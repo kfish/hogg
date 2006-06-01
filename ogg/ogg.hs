@@ -1,9 +1,11 @@
 module Main where
 
-pageSplit :: [Char] -> [[Char]]
+import Data.Bits
+
+pageSplit :: [CUChar] -> [[CUChar]]
 pageSplit = _pageSplit [] []
 
-_pageSplit :: [Char] -> [[Char]] -> [Char] -> [[Char]]
+_pageSplit :: [CUChar] -> [[CUChar]] -> [CUChar] -> [[CUChar]]
 _pageSplit [] l [] = l
 _pageSplit c l [] = l++[c]
 _pageSplit c l ('O':'g':'g':'S':r) = _pageSplit "OggS" (l++[c]) r
