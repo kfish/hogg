@@ -1,17 +1,17 @@
 module Main where
 
-scancnt :: Int -> [Char] -> [Char] -> [Char] -> Int
-scancnt x r [] t = scancnt (x+1) [] r t
-scancnt x _ _ [] = x
-scancnt x r (s:ss) (t:ts)
-    | s == t	= scancnt x (r++[s]) ss ts
-    | otherwise	= scancnt x [] (r++[s]++ss) ts
+pageSplit :: [Char] -> [[Char]]
+pageSplit = _pageSplit [] []
 
-scan = scancnt 0 []
+_pageSplit :: [Char] -> [[Char]] -> [Char] -> [[Char]]
+_pageSplit [] l [] = l
+_pageSplit c l [] = l++[c]
+_pageSplit c l ('O':'g':'g':'S':r) = _pageSplit "OggS" (l++[c]) r
+_pageSplit c l (r:rs) = _pageSplit (c++[r]) l rs
 
-pagescan = scan "OggS"
+pageCount = length . pageSplit
 
 main :: IO ()
 main = do input <- getContents
-          putStrLn ((show (pagescan input)) ++ " pages")
+          putStrLn ((show (pageCount input)) ++ " pages")
 
