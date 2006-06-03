@@ -10,7 +10,11 @@ data OggPage =
   OggPage {
     raw :: [Word8],
     len :: Int,
-    gp :: Int
+    cont :: Bool,
+    bos :: Bool,
+    eos :: Bool,
+    gp :: Int,
+    serialno :: Int
   }
 
 pageMarker :: [Word8]
@@ -30,16 +34,25 @@ _pageSplit c l r = _pageSplit (c++r) l []
 pageCount = length . pageSplit
 
 ixSeq :: Int -> Int -> [Word8] -> [Word8]
-ixSeq off len s = take len (drop off s)
+ixSeq off len s = reverse (take len (drop off s))
 
 readPage :: [Word8] -> OggPage
-readPage d = OggPage d (length d) gp where
-  gp = fromTwosComp $ reverse $ ixSeq 6 8 d
-  --gp = (ixSeq 6 8 d)
+readPage d = OggPage d l cont bos eos gp serialno where
+  l = length d
+  htype = if l > 5 then d !! 5 else 0
+  cont = testBit htype 0
+  bos = testBit htype 1
+  eos = testBit htype 2
+  gp = fromTwosComp $ ixSeq 6 8 d
+  serialno = fromTwosComp $ ixSeq 14 4 d
 
 instance Show OggPage where
 
-  show (OggPage d l gp) = "Page of length " ++ show l ++ " gp " ++ show gp ++ "\n"
+  show (OggPage d l cont bos eos gp serialno) = "serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show l ++ " bytes\n"
+    where flags = ifc ++ ifb ++ ife
+          ifc = if cont then " (cont)" else ""
+          ifb = if bos then " *** bos" else ""
+          ife = if eos then " *** eos" else ""
 
 main :: IO ()
 main = do input <- L.getContents
