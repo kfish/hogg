@@ -30,11 +30,12 @@ _pageSplit c l r = _pageSplit (c++r) l []
 pageCount = length . pageSplit
 
 ixSeq :: Int -> Int -> [Word8] -> [Word8]
-ixSeq i j s = take j (drop i s)
+ixSeq off len s = take len (drop off s)
 
 readPage :: [Word8] -> OggPage
 readPage d = OggPage d (length d) gp where
-  gp = fromTwosComp (ixSeq 6 14 d)
+  gp = fromTwosComp $ reverse $ ixSeq 6 8 d
+  --gp = (ixSeq 6 8 d)
 
 instance Show OggPage where
 
