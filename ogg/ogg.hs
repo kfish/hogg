@@ -22,6 +22,11 @@ data OggPage =
     page_segments :: [[Word8]]
   }
 
+data OggPacket =
+  OggPacket {
+    packet_data :: [Word8]
+  }
+
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
@@ -69,6 +74,20 @@ splitSegments segments accum (l:ls) body
   | otherwise	= splitSegments (segments++[newseg]) 0 ls newbody
                   where (newseg, newbody) = splitAt (accum+l) body
 
+segments :: OggPage -> [[Word8]]
+segments (OggPage d l cont bos eos gp serialno seqno crc numsegs segtab segment_table) = segment_table
+
+packetBuild :: [Word8] -> OggPacket
+packetBuild r = OggPacket r
+
+_pages2packets :: [OggPacket] -> [OggPage] -> [OggPacket]
+_pages2packets packets [] = packets
+_pages2packets packets (g:gs) = _pages2packets (packets++s) gs
+                                where s = map packetBuild (segments g)
+
+pages2packets :: [OggPage] -> [OggPacket]
+pages2packets = _pages2packets []
+
 instance Show OggPage where
 
   show (OggPage d l cont bos eos gp serialno seqno crc numsegs segtab segment_table) =
@@ -78,7 +97,11 @@ instance Show OggPage where
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
 
+instance Show OggPacket where
+
+  show (OggPacket d) = show "Packet length " ++ show (length d) ++ "\n"
+
 main :: IO ()
 main = do input <- L.getContents
-          putStrLn (show (map readPage (pageSplit $ L.unpack input)))
+          putStrLn (show (pages2packets (map readPage (pageSplit $ L.unpack input))))
 
