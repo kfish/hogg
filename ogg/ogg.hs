@@ -16,7 +16,8 @@ data OggPage =
     gp :: Int,
     serialno :: Int,
     seqno :: Int,
-    crc :: Int
+    crc :: Int,
+    page_segments :: Int
   }
 
 pageMarker :: [Word8]
@@ -39,7 +40,7 @@ ixSeq :: Int -> Int -> [Word8] -> [Word8]
 ixSeq off len s = reverse (take len (drop off s))
 
 readPage :: [Word8] -> OggPage
-readPage d = OggPage d len cont bos eos gp serialno seqno crc where
+readPage d = OggPage d len cont bos eos gp serialno seqno crc numseg where
   len = length d
   htype = if len > 5 then d !! 5 else 0
   cont = testBit htype 0
@@ -49,11 +50,12 @@ readPage d = OggPage d len cont bos eos gp serialno seqno crc where
   serialno = fromTwosComp $ ixSeq 14 4 d
   seqno = fromTwosComp $ ixSeq 18 4 d
   crc = fromTwosComp $ ixSeq 22 4 d
+  numseg = fromTwosComp $ ixSeq 26 1 d
 
 instance Show OggPage where
 
-  show (OggPage d l cont bos eos gp serialno seqno crc) =
-    show seqno ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show l ++ " bytes\n"
+  show (OggPage d l cont bos eos gp serialno seqno crc numseg) =
+    show seqno ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show l ++ " bytes (" ++ show numseg ++ " segments)\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ifb = if bos then " *** bos" else ""
