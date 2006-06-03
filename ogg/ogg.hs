@@ -17,7 +17,9 @@ data OggPage =
     serialno :: Int,
     seqno :: Int,
     crc :: Int,
-    page_segments :: Int
+    numseg :: Int,
+    segtab :: [Int],
+    page_segments :: [[Word8]]
   }
 
 pageMarker :: [Word8]
@@ -40,7 +42,7 @@ ixSeq :: Int -> Int -> [Word8] -> [Word8]
 ixSeq off len s = reverse (take len (drop off s))
 
 readPage :: [Word8] -> OggPage
-readPage d = OggPage d len cont bos eos gp serialno seqno crc numseg where
+readPage d = OggPage d len cont bos eos gp serialno seqno crc numseg segtab segments where
   len = length d
   htype = if len > 5 then d !! 5 else 0
   cont = testBit htype 0
@@ -51,11 +53,26 @@ readPage d = OggPage d len cont bos eos gp serialno seqno crc numseg where
   seqno = fromTwosComp $ ixSeq 18 4 d
   crc = fromTwosComp $ ixSeq 22 4 d
   numseg = fromTwosComp $ ixSeq 26 1 d
+  st = take numseg (drop 27 d)
+  segtab = map fromIntegral st
+  body = drop (27+numseg) d
+  segments = splitSegments [] 0 segtab body
+
+-- splitSegments segments accum segtab body
+splitSegments :: [[Word8]] -> Int -> [Int] -> [Word8] -> [[Word8]]
+splitSegments segments _ _ [] = segments
+splitSegments segments 0 [] _ = segments
+splitSegments segments accum [] body = segments++[take accum body]
+splitSegments segments 0 (0:ls) body = splitSegments (segments++[]) 0 ls body
+splitSegments segments accum (l:ls) body 
+  | l == 255	= splitSegments segments (accum+255) ls body
+  | otherwise	= splitSegments (segments++[newseg]) 0 ls newbody
+                  where (newseg, newbody) = splitAt (accum+l) body
 
 instance Show OggPage where
 
-  show (OggPage d l cont bos eos gp serialno seqno crc numseg) =
-    show seqno ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show l ++ " bytes (" ++ show numseg ++ " segments)\n"
+  show (OggPage d l cont bos eos gp serialno seqno crc numsegs segtab segment_table) =
+    show seqno ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show l ++ " bytes (" ++ show (length segment_table) ++ "/" ++ show numsegs ++ "):\n" ++ "\t" ++ show segtab ++ " ->\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ifb = if bos then " *** bos" else ""
