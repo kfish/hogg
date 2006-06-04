@@ -33,7 +33,9 @@ data OggPacket =
   OggPacket {
     packetData :: [Word8],
     packetSerialno :: Int,
-    packetGranulepos :: Granulepos
+    packetGranulepos :: Granulepos,
+    packetBOS :: Bool,
+    packetEOS :: Bool
   }
 
 ------------------------------------------------------------
@@ -107,11 +109,11 @@ instance Show OggPage where
 --
 
 packetBuild :: Int -> [Word8] -> OggPacket
-packetBuild s r = OggPacket r s (Granulepos Nothing)
+packetBuild s r = OggPacket r s (Granulepos Nothing) False False
 
 packetConcat :: OggPacket -> OggPacket -> OggPacket
-packetConcat (OggPacket r1 s1 g1) (OggPacket r2 s2 g2) =
-    OggPacket (r1++r2) s1 g2
+packetConcat (OggPacket r1 s1 g1 b1 e1) (OggPacket r2 s2 g2 b2 e2) =
+    OggPacket (r1++r2) s1 g2 b1 e2
 
 pages2packets :: [OggPage] -> [OggPacket]
 pages2packets = _pages2packets [] Nothing
@@ -135,12 +137,24 @@ _pages2packets packets carry (g:gn:gs) =
           co = pageContinued gn
 
 pageToPackets :: OggPage -> [OggPacket]
-pageToPackets page = setGranulepos packets (pageGranulepos page)
-    where packets = map (packetBuild (pageSerialno page)) (pageSegments page)
+pageToPackets page = setGranulepos p2 (pageGranulepos page)
+    where p2 = setEOS p1 (pageEOS page)
+          p1 = setBOS p0 (pageBOS page)
+          p0 = map (packetBuild (pageSerialno page)) (pageSegments page)
 
 setGranulepos :: [OggPacket] -> Granulepos -> [OggPacket]
 setGranulepos [] _ = []
 setGranulepos ps gp = (init ps)++[(last ps){packetGranulepos = gp}]
+
+setBOS :: [OggPacket] -> Bool -> [OggPacket]
+setBOS [] _ = []
+setBOS ps False = ps
+setBOS (p:ps) True = p{packetBOS = True}:ps
+
+setEOS :: [OggPacket] -> Bool -> [OggPacket]
+setEOS [] _ = []
+setEOS ps False = ps
+setEOS ps True = (init ps)++[(last ps){packetEOS = True}]
 
 carryCarry :: Maybe OggPacket -> Maybe OggPacket -> Maybe OggPacket
 carryCarry Nothing Nothing = Nothing
@@ -154,8 +168,11 @@ prependCarry (Just c) [] = [c]
 prependCarry (Just c) (s:ss) = (packetConcat c s):ss
 
 instance Show OggPacket where
-  show (OggPacket d s gp) =
-    ": serialno " ++ show s ++ ", granulepos " ++ show gp ++ ": " ++ show (length d) ++ " bytes\n"
+  show (OggPacket d s gp bos eos) =
+    ": serialno " ++ show s ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n"
+    where flags = ifb ++ ife
+          ifb = if bos then " *** bos" else ""
+          ife = if eos then " *** eos" else ""
 
 ------------------------------------------------------------
 -- main
