@@ -13,3 +13,8 @@ Executable:          hogg-dump
 Main-Is:             hogg-dump.hs
 Hs-Source-Dirs:      tools
 Other-Modules:       Ogg.Demux
+
+Executable:          hogg-pagedump
+Main-Is:             hogg-pagedump.hs
+Hs-Source-Dirs:      tools
+Other-Modules:       Ogg.Demux
