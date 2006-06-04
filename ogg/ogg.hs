@@ -6,6 +6,11 @@ import qualified Data.ByteString.Lazy as L
 import Data.Word (Word8)
 import Data.Bits
 
+------------------------------------------------------------
+-- Types
+--
+
+newtype Granulepos = Granulepos (Maybe Int)
 
 ------------------------------------------------------------
 -- Data
@@ -18,7 +23,7 @@ data OggPage =
     cont :: Bool,
     bos :: Bool,
     eos :: Bool,
-    gp :: Int,
+    granulepos :: Granulepos,
     serialno :: Int,
     seqno :: Int,
     crc :: Int,
@@ -29,9 +34,18 @@ data OggPage =
 
 data OggPacket =
   OggPacket {
-    packet_data :: [Word8],
-    packet_serialno :: Int
+    packetData :: [Word8],
+    packetSerialno :: Int,
+    packetGranulepos :: Granulepos
   }
+
+------------------------------------------------------------
+-- Granulepos functions
+--
+
+instance Show Granulepos where
+  show (Granulepos (Nothing)) = "-1"
+  show (Granulepos (Just gp)) = show gp
 
 ------------------------------------------------------------
 -- OggPage functions
@@ -63,7 +77,7 @@ readPage d = OggPage d len cont bos eos gp serialno seqno crc numseg segtab segm
   cont = testBit htype 0
   bos = testBit htype 1
   eos = testBit htype 2
-  gp = fromTwosComp $ ixSeq 6 8 d
+  gp = Granulepos (Just (fromTwosComp $ ixSeq 6 8 d))
   serialno = fromTwosComp $ ixSeq 14 4 d
   seqno = fromTwosComp $ ixSeq 18 4 d
   crc = fromTwosComp $ ixSeq 22 4 d
@@ -103,10 +117,11 @@ instance Show OggPage where
 --
 
 packetBuild :: Int -> [Word8] -> OggPacket
-packetBuild s r = OggPacket r s
+packetBuild s r = OggPacket r s (Granulepos Nothing)
 
 packetConcat :: OggPacket -> OggPacket -> OggPacket
-packetConcat (OggPacket r1 s1) (OggPacket r2 s2) = OggPacket (r1++r2) s1
+packetConcat (OggPacket r1 s1 g1) (OggPacket r2 s2 g2) =
+    OggPacket (r1++r2) s1 g2
 
 pages2packets :: [OggPage] -> [OggPacket]
 pages2packets = _pages2packets [] Nothing
@@ -115,23 +130,27 @@ _pages2packets :: [OggPacket] -> Maybe OggPacket -> [OggPage] -> [OggPacket]
 _pages2packets packets Nothing [] = packets
 _pages2packets packets (Just jcarry) [] = packets++[jcarry]
 
+_pages2packets packets carry [g] = packets++s
+    where s = prependCarry carry (pageToPackets g)
+
 _pages2packets packets carry (g:gn:gs) =
-    if (co && length segs == 1) then
+    if (co && length ps == 1) then
         _pages2packets packets (carryCarry carry newcarry) (gn:gs)
     else
         _pages2packets (packets++s) newcarry (gn:gs)
     where s = prependCarry carry ns
-          newcarry = if co then Just (last segs) else Nothing
-          ns = if co then init segs else segs
-          segs = map (packetBuild ser) (segments g)
+          newcarry = if co then Just (last ps) else Nothing
+          ns = if co then init ps else ps
+          ps = pageToPackets g
           co = isContinued gn
-          ser = serialno g
 
-_pages2packets packets carry [g] =
-    _pages2packets (packets++s) Nothing []
-    where s = prependCarry carry segs
-          segs = map (packetBuild ser) (segments g)
-          ser = serialno g
+pageToPackets :: OggPage -> [OggPacket]
+pageToPackets page = setGranulepos packets (granulepos page)
+    where packets = map (packetBuild (serialno page)) (segments page)
+
+setGranulepos :: [OggPacket] -> Granulepos -> [OggPacket]
+setGranulepos [] _ = []
+setGranulepos ps gp = (init ps)++[(last ps){packetGranulepos = gp}]
 
 carryCarry :: Maybe OggPacket -> Maybe OggPacket -> Maybe OggPacket
 carryCarry Nothing Nothing = Nothing
@@ -145,9 +164,8 @@ prependCarry (Just c) [] = [c]
 prependCarry (Just c) (s:ss) = (packetConcat c s):ss
 
 instance Show OggPacket where
-  show (OggPacket d s) =
-    show "Packet length " ++ show (length d) ++
-         " serialno " ++ show s ++ "\n"
+  show (OggPacket d s gp) =
+    ": serialno " ++ show s ++ ", granulepos " ++ show gp ++ ": " ++ show (length d) ++ " bytes\n"
 
 ------------------------------------------------------------
 -- main
