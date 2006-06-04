@@ -12,9 +12,8 @@ import Ogg.Utils
 
 import Data.Word (Word8)
 import Data.Bits
-import Data.Char (isPrint, isAscii, isAlphaNum, isSpace, chr)
+import Data.Char (isSpace, chr, ord)
 
-import Numeric (showHex)
 import Text.Printf
 
 ------------------------------------------------------------
@@ -63,28 +62,31 @@ instance Show Granulepos where
 --
 
 hexDump :: [Word8] -> String
-hexDump = _hexDump ""
+hexDump = _hexDump 0 ""
 
-_hexDump :: String -> [Word8] -> String
-_hexDump s [] = s
-_hexDump s d = _hexDump (s++lineDump) rest
+_hexDump :: Int -> String -> [Word8] -> String
+_hexDump _ s [] = s
+_hexDump o s d = _hexDump (o+16) (s++lineDump) rest
     where (line, rest) = splitAt 16 d
-          lineDump = (take 8 $ repeat ' ') ++ hexLine ++ "  " ++ ascLine ++ "\n"
-          hexList = map hexByte line
+          lineDump = spaces 4 ++ offset ++ ": " ++ hexLine ++ spaces hexPad ++ ascLine ++ "\n"
+          spaces n = take n $ repeat ' '
+          offset = printf "%04x" o
+
           hexLine = hexSpace "" hexList False
-          -- hexByte x = if x < 16 then '0':(h x) else h x
-          -- h x = showHex x ""
+          hexPad = 1 + 8*5 - length hexLine
+          hexList = map hexByte line
           hexByte x = printf "%02x" ((fromIntegral x)::Int)
-          hexSpace s [] _ = s
-          hexSpace s (c:cs) True = hexSpace (s++c++" ") cs False
-          hexSpace s (c:cs) False = hexSpace (s++c) cs True
+          hexSpace x [] _ = x
+          hexSpace x (c:cs) True = hexSpace (x++c++" ") cs False
+          hexSpace x (c:cs) False = hexSpace (x++c) cs True
+
           ascLine = concat $ map ascByte chars
           chars = map chr (map fromIntegral line)
           ascByte c
-            | not $ isAscii c = "."
-            | isAlphaNum c = [c]
+            | (ord c) > 126 = "."
             | isSpace c = " "
-            | otherwise = "."
+            | (ord c) < 32 = "."
+            | otherwise = [c]
 
 ------------------------------------------------------------
 -- OggPage functions
@@ -99,13 +101,11 @@ pageSplit = _pageSplit 0 0 [] []
 -- _pageSplit currOffset lastOffset currData accumResult remainingData
 _pageSplit :: Int -> Int -> [Word8] -> [(Int, [Word8])] -> [Word8] -> [(Int, [Word8])]
 _pageSplit _ _ [] l [] = l
-_pageSplit x o c l [] = l++[(o, c)]
+_pageSplit _ o c l [] = l++[(o, c)]
 _pageSplit x o c l (r1:r2:r3:r4:r)
     | [r1,r2,r3,r4] == pageMarker = _pageSplit (x+4) x pageMarker (l++[(o, c)]) r
     | otherwise                   = _pageSplit (x+1) o (c++[r1]) l (r2:r3:r4:r)
 _pageSplit x o c l r = _pageSplit x o (c++r) l []
-
-pageCount = length . pageSplit
 
 ixSeq :: Int -> Int -> [Word8] -> [Word8]
 ixSeq off len s = reverse (take len (drop off s))
@@ -210,7 +210,7 @@ prependCarry (Just c) (s:ss) = (packetConcat c s):ss
 
 instance Show OggPacket where
   show (OggPacket d s gp bos eos) =
-    "\n: serialno " ++ show s ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ hexDump d ++ "\n"
+    ": serialno " ++ show s ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ hexDump d
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
