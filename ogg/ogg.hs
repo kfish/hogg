@@ -5,6 +5,9 @@ import qualified Data.ByteString.Lazy as L
 
 import Data.Word (Word8)
 import Data.Bits
+import Data.Char (isPrint, isAscii, isAlphaNum, isSpace, chr)
+
+import Numeric (showHex)
 
 ------------------------------------------------------------
 -- Types
@@ -45,6 +48,33 @@ data OggPacket =
 instance Show Granulepos where
   show (Granulepos (Nothing)) = "-1"
   show (Granulepos (Just gp)) = show gp
+
+------------------------------------------------------------
+-- Dump
+--
+
+hexDump :: [Word8] -> String
+hexDump = _hexDump ""
+
+_hexDump :: String -> [Word8] -> String
+_hexDump s [] = s
+_hexDump s d = _hexDump (s++lineDump) rest
+    where (line, rest) = splitAt 16 d
+          lineDump = (take 8 $ repeat ' ') ++ hexLine ++ "  " ++ ascLine ++ "\n"
+          hexList = map hexByte line
+          hexLine = hexSpace "" hexList False
+          hexByte x = if x < 16 then '0':(h x) else h x
+          h x = showHex x ""
+          hexSpace s [] _ = s
+          hexSpace s (c:cs) True = hexSpace (s++c++" ") cs False
+          hexSpace s (c:cs) False = hexSpace (s++c) cs True
+          ascLine = concat $ map ascByte chars
+          chars = map chr (map fromIntegral line)
+          ascByte c
+            | not $ isAscii c = "."
+            | isAlphaNum c = [c]
+            | isSpace c = " "
+            | otherwise = "."
 
 ------------------------------------------------------------
 -- OggPage functions
@@ -169,7 +199,7 @@ prependCarry (Just c) (s:ss) = (packetConcat c s):ss
 
 instance Show OggPacket where
   show (OggPacket d s gp bos eos) =
-    ": serialno " ++ show s ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n"
+    "\n: serialno " ++ show s ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ hexDump d ++ "\n"
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
