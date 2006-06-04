@@ -1,7 +1,6 @@
-module Main where
+module Ogg.Demux where
 
 import Ogg.Utils
-import qualified Data.ByteString.Lazy as L
 
 import Data.Word (Word8)
 import Data.Bits
@@ -207,13 +206,3 @@ instance Show OggPacket where
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
-
-------------------------------------------------------------
--- main
---
-
-main :: IO ()
-main = do input <- L.getContents
-          putStrLn (show (pages2packets (map readPage (pageSplit $ L.unpack input))))
-          -- putStrLn (show (map readPage (pageSplit $ L.unpack input)))
-

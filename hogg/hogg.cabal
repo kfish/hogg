@@ -1,0 +1,14 @@
+Name:                hogg
+Version:             0.1
+Description:         Ogg interface
+License:             BSD3
+License-file:        LICENSE
+Author:              Conrad Parker
+Maintainer:          conradp@cse.unsw.edu.au
+Build-Depends:       base, fps
+Exposed-modules:     Ogg.Demux
+ghc-options:         -Wall -fglasgow-exts -O -optc-O2 -funbox-strict-fields 
+
+Executable:          hogg-dump
+Main-Is:             hogg-dump.hs
+Other-Modules:       Ogg.Demux
