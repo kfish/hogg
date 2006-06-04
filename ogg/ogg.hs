@@ -18,18 +18,15 @@ newtype Granulepos = Granulepos (Maybe Int)
 
 data OggPage =
   OggPage {
-    raw :: [Word8],
-    len :: Int,
-    cont :: Bool,
-    bos :: Bool,
-    eos :: Bool,
-    granulepos :: Granulepos,
-    serialno :: Int,
-    seqno :: Int,
-    crc :: Int,
-    numseg :: Int,
-    segtab :: [Int],
-    page_segments :: [[Word8]]
+    pageData :: [Word8],
+    pageContinued :: Bool,
+    pageBOS :: Bool,
+    pageEOS :: Bool,
+    pageGranulepos :: Granulepos,
+    pageSerialno :: Int,
+    pageSeqno :: Int,
+    pageCRC :: Int,
+    pageSegments :: [[Word8]]
   }
 
 data OggPacket =
@@ -71,9 +68,8 @@ ixSeq :: Int -> Int -> [Word8] -> [Word8]
 ixSeq off len s = reverse (take len (drop off s))
 
 readPage :: [Word8] -> OggPage
-readPage d = OggPage d len cont bos eos gp serialno seqno crc numseg segtab segments where
-  len = length d
-  htype = if len > 5 then d !! 5 else 0
+readPage d = OggPage d cont bos eos gp serialno seqno crc segments where
+  htype = if (length d) > 5 then d !! 5 else 0
   cont = testBit htype 0
   bos = testBit htype 1
   eos = testBit htype 2
@@ -98,15 +94,9 @@ splitSegments segments accum (l:ls) body
   | otherwise	= splitSegments (segments++[newseg]) 0 ls newbody
                   where (newseg, newbody) = splitAt (accum+l) body
 
-segments :: OggPage -> [[Word8]]
-segments (OggPage _ _ _ _ _ _ _ _ _ _ _ segment_table) = segment_table
-
-isContinued :: OggPage -> Bool
-isContinued (OggPage _ _ cont _ _ _ _ _ _ _ _ _) = cont
-
 instance Show OggPage where
-  show (OggPage d l cont bos eos gp serialno seqno crc numsegs segtab segment_table) =
-    show seqno ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show l ++ " bytes (" ++ show (length segment_table) ++ "/" ++ show numsegs ++ "):\n" ++ "\t" ++ show segtab ++ " ->\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
+  show (OggPage d cont bos eos gp serialno seqno crc segment_table) =
+    show seqno ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ifb = if bos then " *** bos" else ""
@@ -142,11 +132,11 @@ _pages2packets packets carry (g:gn:gs) =
           newcarry = if co then Just (last ps) else Nothing
           ns = if co then init ps else ps
           ps = pageToPackets g
-          co = isContinued gn
+          co = pageContinued gn
 
 pageToPackets :: OggPage -> [OggPacket]
-pageToPackets page = setGranulepos packets (granulepos page)
-    where packets = map (packetBuild (serialno page)) (segments page)
+pageToPackets page = setGranulepos packets (pageGranulepos page)
+    where packets = map (packetBuild (pageSerialno page)) (pageSegments page)
 
 setGranulepos :: [OggPacket] -> Granulepos -> [OggPacket]
 setGranulepos [] _ = []
