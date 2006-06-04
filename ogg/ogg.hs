@@ -6,6 +6,11 @@ import qualified Data.ByteString.Lazy as L
 import Data.Word (Word8)
 import Data.Bits
 
+
+------------------------------------------------------------
+-- Data
+--
+
 data OggPage =
   OggPage {
     raw :: [Word8],
@@ -26,6 +31,10 @@ data OggPacket =
   OggPacket {
     packet_data :: [Word8]
   }
+
+------------------------------------------------------------
+-- OggPage functions
+--
 
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
@@ -75,21 +84,12 @@ splitSegments segments accum (l:ls) body
                   where (newseg, newbody) = splitAt (accum+l) body
 
 segments :: OggPage -> [[Word8]]
-segments (OggPage d l cont bos eos gp serialno seqno crc numsegs segtab segment_table) = segment_table
+segments (OggPage _ _ _ _ _ _ _ _ _ _ _ segment_table) = segment_table
 
-packetBuild :: [Word8] -> OggPacket
-packetBuild r = OggPacket r
-
-_pages2packets :: [OggPacket] -> [OggPage] -> [OggPacket]
-_pages2packets packets [] = packets
-_pages2packets packets (g:gs) = _pages2packets (packets++s) gs
-                                where s = map packetBuild (segments g)
-
-pages2packets :: [OggPage] -> [OggPacket]
-pages2packets = _pages2packets []
+isContinued :: OggPage -> Bool
+isContinued (OggPage _ _ cont _ _ _ _ _ _ _ _ _) = cont
 
 instance Show OggPage where
-
   show (OggPage d l cont bos eos gp serialno seqno crc numsegs segtab segment_table) =
     show seqno ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show l ++ " bytes (" ++ show (length segment_table) ++ "/" ++ show numsegs ++ "):\n" ++ "\t" ++ show segtab ++ " ->\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
@@ -97,9 +97,44 @@ instance Show OggPage where
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
 
-instance Show OggPacket where
+------------------------------------------------------------
+-- OggPacket functions
+--
 
+packetBuild :: [Word8] -> OggPacket
+packetBuild r = OggPacket r
+
+pages2packets :: [OggPage] -> [OggPacket]
+pages2packets = _pages2packets [] []
+
+_pages2packets :: [OggPacket] -> [Word8] -> [OggPage] -> [OggPacket]
+_pages2packets packets [] [] = packets
+_pages2packets packets carry [] = packets++[packetBuild carry]
+
+_pages2packets packets carry (g:gn:gs) =
+    if (co && length segs == 1) then
+        _pages2packets packets (carry++nc) (gn:gs)
+    else
+        _pages2packets (packets++s) nc (gn:gs)
+    where s = map packetBuild (prependCarry carry ns)
+          nc = if co then last segs else []
+          ns = if co then init segs else segs
+          co = isContinued gn
+          segs = segments g
+
+_pages2packets packets carry (g:gs) = _pages2packets (packets++s) carry gs
+    where s = map packetBuild (prependCarry carry (segments g))
+
+prependCarry :: [Word8] -> [[Word8]] -> [[Word8]]
+prependCarry c [] = [c]
+prependCarry c (s:ss) = (c++s):ss
+
+instance Show OggPacket where
   show (OggPacket d) = show "Packet length " ++ show (length d) ++ "\n"
+
+------------------------------------------------------------
+-- main
+--
 
 main :: IO ()
 main = do input <- L.getContents
