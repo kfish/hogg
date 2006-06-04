@@ -11,4 +11,5 @@ ghc-options:         -Wall -fglasgow-exts -O -optc-O2 -funbox-strict-fields
 
 Executable:          hogg-dump
 Main-Is:             hogg-dump.hs
+Hs-Source-Dirs:      tools
 Other-Modules:       Ogg.Demux
