@@ -5,5 +5,5 @@ import Ogg.Demux
 
 main :: IO ()
 main = do input <- L.getContents
-          putStrLn (show (pages2packets (map readPage (pageSplit $ L.unpack input))))
+          mapM_ putStrLn (map show (pages2packets (map readPage (pageSplit $ L.unpack input))))
 
