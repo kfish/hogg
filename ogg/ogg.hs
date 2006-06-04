@@ -8,6 +8,7 @@ import Data.Bits
 import Data.Char (isPrint, isAscii, isAlphaNum, isSpace, chr)
 
 import Numeric (showHex)
+import Text.Printf
 
 ------------------------------------------------------------
 -- Types
@@ -21,6 +22,7 @@ newtype Granulepos = Granulepos (Maybe Int)
 
 data OggPage =
   OggPage {
+    pageOffset :: Int,
     pageData :: [Word8],
     pageContinued :: Bool,
     pageBOS :: Bool,
@@ -63,8 +65,9 @@ _hexDump s d = _hexDump (s++lineDump) rest
           lineDump = (take 8 $ repeat ' ') ++ hexLine ++ "  " ++ ascLine ++ "\n"
           hexList = map hexByte line
           hexLine = hexSpace "" hexList False
-          hexByte x = if x < 16 then '0':(h x) else h x
-          h x = showHex x ""
+          -- hexByte x = if x < 16 then '0':(h x) else h x
+          -- h x = showHex x ""
+          hexByte x = printf "%02x" ((fromIntegral x)::Int)
           hexSpace s [] _ = s
           hexSpace s (c:cs) True = hexSpace (s++c++" ") cs False
           hexSpace s (c:cs) False = hexSpace (s++c) cs True
@@ -83,24 +86,25 @@ _hexDump s d = _hexDump (s++lineDump) rest
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
-pageSplit :: [Word8] -> [[Word8]]
-pageSplit = _pageSplit [] []
+pageSplit :: [Word8] -> [(Int, [Word8])]
+pageSplit = _pageSplit 0 0 [] []
 
-_pageSplit :: [Word8] -> [[Word8]] -> [Word8] -> [[Word8]]
-_pageSplit [] l [] = l
-_pageSplit c l [] = l++[c]
-_pageSplit c l (r1:r2:r3:r4:r)
-    | [r1,r2,r3,r4] == pageMarker = _pageSplit pageMarker (l++[c]) r
-    | otherwise                   = _pageSplit (c++[r1]) l (r2:r3:r4:r)
-_pageSplit c l r = _pageSplit (c++r) l []
+-- _pageSplit currOffset lastOffset currData accumResult remainingData
+_pageSplit :: Int -> Int -> [Word8] -> [(Int, [Word8])] -> [Word8] -> [(Int, [Word8])]
+_pageSplit _ _ [] l [] = l
+_pageSplit x o c l [] = l++[(o, c)]
+_pageSplit x o c l (r1:r2:r3:r4:r)
+    | [r1,r2,r3,r4] == pageMarker = _pageSplit (x+4) x pageMarker (l++[(o, c)]) r
+    | otherwise                   = _pageSplit (x+1) o (c++[r1]) l (r2:r3:r4:r)
+_pageSplit x o c l r = _pageSplit x o (c++r) l []
 
 pageCount = length . pageSplit
 
 ixSeq :: Int -> Int -> [Word8] -> [Word8]
 ixSeq off len s = reverse (take len (drop off s))
 
-readPage :: [Word8] -> OggPage
-readPage d = OggPage d cont bos eos gp serialno seqno crc segments where
+readPage :: (Int, [Word8]) -> OggPage
+readPage (o, d) = OggPage o d cont bos eos gp serialno seqno crc segments where
   htype = if (length d) > 5 then d !! 5 else 0
   cont = testBit htype 0
   bos = testBit htype 1
@@ -127,8 +131,8 @@ splitSegments segments accum (l:ls) body
                   where (newseg, newbody) = splitAt (accum+l) body
 
 instance Show OggPage where
-  show (OggPage d cont bos eos gp serialno seqno crc segment_table) =
-    show seqno ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
+  show (OggPage o d cont bos eos gp serialno seqno crc segment_table) =
+    (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ifb = if bos then " *** bos" else ""
@@ -211,4 +215,5 @@ instance Show OggPacket where
 main :: IO ()
 main = do input <- L.getContents
           putStrLn (show (pages2packets (map readPage (pageSplit $ L.unpack input))))
+          -- putStrLn (show (map readPage (pageSplit $ L.unpack input)))
 
