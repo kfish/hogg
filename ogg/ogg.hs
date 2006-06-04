@@ -29,7 +29,8 @@ data OggPage =
 
 data OggPacket =
   OggPacket {
-    packet_data :: [Word8]
+    packet_data :: [Word8],
+    packet_serialno :: Int
   }
 
 ------------------------------------------------------------
@@ -101,36 +102,52 @@ instance Show OggPage where
 -- OggPacket functions
 --
 
-packetBuild :: [Word8] -> OggPacket
-packetBuild r = OggPacket r
+packetBuild :: Int -> [Word8] -> OggPacket
+packetBuild s r = OggPacket r s
+
+packetConcat :: OggPacket -> OggPacket -> OggPacket
+packetConcat (OggPacket r1 s1) (OggPacket r2 s2) = OggPacket (r1++r2) s1
 
 pages2packets :: [OggPage] -> [OggPacket]
-pages2packets = _pages2packets [] []
+pages2packets = _pages2packets [] Nothing
 
-_pages2packets :: [OggPacket] -> [Word8] -> [OggPage] -> [OggPacket]
-_pages2packets packets [] [] = packets
-_pages2packets packets carry [] = packets++[packetBuild carry]
+_pages2packets :: [OggPacket] -> Maybe OggPacket -> [OggPage] -> [OggPacket]
+_pages2packets packets Nothing [] = packets
+_pages2packets packets (Just jcarry) [] = packets++[jcarry]
 
 _pages2packets packets carry (g:gn:gs) =
     if (co && length segs == 1) then
-        _pages2packets packets (carry++nc) (gn:gs)
+        _pages2packets packets (carryCarry carry newcarry) (gn:gs)
     else
-        _pages2packets (packets++s) nc (gn:gs)
-    where s = map packetBuild (prependCarry carry ns)
-          nc = if co then last segs else []
+        _pages2packets (packets++s) newcarry (gn:gs)
+    where s = prependCarry carry ns
+          newcarry = if co then Just (last segs) else Nothing
           ns = if co then init segs else segs
+          segs = map (packetBuild ser) (segments g)
           co = isContinued gn
-          segs = segments g
+          ser = serialno g
 
-_pages2packets packets carry (g:gs) = _pages2packets (packets++s) carry gs
-    where s = map packetBuild (prependCarry carry (segments g))
+_pages2packets packets carry [g] =
+    _pages2packets (packets++s) Nothing []
+    where s = prependCarry carry segs
+          segs = map (packetBuild ser) (segments g)
+          ser = serialno g
 
-prependCarry :: [Word8] -> [[Word8]] -> [[Word8]]
-prependCarry c [] = [c]
-prependCarry c (s:ss) = (c++s):ss
+carryCarry :: Maybe OggPacket -> Maybe OggPacket -> Maybe OggPacket
+carryCarry Nothing Nothing = Nothing
+carryCarry Nothing (Just p) = Just p
+carryCarry (Just c) Nothing = Just c
+carryCarry (Just c) (Just p) = Just (packetConcat c p)
+
+prependCarry :: Maybe OggPacket -> [OggPacket] -> [OggPacket]
+prependCarry Nothing s = s
+prependCarry (Just c) [] = [c]
+prependCarry (Just c) (s:ss) = (packetConcat c s):ss
 
 instance Show OggPacket where
-  show (OggPacket d) = show "Packet length " ++ show (length d) ++ "\n"
+  show (OggPacket d s) =
+    show "Packet length " ++ show (length d) ++
+         " serialno " ++ show s ++ "\n"
 
 ------------------------------------------------------------
 -- main
