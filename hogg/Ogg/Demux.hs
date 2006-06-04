@@ -1,3 +1,11 @@
+--
+-- Module      : Demux
+-- Copyright   : (c) Conrad Parker 2006
+-- License     : BSD-style
+-- Maintainer  : conradp@cse.unsw.edu.au
+-- Stability   : experimental
+-- Portability : portable
+
 module Ogg.Demux where
 
 import Ogg.Utils

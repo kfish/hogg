@@ -7,6 +7,7 @@ Author:              Conrad Parker
 Maintainer:          conradp@cse.unsw.edu.au
 Build-Depends:       base, fps
 Exposed-modules:     Ogg.Demux
+Other-modules:       Ogg.Utils
 ghc-options:         -Wall -fglasgow-exts -O -optc-O2 -funbox-strict-fields 
 
 Executable:          hogg-dump
