@@ -5,5 +5,5 @@ import Ogg.Page
 
 main :: IO ()
 main = do input <- L.getContents
-          mapM_ putStrLn (map (show . readPage) (pageSplit $ L.unpack input))
+          mapM_ putStrLn (map show (pageScan $ L.unpack input))
 

@@ -41,23 +41,20 @@ data OggPage =
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
-pageSplit :: [Word8] -> [(Int, [Word8])]
-pageSplit = _pageSplit 0 0 [] []
+pageScan :: [Word8] -> [OggPage]
+pageScan = _pageScan 0 []
 
--- _pageSplit currOffset lastOffset currData accumResult remainingData
-_pageSplit :: Int -> Int -> [Word8] -> [(Int, [Word8])] -> [Word8] -> [(Int, [Word8])]
-_pageSplit _ _ [] l [] = l
-_pageSplit _ o c l [] = l++[(o, c)]
-_pageSplit x o c l (r1:r2:r3:r4:r)
-    | [r1,r2,r3,r4] == pageMarker = _pageSplit (x+4) x pageMarker (l++[(o, c)]) r
-    | otherwise                   = _pageSplit (x+1) o (c++[r1]) l (r2:r3:r4:r)
-_pageSplit x o c l r = _pageSplit x o (c++r) l []
+_pageScan :: Int -> [OggPage] -> [Word8] -> [OggPage]
+_pageScan _ l [] = l
+_pageScan o l r@(r1:r2:r3:r4:_)
+    | [r1,r2,r3,r4] == pageMarker = _pageScan (o+pageLen) (l++[newpage]) rest
+    | otherwise	= _pageScan (o+1) l (tail r)
+      where (newpage, pageLen, rest) = pageBuild o r
+_pageScan _ l _ = l -- length r < 4
 
-ixSeq :: Int -> Int -> [Word8] -> [Word8]
-ixSeq off len s = reverse (take len (drop off s))
-
-readPage :: (Int, [Word8]) -> OggPage
-readPage (o, d) = OggPage o d cont bos eos gp serialno seqno crc segments where
+pageBuild :: Int -> [Word8] -> (OggPage, Int, [Word8])
+pageBuild o d = (newpage, pageLen, rest) where
+  newpage = OggPage o d cont bos eos gp serialno seqno crc segments
   htype = if (length d) > 5 then d !! 5 else 0
   cont = testBit htype 0
   bos = testBit htype 1
@@ -69,8 +66,15 @@ readPage (o, d) = OggPage o d cont bos eos gp serialno seqno crc segments where
   numseg = fromTwosComp $ ixSeq 26 1 d
   st = take numseg (drop 27 d)
   segtab = map fromIntegral st
-  body = drop (27+numseg) d
+  headerSize = 27 + numseg
+  bodySize = sum segtab
+  body = take bodySize (drop headerSize d)
   segments = splitSegments [] 0 segtab body
+  pageLen = headerSize + bodySize
+  rest = drop pageLen d
+
+ixSeq :: Int -> Int -> [Word8] -> [Word8]
+ixSeq off len s = reverse (take len (drop off s))
 
 -- splitSegments segments accum segtab body
 splitSegments :: [[Word8]] -> Int -> [Int] -> [Word8] -> [[Word8]]

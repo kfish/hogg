@@ -20,3 +20,7 @@ Hs-Source-Dirs:      tools
 Executable:          hogg-pagedump
 Main-Is:             hogg-pagedump.hs
 Hs-Source-Dirs:      tools
+
+Executable:          hogg-pagecount
+Main-Is:             hogg-pagecount.hs
+Hs-Source-Dirs:      tools
