@@ -1,7 +1,7 @@
 module Main where
 
 import qualified Data.ByteString.Lazy as L
-import Ogg.Demux
+import Ogg.Page
 
 main :: IO ()
 main = do input <- L.getContents

@@ -1,26 +1,20 @@
 --
--- Module      : Demux
+-- Module      : Page
 -- Copyright   : (c) Conrad Parker 2006
 -- License     : BSD-style
 -- Maintainer  : conradp@cse.unsw.edu.au
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Demux where
+module Ogg.Page where
 
 import Ogg.Utils
-import Ogg.Dump
+import Ogg.Granulepos
 
 import Data.Word (Word8)
 import Data.Bits
 
 import Text.Printf
-
-------------------------------------------------------------
--- Types
---
-
-newtype Granulepos = Granulepos (Maybe Int)
 
 ------------------------------------------------------------
 -- Data
@@ -39,14 +33,6 @@ data OggPage =
     pageCRC :: Int,
     pageSegments :: [[Word8]]
   }
-
-------------------------------------------------------------
--- Granulepos functions
---
-
-instance Show Granulepos where
-  show (Granulepos (Nothing)) = "-1"
-  show (Granulepos (Just gp)) = show gp
 
 ------------------------------------------------------------
 -- OggPage functions

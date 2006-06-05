@@ -8,13 +8,11 @@
 
 module Ogg.Packet where
 
-import Ogg.Utils
 import Ogg.Dump
-import Ogg.Demux
+import Ogg.Granulepos
+import Ogg.Page
 
 import Data.Word (Word8)
-import Data.Bits
-import Data.Char (isSpace, chr, ord)
 
 ------------------------------------------------------------
 -- Data
@@ -37,7 +35,7 @@ packetBuild :: Int -> [Word8] -> OggPacket
 packetBuild s r = OggPacket r s (Granulepos Nothing) False False
 
 packetConcat :: OggPacket -> OggPacket -> OggPacket
-packetConcat (OggPacket r1 s1 g1 b1 e1) (OggPacket r2 s2 g2 b2 e2) =
+packetConcat (OggPacket r1 s1 _ b1 _) (OggPacket r2 _ g2 _ e2) =
     OggPacket (r1++r2) s1 g2 b1 e2
 
 pages2packets :: [OggPage] -> [OggPacket]

@@ -6,16 +6,17 @@ License-file:        LICENSE
 Author:              Conrad Parker
 Maintainer:          conradp@cse.unsw.edu.au
 Build-Depends:       base, fps
-Exposed-modules:     Ogg.Demux
+Exposed-modules:     Ogg.Page
+                     Ogg.Packet
+                     Ogg.Granulepos
 Other-modules:       Ogg.Utils
+                     Ogg.Dump
 ghc-options:         -Wall -fglasgow-exts -O -optc-O2 -funbox-strict-fields 
 
 Executable:          hogg-dump
 Main-Is:             hogg-dump.hs
 Hs-Source-Dirs:      tools
-Other-Modules:       Ogg.Demux
 
 Executable:          hogg-pagedump
 Main-Is:             hogg-pagedump.hs
 Hs-Source-Dirs:      tools
-Other-Modules:       Ogg.Demux
