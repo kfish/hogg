@@ -13,14 +13,6 @@ Other-modules:       Ogg.Utils
                      Ogg.Dump
 ghc-options:         -Wall -fglasgow-exts -O -optc-O2 -funbox-strict-fields 
 
-Executable:          hogg-dump
-Main-Is:             hogg-dump.hs
-Hs-Source-Dirs:      tools
-
-Executable:          hogg-pagedump
-Main-Is:             hogg-pagedump.hs
-Hs-Source-Dirs:      tools
-
-Executable:          hogg-pagecount
-Main-Is:             hogg-pagecount.hs
+Executable:          hogg
+Main-Is:             hogg.hs
 Hs-Source-Dirs:      tools
