@@ -10,6 +10,12 @@ import qualified Data.ByteString.Lazy as L
 import Ogg.Page
 import Ogg.Packet
 
+countPackets :: String -> IO ()
+countPackets filename = do
+    handle <- openFile filename ReadMode
+    input <- L.hGetContents handle
+    putStrLn $ show (length (pages2packets (pageScan $ L.unpack input))) ++ " packets"
+
 dumpPackets :: String -> IO ()
 dumpPackets filename = do
     handle <- openFile filename ReadMode
@@ -37,6 +43,6 @@ main = do
     filename <- getFilename args
     case command of
       "dump" -> dumpPackets filename
+      "packetcount" -> countPackets filename
       "pagecount" -> countPages filename
       "pagedump" -> dumpPages filename
-
