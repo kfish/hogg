@@ -84,7 +84,7 @@ _pageScan _ l _ = l -- length r < 4
 
 pageBuild :: Int -> [Word8] -> (OggPage, Int, [Word8])
 pageBuild o d = (newpage, pageLen, rest) where
-  newpage = OggPage o d cont bos eos gp serialno seqno crc segments
+  newpage = OggPage o p cont bos eos gp serialno seqno crc segments
   htype = if (length d) > 5 then d !! 5 else 0
   cont = testBit htype 0
   bos = testBit htype 1
@@ -101,7 +101,7 @@ pageBuild o d = (newpage, pageLen, rest) where
   body = take bodySize (drop headerSize d)
   segments = splitSegments [] 0 segtab body
   pageLen = headerSize + bodySize
-  rest = drop pageLen d
+  (p, rest) = splitAt pageLen d 
 
 ixSeq :: Int -> Int -> [Word8] -> [Word8]
 ixSeq off len s = reverse (take len (drop off s))
@@ -118,8 +118,8 @@ splitSegments segments accum (l:ls) body
                   where (newseg, newbody) = splitAt (accum+l) body
 
 instance Show OggPage where
-  show (OggPage o d cont bos eos gp serialno seqno crc segment_table) =
-    (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
+  show (OggPage o p cont bos eos gp serialno seqno crc segment_table) =
+    (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ifb = if bos then " *** bos" else ""
