@@ -6,7 +6,10 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Packet where
+module Ogg.Packet (
+  OggPacket (..),
+  pages2packets
+) where
 
 import Ogg.Dump
 import Ogg.Granulepos

@@ -6,7 +6,10 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Page where
+module Ogg.Page (
+  OggPage (..),
+  pageScan
+) where
 
 import Ogg.Utils
 import Ogg.Granulepos

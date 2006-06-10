@@ -6,7 +6,9 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Dump where
+module Ogg.Dump (
+  hexDump
+) where
 
 import Data.Word (Word8)
 import Data.Char (isSpace, chr, ord)

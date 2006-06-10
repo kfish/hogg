@@ -6,7 +6,9 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Granulepos where
+module Ogg.Granulepos (
+  Granulepos (..)
+) where
 
 ------------------------------------------------------------
 -- Types
