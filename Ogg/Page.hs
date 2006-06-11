@@ -16,7 +16,7 @@ module Ogg.Page (
 import Ogg.Utils
 import Ogg.Granulepos
 
-import Data.Word (Word8, Word32, Word64)
+import Data.Word (Word8, Word32)
 import Data.Bits
 
 import Text.Printf
@@ -77,43 +77,62 @@ data OggPage =
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
+pageVersion :: Word8
+pageVersion = 0x00
+
 ------------------------------------------------------------
 -- pageWrite
 --
 
-pageWrite :: OggPage -> ([Word8], Int, Int)
+pageWrite :: OggPage -> ([Word8], Int, Int, [Word8])
 pageWrite (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
-  (newPageData, nhl, nbl)
+  (newPageData, nhl, nbl, segtab)
 --pageWrite :: OggPage -> [Word8]
 --pageWrite (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
 --  newPageData
   where
-    newPageData = pageMarker ++ version ++ htype ++ gp_ ++ ser_ ++ seqno_ ++ crc_ ++ segs
-    version = toTwosComp (0 :: Word8)
-    htype = toTwosComp (0 :: Word8)
-    gp_ = toTwosComp (0 :: Word64)
-    ser_ = toTwosComp (0 :: Word32)
-    seqno_ = toTwosComp (0 :: Word32)
-    crc_ = toTwosComp (0 :: Word32)
+    newPageData = hData ++ sData ++ body
+    hData = pageMarker ++ version ++ htype ++ gp_ ++ ser_ ++ seqno_ ++ crc_
+    sData = segs
 
-    -- version = toTwosComp (0 :: Word8)
-    -- htype = toTwosComp (headerType :: Word8)
-    -- gp_ = toTwosComp ((gpUnpack gp) :: Word32)
-    -- ser_ = toTwosComp (serialno :: Word32)
-    -- seqno_ = toTwosComp (seqno :: Word32)
-    -- crc_ = toTwosComp (crc :: Word32)
+    version = fillField pageVersion 1
+    -- htype = fillField (0 :: Word8) 1
+    htype = [headerType]
+
+    -- gp_ = fillField (0 :: Int) 8
+    gp_ = fillField (gpUnpack gp) 8
+    -- ser_ = fillField (0 :: Int) 4
+    ser_ = fillField serialno 4
+    -- seqno_ = fillField (0 :: Int) 4
+    seqno_ = fillField seqno 4
+    -- crc_ = fillField (0 :: Int) 4
+    crc_ = fillField crc 4
+    
+    headerType :: Word8
     headerType = c .|. b .|. e
     c = if cont then (bit 0 :: Word8) else 0
     b = if cont then (bit 1 :: Word8) else 0
     e = if cont then (bit 2 :: Word8) else 0
 
     -- Segment table
-    segs = (toTwosComp (length s)) ++ segtab ++ body
-    body = concat s
+    --segs = (toTwosComp (ns :: Word8)) ++ segtab
+    segs = (toTwosComp (numsegs)) ++ segtab
+    -- ns = fromIntegral numsegs
     (numsegs, segtab) = buildSegtab 0 [] s
 
-    nhl = 4 + 1 + 1 + 8 + 4 + 4 + 4 + 1 + numsegs
-    nbl = length segtab + length body
+    -- nhl = 4 + 1 + 1 + 8 + 4 + 4 + 4 + 1 + numsegs
+    nhl = length (hData) + 1 + numsegs
+
+    body = concat s
+    nbl = length body
+
+fillField :: Integral a => a -> Int -> [Word8]
+fillField x n
+  | l < n	= (take (n-l) $ repeat 0) ++ i
+  | l > n	= drop (l-n) i
+  | otherwise	= i
+                  where l = length i
+                        i = toTwosComp x
 
 buildSegtab :: Int -> [Word8] -> [[Word8]] -> (Int, [Word8])
 buildSegtab numsegs accum [] = (numsegs, accum)
@@ -130,13 +149,20 @@ buildTab q r _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 pageTest :: OggPage -> String
 pageTest g@(OggPage o p cont bos eos gp serialno seqno crc segment_table hl bl) =
   report where
-    -- n = pageWrite g
-    (n, nhl, nbl) = pageWrite g
+    --n = pageWrite g
+    (n, nhl, nbl, segtab) = pageWrite g
 
     report = "Cont: " ++ show cont ++ "\tOriginal Length: " ++ show (length  p) ++ lenEq hl bl ++ "\n"
              ++ "\tNew Length: " ++ show (length n) ++ lenEq nhl nbl ++ "\n"
              ++ "\tSegments: " ++ show (map length segment_table) ++ "\n"
+             ++ "\tNew Segs: " ++ show segtab ++ " total: " ++ show (t 0 segtab) ++ "\n"
+             ++ "\tLength diff: " ++ show (length p - length n) ++ "\n"
     lenEq h b = " (" ++ show h ++ "+" ++ show b ++ " = " ++ show (h+b) ++ ")"
+
+    t :: Int -> [Word8] -> Int
+    t x [] = x
+    t x (y:ys) = t (x+yi) ys
+      where yi = fromIntegral y
 
 ------------------------------------------------------------
 -- pageScan
