@@ -7,7 +7,8 @@
 -- Portability : portable
 
 module Ogg.Granulepos (
-  Granulepos (..)
+  Granulepos (..),
+  gpUnpack
 ) where
 
 import Data.Word (Word64)
@@ -21,6 +22,10 @@ newtype Granulepos = Granulepos (Maybe Word64)
 ------------------------------------------------------------
 -- Granulepos functions
 --
+
+gpUnpack :: Granulepos -> Word64
+gpUnpack (Granulepos (Nothing)) = -1
+gpUnpack (Granulepos (Just gp)) = gp
 
 instance Show Granulepos where
   show (Granulepos (Nothing)) = "-1"

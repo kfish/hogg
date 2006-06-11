@@ -26,7 +26,14 @@ rewritePages :: String -> IO ()
 rewritePages filename = do
     handle <- openFile filename ReadMode
     input <- L.hGetContents handle
-    mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
+    mapM_ putStrLn (map show (pages2packets (pageScan $ L.unpack input)))
+    --mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
+
+testPages :: String -> IO ()
+testPages filename = do
+    handle <- openFile filename ReadMode
+    input <- L.hGetContents handle
+    mapM_ putStrLn (map pageTest (pageScan $ L.unpack input))
 
 countPages :: String -> IO ()
 countPages filename = do
@@ -53,3 +60,4 @@ main = do
       "pagecount" -> countPages filename
       "pagedump" -> dumpPages filename
       "rewrite" -> rewritePages filename
+      "test" -> testPages filename

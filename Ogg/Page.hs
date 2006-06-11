@@ -9,7 +9,8 @@
 module Ogg.Page (
   OggPage (..),
   pageScan,
-  pageWrite
+  pageWrite,
+  pageTest
 ) where
 
 import Ogg.Utils
@@ -36,6 +37,10 @@ data OggPage =
     pageSeqno :: Word32,
     pageCRC :: Word32,
     pageSegments :: [[Word8]]
+
+    ,
+    pageHeaderLen :: Int,
+    pageBodyLen :: Int
   }
 
 ------------------------------------------------------------
@@ -72,9 +77,70 @@ data OggPage =
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
-pageWrite :: OggPage -> [Word8]
--- pageWrite (OggPage o p cont bos eos gp serialno seqno crc segment_table) = p
-pageWrite (OggPage _ p _ _ _ _ _ _ _ _) = p
+------------------------------------------------------------
+-- pageWrite
+--
+
+pageWrite :: OggPage -> ([Word8], Int, Int)
+pageWrite (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
+  (newPageData, nhl, nbl)
+--pageWrite :: OggPage -> [Word8]
+--pageWrite (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
+--  newPageData
+  where
+    newPageData = pageMarker ++ version ++ htype ++ gp_ ++ ser_ ++ seqno_ ++ crc_ ++ segs
+    version = toTwosComp (0 :: Word8)
+    htype = toTwosComp (0 :: Word8)
+    gp_ = toTwosComp (0 :: Word64)
+    ser_ = toTwosComp (0 :: Word32)
+    seqno_ = toTwosComp (0 :: Word32)
+    crc_ = toTwosComp (0 :: Word32)
+
+    -- version = toTwosComp (0 :: Word8)
+    -- htype = toTwosComp (headerType :: Word8)
+    -- gp_ = toTwosComp ((gpUnpack gp) :: Word32)
+    -- ser_ = toTwosComp (serialno :: Word32)
+    -- seqno_ = toTwosComp (seqno :: Word32)
+    -- crc_ = toTwosComp (crc :: Word32)
+    headerType = c .|. b .|. e
+    c = if cont then (bit 0 :: Word8) else 0
+    b = if cont then (bit 1 :: Word8) else 0
+    e = if cont then (bit 2 :: Word8) else 0
+
+    -- Segment table
+    segs = (toTwosComp (length s)) ++ segtab ++ body
+    body = concat s
+    (numsegs, segtab) = buildSegtab 0 [] s
+
+    nhl = 4 + 1 + 1 + 8 + 4 + 4 + 4 + 1 + numsegs
+    nbl = length segtab + length body
+
+buildSegtab :: Int -> [Word8] -> [[Word8]] -> (Int, [Word8])
+buildSegtab numsegs accum [] = (numsegs, accum)
+buildSegtab numsegs accum (x:xs) = buildSegtab (numsegs+length(tab)) (accum ++ tab) xs where
+  (q,r) = quotRem (length x) 255
+  tab = buildTab q r xs
+
+buildTab :: Int -> Int -> [a] -> [Word8]
+buildTab 0 r _ = [fromIntegral r]
+-- don't add [0] if the last seg is cont
+buildTab q 0 [] = take q $ repeat (255 :: Word8)
+buildTab q r _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
+
+pageTest :: OggPage -> String
+pageTest g@(OggPage o p cont bos eos gp serialno seqno crc segment_table hl bl) =
+  report where
+    -- n = pageWrite g
+    (n, nhl, nbl) = pageWrite g
+
+    report = "Cont: " ++ show cont ++ "\tOriginal Length: " ++ show (length  p) ++ lenEq hl bl ++ "\n"
+             ++ "\tNew Length: " ++ show (length n) ++ lenEq nhl nbl ++ "\n"
+             ++ "\tSegments: " ++ show (map length segment_table) ++ "\n"
+    lenEq h b = " (" ++ show h ++ "+" ++ show b ++ " = " ++ show (h+b) ++ ")"
+
+------------------------------------------------------------
+-- pageScan
+--
 
 pageScan :: [Word8] -> [OggPage]
 pageScan = _pageScan 0 []
@@ -89,7 +155,7 @@ _pageScan _ l _ = l -- length r < 4
 
 pageBuild :: Int -> [Word8] -> (OggPage, Int, [Word8])
 pageBuild o d = (newpage, pageLen, rest) where
-  newpage = OggPage o p cont bos eos gp serialno seqno crc segments
+  newpage = OggPage o p cont bos eos gp serialno seqno crc segments headerSize bodySize
   htype = if (length d) > 5 then d !! 5 else 0
   cont = testBit htype 0
   bos = testBit htype 1
@@ -123,7 +189,7 @@ splitSegments segments accum (l:ls) body
                   where (newseg, newbody) = splitAt (accum+l) body
 
 instance Show OggPage where
-  show (OggPage o p cont bos eos gp serialno seqno crc segment_table) =
+  show (OggPage o p cont bos eos gp serialno seqno crc segment_table hl bl) =
     (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
