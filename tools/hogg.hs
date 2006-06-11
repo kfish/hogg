@@ -26,8 +26,7 @@ rewritePages :: String -> IO ()
 rewritePages filename = do
     handle <- openFile filename ReadMode
     input <- L.hGetContents handle
-    mapM_ putStrLn (map show (pages2packets (pageScan $ L.unpack input)))
-    -- mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
+    mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
 
 testPages :: String -> IO ()
 testPages filename = do

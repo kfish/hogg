@@ -84,12 +84,13 @@ pageVersion = 0x00
 -- pageWrite
 --
 
-pageWrite :: OggPage -> ([Word8], Int, Int, [Word8])
-pageWrite (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
+pageWrite :: OggPage -> [Word8]
+pageWrite p = newPageData
+  where (newPageData, _, _, _) = pageWriteExtra p
+
+pageWriteExtra :: OggPage -> ([Word8], Int, Int, [Word8])
+pageWriteExtra (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
   (newPageData, nhl, nbl, segtab)
---pageWrite :: OggPage -> [Word8]
---pageWrite (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
---  newPageData
   where
     newPageData = hData ++ sData ++ body
     hData = pageMarker ++ version ++ htype ++ gp_ ++ ser_ ++ seqno_ ++ crc_
@@ -144,7 +145,7 @@ pageTest :: OggPage -> String
 pageTest g@(OggPage o p cont bos eos gp serialno seqno crc segment_table hl bl) =
   report where
     --n = pageWrite g
-    (n, nhl, nbl, segtab) = pageWrite g
+    (n, nhl, nbl, segtab) = pageWriteExtra g
 
     report = "Cont: " ++ show cont ++ "\tOriginal Length: " ++ show (length  p) ++ lenEq hl bl ++ "\n"
              ++ "\tNew Length: " ++ show (length n) ++ lenEq nhl nbl ++ "\n"
