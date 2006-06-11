@@ -8,7 +8,8 @@
 
 module Ogg.Page (
   OggPage (..),
-  pageScan
+  pageScan,
+  pageWrite
 ) where
 
 import Ogg.Utils
@@ -70,6 +71,10 @@ data OggPage =
 
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
+
+pageWrite :: OggPage -> [Word8]
+-- pageWrite (OggPage o p cont bos eos gp serialno seqno crc segment_table) = p
+pageWrite (OggPage _ p _ _ _ _ _ _ _ _) = p
 
 pageScan :: [Word8] -> [OggPage]
 pageScan = _pageScan 0 []
