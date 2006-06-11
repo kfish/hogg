@@ -15,7 +15,7 @@ import Ogg.Dump
 import Ogg.Granulepos
 import Ogg.Page
 
-import Data.Word (Word8)
+import Data.Word (Word8, Word32)
 
 ------------------------------------------------------------
 -- Data
@@ -24,7 +24,7 @@ import Data.Word (Word8)
 data OggPacket =
   OggPacket {
     packetData :: [Word8],
-    packetSerialno :: Int,
+    packetSerialno :: Word32,
     packetGranulepos :: Granulepos,
     packetBOS :: Bool,
     packetEOS :: Bool
@@ -34,7 +34,7 @@ data OggPacket =
 -- OggPacket functions
 --
 
-packetBuild :: Int -> [Word8] -> OggPacket
+packetBuild :: Word32 -> [Word8] -> OggPacket
 packetBuild s r = OggPacket r s (Granulepos Nothing) False False
 
 packetConcat :: OggPacket -> OggPacket -> OggPacket

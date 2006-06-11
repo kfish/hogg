@@ -10,11 +10,13 @@ module Ogg.Granulepos (
   Granulepos (..)
 ) where
 
+import Data.Word (Word64)
+
 ------------------------------------------------------------
 -- Types
 --
 
-newtype Granulepos = Granulepos (Maybe Int)
+newtype Granulepos = Granulepos (Maybe Word64)
 
 ------------------------------------------------------------
 -- Granulepos functions

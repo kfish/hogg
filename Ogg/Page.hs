@@ -15,7 +15,7 @@ module Ogg.Page (
 import Ogg.Utils
 import Ogg.Granulepos
 
-import Data.Word (Word8)
+import Data.Word (Word8, Word32, Word64)
 import Data.Bits
 
 import Text.Printf
@@ -32,9 +32,9 @@ data OggPage =
     pageBOS :: Bool,
     pageEOS :: Bool,
     pageGranulepos :: Granulepos,
-    pageSerialno :: Int,
-    pageSeqno :: Int,
-    pageCRC :: Int,
+    pageSerialno :: Word32,
+    pageSeqno :: Word32,
+    pageCRC :: Word32,
     pageSegments :: [[Word8]]
   }
 
