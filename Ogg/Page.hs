@@ -96,23 +96,17 @@ pageWrite (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
     sData = segs
 
     version = fillField pageVersion 1
-    -- htype = fillField (0 :: Word8) 1
     htype = [headerType]
-
-    -- gp_ = fillField (0 :: Int) 8
     gp_ = fillField (gpUnpack gp) 8
-    -- ser_ = fillField (0 :: Int) 4
     ser_ = fillField serialno 4
-    -- seqno_ = fillField (0 :: Int) 4
     seqno_ = fillField seqno 4
-    -- crc_ = fillField (0 :: Int) 4
     crc_ = fillField crc 4
     
     headerType :: Word8
     headerType = c .|. b .|. e
     c = if cont then (bit 0 :: Word8) else 0
-    b = if cont then (bit 1 :: Word8) else 0
-    e = if cont then (bit 2 :: Word8) else 0
+    b = if bos then (bit 1 :: Word8) else 0
+    e = if eos then (bit 2 :: Word8) else 0
 
     -- Segment table
     --segs = (toTwosComp (ns :: Word8)) ++ segtab
