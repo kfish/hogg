@@ -123,9 +123,9 @@ pageWriteExtra (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
 
 fillField :: Integral a => a -> Int -> [Word8]
 fillField x n
-  | l < n	= (take (n-l) $ repeat 0) ++ i
-  | l > n	= drop (l-n) i
-  | otherwise	= i
+  | l < n	= reverse ((take (n-l) $ repeat 0) ++ i)
+  | l > n	= reverse (drop (l-n) i)
+  | otherwise	= reverse i
                   where l = length i
                         i = toTwosComp x
 
@@ -146,12 +146,21 @@ pageTest g@(OggPage o p cont bos eos gp serialno seqno crc segment_table hl bl) 
   report where
     --n = pageWrite g
     (n, nhl, nbl, segtab) = pageWriteExtra g
+    nser = fromTwosComp $ ixSeq 14 4 n
+    ngp = Granulepos (Just (fromTwosComp $ ixSeq 6 8 n))
+    nseq = fromTwosComp $ ixSeq 18 4 n
+    ncrc = fromTwosComp $ ixSeq 22 4 n
 
-    report = "Cont: " ++ show cont ++ "\tOriginal Length: " ++ show (length  p) ++ lenEq hl bl ++ "\n"
-             ++ "\tNew Length: " ++ show (length n) ++ lenEq nhl nbl ++ "\n"
-             ++ "\tSegments: " ++ show (map length segment_table) ++ "\n"
-             ++ "\tNew Segs: " ++ show segtab ++ " total: " ++ show (t 0 segtab) ++ "\n"
-             ++ "\tLength diff: " ++ show (length p - length n) ++ "\n"
+    -- report = "New: " ++ show (map fromIntegral (take 26 n)) ++ "\n"
+    report = "Serialno: " ++ show serialno ++ "\tNew Ser: " ++ show nser ++ "\n"
+             ++ "GP: " ++ show gp ++ "\tNew GP: " ++ show ngp ++ "\n"
+             ++ "seqno: " ++ show seqno ++ "\tNew seqno: " ++ show nseq ++ "\n"
+             ++ "CRC: " ++ show crc ++ "\tNew CRC: " ++ show ncrc ++ "\n"
+    --report = "Cont: " ++ show cont ++ "\tOriginal Length: " ++ show (length  p) ++ lenEq hl bl ++ "\n"
+    --         ++ "\tNew Length: " ++ show (length n) ++ lenEq nhl nbl ++ "\n"
+    --         ++ "\tSegments: " ++ show (map length segment_table) ++ "\n"
+    --         ++ "\tNew Segs: " ++ show segtab ++ " total: " ++ show (t 0 segtab) ++ "\n"
+    --         ++ "\tLength diff: " ++ show (length p - length n) ++ "\n"
     lenEq h b = " (" ++ show h ++ "+" ++ show b ++ " = " ++ show (h+b) ++ ")"
 
     t :: Int -> [Word8] -> Int
