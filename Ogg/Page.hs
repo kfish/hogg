@@ -110,9 +110,7 @@ pageWriteExtra (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
     e = if eos then (bit 2 :: Word8) else 0
 
     -- Segment table
-    --segs = (toTwosComp (ns :: Word8)) ++ segtab
     segs = (toTwosComp (numsegs)) ++ segtab
-    -- ns = fromIntegral numsegs
     (numsegs, segtab) = buildSegtab 0 [] s
 
     -- nhl = 4 + 1 + 1 + 8 + 4 + 4 + 4 + 1 + numsegs
@@ -123,7 +121,7 @@ pageWriteExtra (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
 
 fillField :: Integral a => a -> Int -> [Word8]
 fillField x n
-  | l < n	= reverse ((take (n-l) $ repeat 0) ++ i)
+  | l < n	= reverse ((take (n-l) $ repeat 0x00) ++ i)
   | l > n	= reverse (drop (l-n) i)
   | otherwise	= reverse i
                   where l = length i
@@ -146,16 +144,25 @@ pageTest g@(OggPage o p cont bos eos gp serialno seqno crc segment_table hl bl) 
   report where
     --n = pageWrite g
     (n, nhl, nbl, segtab) = pageWriteExtra g
+
+    nser :: Word32
     nser = fromTwosComp $ ixSeq 14 4 n
+
     ngp = Granulepos (Just (fromTwosComp $ ixSeq 6 8 n))
+
+    nseq :: Word32
     nseq = fromTwosComp $ ixSeq 18 4 n
+
+    ncrc_l = ixSeq 22 4 n
+
+    ncrc :: Word32
     ncrc = fromTwosComp $ ixSeq 22 4 n
 
     -- report = "New: " ++ show (map fromIntegral (take 26 n)) ++ "\n"
     report = "Serialno: " ++ show serialno ++ "\tNew Ser: " ++ show nser ++ "\n"
              ++ "GP: " ++ show gp ++ "\tNew GP: " ++ show ngp ++ "\n"
              ++ "seqno: " ++ show seqno ++ "\tNew seqno: " ++ show nseq ++ "\n"
-             ++ "CRC: " ++ show crc ++ "\tNew CRC: " ++ show ncrc ++ "\n"
+             ++ "CRC: " ++ show crc ++ "\tNew CRC: " ++ show ncrc ++ show ncrc_l ++ "\n"
     --report = "Cont: " ++ show cont ++ "\tOriginal Length: " ++ show (length  p) ++ lenEq hl bl ++ "\n"
     --         ++ "\tNew Length: " ++ show (length n) ++ lenEq nhl nbl ++ "\n"
     --         ++ "\tSegments: " ++ show (map length segment_table) ++ "\n"
