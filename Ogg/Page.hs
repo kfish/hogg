@@ -9,7 +9,8 @@
 module Ogg.Page (
   OggPage (..),
   pageScan,
-  pageWrite
+  pageWrite,
+  pageLength
 ) where
 
 import Ogg.CRC
@@ -71,9 +72,11 @@ data OggPage =
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
+-- | Ogg version supported by this library
 pageVersion :: Word8
 pageVersion = 0x00
 
+-- | Determine the length of a page that would be written
 pageLength :: OggPage -> Int
 pageLength (OggPage _ _ _ _ _ _ _ s) = 27 + numsegs + sum (map length s)
     where (numsegs, _) = buildSegtab 0 [] s
@@ -82,6 +85,7 @@ pageLength (OggPage _ _ _ _ _ _ _ s) = 27 + numsegs + sum (map length s)
 -- pageWrite
 --
 
+-- | Construct a binary representation of an Ogg page
 pageWrite :: OggPage -> [Word8]
 pageWrite (OggPage _ cont bos eos gp serialno seqno s) = newPageData
   where
@@ -134,6 +138,7 @@ buildTab q r _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 -- pageScan
 --
 
+-- | Read a list of data bytes into Ogg pages
 pageScan :: [Word8] -> [OggPage]
 pageScan = _pageScan 0 []
 
