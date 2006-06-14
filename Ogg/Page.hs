@@ -185,6 +185,10 @@ splitSegments segments accum (l:ls) body
   | otherwise	= splitSegments (segments++[newseg]) 0 ls newbody
                   where (newseg, newbody) = splitAt (accum+l) body
 
+------------------------------------------------------------
+-- Show
+--
+
 instance Show OggPage where
   show p@(OggPage o cont bos eos gp serialno seqno segment_table) =
     (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
