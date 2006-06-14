@@ -28,14 +28,12 @@ import Text.Printf
 data OggPage =
   OggPage {
     pageOffset :: Int,
-    pageData :: [Word8],
     pageContinued :: Bool,
     pageBOS :: Bool,
     pageEOS :: Bool,
     pageGranulepos :: Granulepos,
     pageSerialno :: Word32,
     pageSeqno :: Word32,
-    pageCRC :: Word32,
     pageSegments :: [[Word8]]
   }
 
@@ -76,14 +74,18 @@ pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 pageVersion :: Word8
 pageVersion = 0x00
 
+pageLength :: OggPage -> Int
+pageLength (OggPage _ _ _ _ _ _ _ s) = 27 + numsegs + sum (map length s)
+    where (numsegs, _) = buildSegtab 0 [] s
+
 ------------------------------------------------------------
 -- pageWrite
 --
 
 pageWrite :: OggPage -> [Word8]
-pageWrite (OggPage o p cont bos eos gp serialno seqno crc s) = newPageData
+pageWrite (OggPage _ cont bos eos gp serialno seqno s) = newPageData
   where
-    newPageData = hData ++ crc_ ++ sData ++ body
+    newPageData = hData ++ crc ++ sData ++ body
     crcPageData = hData ++ zeroCRC ++ sData ++ body
     hData = pageMarker ++ version ++ htype ++ gp_ ++ ser_ ++ seqno_
     sData = segs
@@ -93,8 +95,7 @@ pageWrite (OggPage o p cont bos eos gp serialno seqno crc s) = newPageData
     gp_ = fillField (gpUnpack gp) 8
     ser_ = fillField serialno 4
     seqno_ = fillField seqno 4
-    -- crc_ = fillField crc 4
-    crc_ = fillField (genCRC crcPageData) 4
+    crc = fillField (genCRC crcPageData) 4
  
     headerType :: Word8
     headerType = c .|. b .|. e
@@ -146,7 +147,7 @@ _pageScan _ l _ = l -- length r < 4
 
 pageBuild :: Int -> [Word8] -> (OggPage, Int, [Word8])
 pageBuild o d = (newpage, pageLen, rest) where
-  newpage = OggPage o p cont bos eos gp serialno seqno crc segments
+  newpage = OggPage o cont bos eos gp serialno seqno segments
   htype = if (length d) > 5 then d !! 5 else 0
   cont = testBit htype 0
   bos = testBit htype 1
@@ -154,7 +155,7 @@ pageBuild o d = (newpage, pageLen, rest) where
   gp = Granulepos (Just (fromTwosComp $ ixSeq 6 8 d))
   serialno = fromTwosComp $ ixSeq 14 4 d
   seqno = fromTwosComp $ ixSeq 18 4 d
-  crc = fromTwosComp $ ixSeq 22 4 d
+  -- crc = fromTwosComp $ ixSeq 22 4 d
   numseg = fromTwosComp $ ixSeq 26 1 d
   st = take numseg (drop 27 d)
   segtab = map fromIntegral st
@@ -163,7 +164,7 @@ pageBuild o d = (newpage, pageLen, rest) where
   body = take bodySize (drop headerSize d)
   segments = splitSegments [] 0 segtab body
   pageLen = headerSize + bodySize
-  (p, rest) = splitAt pageLen d 
+  rest = drop pageLen d 
 
 ixSeq :: Int -> Int -> [Word8] -> [Word8]
 ixSeq off len s = reverse (take len (drop off s))
@@ -180,8 +181,8 @@ splitSegments segments accum (l:ls) body
                   where (newseg, newbody) = splitAt (accum+l) body
 
 instance Show OggPage where
-  show (OggPage o p cont bos eos gp serialno seqno crc segment_table) =
-    (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
+  show p@(OggPage o cont bos eos gp serialno seqno segment_table) =
+    (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ifb = if bos then " *** bos" else ""
