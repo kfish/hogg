@@ -19,6 +19,8 @@ import Text.Printf
 -- Dump
 --
 
+-- | Generate a hexdump for a block of data
+
 hexDump :: [Word8] -> String
 hexDump = _hexDump 0 ""
 

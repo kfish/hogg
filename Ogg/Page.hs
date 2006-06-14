@@ -13,6 +13,7 @@ module Ogg.Page (
   pageTest
 ) where
 
+import Ogg.CRC
 import Ogg.Utils
 import Ogg.Granulepos
 
@@ -92,8 +93,9 @@ pageWriteExtra :: OggPage -> ([Word8], Int, Int, [Word8])
 pageWriteExtra (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
   (newPageData, nhl, nbl, segtab)
   where
-    newPageData = hData ++ sData ++ body
-    hData = pageMarker ++ version ++ htype ++ gp_ ++ ser_ ++ seqno_ ++ crc_
+    newPageData = hData ++ crc_ ++ sData ++ body
+    crcPageData = hData ++ zeroCRC ++ sData ++ body
+    hData = pageMarker ++ version ++ htype ++ gp_ ++ ser_ ++ seqno_
     sData = segs
 
     version = fillField pageVersion 1
@@ -101,8 +103,9 @@ pageWriteExtra (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
     gp_ = fillField (gpUnpack gp) 8
     ser_ = fillField serialno 4
     seqno_ = fillField seqno 4
-    crc_ = fillField crc 4
-    
+    -- crc_ = fillField crc 4
+    crc_ = fillField (genCRC crcPageData) 4
+ 
     headerType :: Word8
     headerType = c .|. b .|. e
     c = if cont then (bit 0 :: Word8) else 0
