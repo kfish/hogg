@@ -9,8 +9,7 @@
 module Ogg.Page (
   OggPage (..),
   pageScan,
-  pageWrite,
-  pageTest
+  pageWrite
 ) where
 
 import Ogg.CRC
@@ -38,10 +37,6 @@ data OggPage =
     pageSeqno :: Word32,
     pageCRC :: Word32,
     pageSegments :: [[Word8]]
-
-    ,
-    pageHeaderLen :: Int,
-    pageBodyLen :: Int
   }
 
 ------------------------------------------------------------
@@ -86,12 +81,7 @@ pageVersion = 0x00
 --
 
 pageWrite :: OggPage -> [Word8]
-pageWrite p = newPageData
-  where (newPageData, _, _, _) = pageWriteExtra p
-
-pageWriteExtra :: OggPage -> ([Word8], Int, Int, [Word8])
-pageWriteExtra (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
-  (newPageData, nhl, nbl, segtab)
+pageWrite (OggPage o p cont bos eos gp serialno seqno crc s) = newPageData
   where
     newPageData = hData ++ crc_ ++ sData ++ body
     crcPageData = hData ++ zeroCRC ++ sData ++ body
@@ -116,11 +106,8 @@ pageWriteExtra (OggPage o p cont bos eos gp serialno seqno crc s hl bl) =
     segs = (toTwosComp (numsegs)) ++ segtab
     (numsegs, segtab) = buildSegtab 0 [] s
 
-    -- nhl = 4 + 1 + 1 + 8 + 4 + 4 + 4 + 1 + numsegs
-    nhl = length (hData) + 1 + numsegs
-
+    -- Body data
     body = concat s
-    nbl = length body
 
 fillField :: Integral a => a -> Int -> [Word8]
 fillField x n
@@ -142,42 +129,6 @@ buildTab 0 r _ = [fromIntegral r]
 buildTab q 0 [] = take q $ repeat (255 :: Word8)
 buildTab q r _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 
-pageTest :: OggPage -> String
-pageTest g@(OggPage o p cont bos eos gp serialno seqno crc segment_table hl bl) =
-  report where
-    --n = pageWrite g
-    (n, nhl, nbl, segtab) = pageWriteExtra g
-
-    nser :: Word32
-    nser = fromTwosComp $ ixSeq 14 4 n
-
-    ngp = Granulepos (Just (fromTwosComp $ ixSeq 6 8 n))
-
-    nseq :: Word32
-    nseq = fromTwosComp $ ixSeq 18 4 n
-
-    ncrc_l = ixSeq 22 4 n
-
-    ncrc :: Word32
-    ncrc = fromTwosComp $ ixSeq 22 4 n
-
-    -- report = "New: " ++ show (map fromIntegral (take 26 n)) ++ "\n"
-    report = "Serialno: " ++ show serialno ++ "\tNew Ser: " ++ show nser ++ "\n"
-             ++ "GP: " ++ show gp ++ "\tNew GP: " ++ show ngp ++ "\n"
-             ++ "seqno: " ++ show seqno ++ "\tNew seqno: " ++ show nseq ++ "\n"
-             ++ "CRC: " ++ show crc ++ "\tNew CRC: " ++ show ncrc ++ show ncrc_l ++ "\n"
-    --report = "Cont: " ++ show cont ++ "\tOriginal Length: " ++ show (length  p) ++ lenEq hl bl ++ "\n"
-    --         ++ "\tNew Length: " ++ show (length n) ++ lenEq nhl nbl ++ "\n"
-    --         ++ "\tSegments: " ++ show (map length segment_table) ++ "\n"
-    --         ++ "\tNew Segs: " ++ show segtab ++ " total: " ++ show (t 0 segtab) ++ "\n"
-    --         ++ "\tLength diff: " ++ show (length p - length n) ++ "\n"
-    lenEq h b = " (" ++ show h ++ "+" ++ show b ++ " = " ++ show (h+b) ++ ")"
-
-    t :: Int -> [Word8] -> Int
-    t x [] = x
-    t x (y:ys) = t (x+yi) ys
-      where yi = fromIntegral y
-
 ------------------------------------------------------------
 -- pageScan
 --
@@ -195,7 +146,7 @@ _pageScan _ l _ = l -- length r < 4
 
 pageBuild :: Int -> [Word8] -> (OggPage, Int, [Word8])
 pageBuild o d = (newpage, pageLen, rest) where
-  newpage = OggPage o p cont bos eos gp serialno seqno crc segments headerSize bodySize
+  newpage = OggPage o p cont bos eos gp serialno seqno crc segments
   htype = if (length d) > 5 then d !! 5 else 0
   cont = testBit htype 0
   bos = testBit htype 1
@@ -229,7 +180,7 @@ splitSegments segments accum (l:ls) body
                   where (newseg, newbody) = splitAt (accum+l) body
 
 instance Show OggPage where
-  show (OggPage o p cont bos eos gp serialno seqno crc segment_table hl bl) =
+  show (OggPage o p cont bos eos gp serialno seqno crc segment_table) =
     (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
