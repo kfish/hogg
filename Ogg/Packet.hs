@@ -27,19 +27,30 @@ data OggPacket =
     packetSerialno :: Word32,
     packetGranulepos :: Granulepos,
     packetBOS :: Bool,
-    packetEOS :: Bool
+    packetEOS :: Bool,
+    packetSegments :: Maybe [OggSegment]
+  }
+
+data OggSegment =
+  OggSegment {
+    segmentLength :: Int,
+    segmentEndsPage :: Bool -- ^ whether or not the segment ends a page
   }
 
 ------------------------------------------------------------
--- OggPacket functions
+-- packets2pages
 --
 
-packetBuild :: Word32 -> [Word8] -> OggPacket
-packetBuild s r = OggPacket r s (Granulepos Nothing) False False
+-- packets2pages :: [OggPacket] -> [OggPage]
+-- packets2pages = packets2pages_ []
 
-packetConcat :: OggPacket -> OggPacket -> OggPacket
-packetConcat (OggPacket r1 s1 _ b1 _) (OggPacket r2 _ g2 _ e2) =
-    OggPacket (r1++r2) s1 g2 b1 e2
+-- packets2pages_ :: [OggPage] -> [OggPacket] -> [OggPage]
+-- packets2pages pages [] = pages
+-- packets2pages pages (x:xs) = packets2pages 
+
+------------------------------------------------------------
+-- pages2packets
+--
 
 pages2packets :: [OggPage] -> [OggPacket]
 pages2packets = _pages2packets [] Nothing
@@ -63,10 +74,20 @@ _pages2packets packets carry (g:gn:gs) =
           co = pageContinued gn
 
 pageToPackets :: OggPage -> [OggPacket]
-pageToPackets page = setGranulepos p2 (pageGranulepos page)
-    where p2 = setEOS p1 (pageEOS page)
+pageToPackets page = setLastSegmentEnds p3
+    where p3 = setGranulepos p2 (pageGranulepos page)
+          p2 = setEOS p1 (pageEOS page)
           p1 = setBOS p0 (pageBOS page)
           p0 = map (packetBuild (pageSerialno page)) (pageSegments page)
+
+setLastSegmentEnds :: [OggPacket] -> [OggPacket]
+setLastSegmentEnds [] = []
+setLastSegmentEnds ps = (init ps) ++ [setSegmentEnds (last ps)]
+
+setSegmentEnds :: OggPacket -> OggPacket
+setSegmentEnds p@(OggPacket _ _ _ _ _ (Just [s])) =
+  p{packetSegments = (Just [s{segmentEndsPage = True}])}
+setSegmentEnds p = p
 
 setGranulepos :: [OggPacket] -> Granulepos -> [OggPacket]
 setGranulepos [] _ = []
@@ -82,6 +103,21 @@ setEOS [] _ = []
 setEOS ps False = ps
 setEOS ps True = (init ps)++[(last ps){packetEOS = True}]
 
+-- | Build a partial packet given a serialno and a segment
+packetBuild :: Word32 -> [Word8] -> OggPacket
+packetBuild s r = OggPacket r s (Granulepos Nothing) False False (Just [seg])
+    where seg = OggSegment l False
+          l = length r
+
+-- | Concatenate data of two (partial) packets into one (partial) packet
+packetConcat :: OggPacket -> OggPacket -> OggPacket
+packetConcat (OggPacket r1 s1 _ b1 _ (Just x1)) (OggPacket r2 _ g2 _ e2 (Just x2)) =
+    OggPacket (r1++r2) s1 g2 b1 e2 (Just (x1++x2))
+
+-- If either of the packets have unknown segmentation, ditch all segmentation
+packetConcat (OggPacket r1 s1 _ b1 _ _) (OggPacket r2 _ g2 _ e2 _) =
+    OggPacket (r1++r2) s1 g2 b1 e2 Nothing
+
 carryCarry :: Maybe OggPacket -> Maybe OggPacket -> Maybe OggPacket
 carryCarry Nothing Nothing = Nothing
 carryCarry Nothing (Just p) = Just p
@@ -93,8 +129,12 @@ prependCarry Nothing s = s
 prependCarry (Just c) [] = [c]
 prependCarry (Just c) (s:ss) = (packetConcat c s):ss
 
+------------------------------------------------------------
+-- Show
+--
+
 instance Show OggPacket where
-  show (OggPacket d s gp bos eos) =
+  show (OggPacket d s gp bos eos _) =
     ": serialno " ++ show s ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ hexDump d
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
