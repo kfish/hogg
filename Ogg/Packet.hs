@@ -50,25 +50,6 @@ packetsToPages_ :: [OggPage] -> Maybe OggPage -> [OggPacket] -> [OggPage]
 packetsToPages_ pages Nothing [] = pages
 packetsToPages_ pages (Just g) [] = pages++[g]
 
--- A packet using only one segment, no carry
--- packetsToPages pages Nothing
---                (p@(OggPacket d serialno gp bos eos (Just [s])):ps)
---   | segmentEndsPage s = packetsToPages (pages++[newPage]) Nothing ps
---   | otherwise         = packetsToPages pages (Just newPage) ps
---   where
---     newPage = OggPage 0 False bos eos gp serialno seqno [d]
---     seqno = 0 -- XXX
-
--- A packet using only one segment, with carry
--- packetsToPages pages (Just carryPage)
---                (p@(OggPacket d serialno gp bos eos (Just [s])):ps)
---   | segmentEndsPage s = packetsToPages (pages++[newPage]) Nothing ps
---   | otherwise         = packetsToPages pages (Just newPage) ps
---   where
---     newPage = appendSegment carryPage d gp eos
-
--- -- For packets with more than one segment, we must make new page(s)
-
 packetsToPages_ pages carry (p:ps)
   = packetsToPages_ (pages++newPages) newCarry ps
   where
@@ -85,7 +66,6 @@ segsToPages pages carry p@(OggPacket d serialno gp bos eos (Just [s]))
   | otherwise         = (pages, Just newPage)
   where
     newPage = appendToCarry carry p
-    -- newPage = OggPage 0 False bos eos gp serialno 0 [d]
 
 segsToPages pages carry p@(OggPacket d serialno gp bos eos (Just (s:ss)))
   = segsToPages (pages++[newPage]) carry dropPacket
@@ -93,10 +73,6 @@ segsToPages pages carry p@(OggPacket d serialno gp bos eos (Just (s:ss)))
     dropPacket = OggPacket rest serialno gp False eos (Just ss)
     rest = drop (segmentLength s) d
     newPage = appendToCarry carry p
-    -- dropPacket = OggPacket rest serialno gp False eos (Just ss)
-    -- (seg, rest) = splitAt (segmentLength s) d
-    -- newPage = OggPage 0 cont bos False Nothing serialno 0 [seg]
-    -- cont = (pages /= [])
 
 -- | Append the first segment of a packet to the carry page
 appendToCarry :: Maybe OggPage -> OggPacket -> OggPage
@@ -124,30 +100,6 @@ appendToCarry Nothing (OggPacket _ _ _ _ _ (Just []))
   = OggPage 0 False False False (Granulepos Nothing) 0 0 []
 appendToCarry (Just carry) (OggPacket _ _ _ _ _ Nothing) = carry
 appendToCarry (Just carry) (OggPacket _ _ _ _ _ (Just [])) = carry
-
--- appendSegment :: Maybe OggPage -> [Word8] -> Granulepos -> Bool -> OggPage
-
--- appendSegment Nothing seg gp eos =
---   OggPage 0 cont 
-
--- appendSegment (Just g@(o cont bos _ _ serialno seqno segs)) seg gp eos =
---  OggPage o cont bos eos gp serialno seqno (segs++[seg])
-
---   pages++[newPage]
---   where
---     newPage = OggPage 0 cont bos_ eos gp serialno seqno [seg]
---     cont = (pages == [])
---     bos_ = if cont then bos else False
---     seqno = 0 -- XXX
-
--- packetToPages pages (OggPacket d serialno gp bos eos (Just (s:ss))) =
---   packetToPages (pages++[newPage]) dropPacket
---   where
---     dropPacket = OggPacket rest serialno gp False eos (Just ss)
---     (seg, rest) = splitAt (segmentLength s) d
---     newPage = OggPage 0 cont bos False Nothing serialno seqno [seg]
---     cont = (pages == [])
---     seqno = 0 -- XXX
 
 ------------------------------------------------------------
 -- pages2packets
