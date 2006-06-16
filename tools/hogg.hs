@@ -28,6 +28,12 @@ rewritePages filename = do
     input <- L.hGetContents handle
     mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
 
+rewritePackets :: String -> IO ()
+rewritePackets filename = do
+    handle <- openFile filename ReadMode
+    input <- L.hGetContents handle
+    mapM_ L.putStr (map L.pack (map pageWrite (packetsToPages (pages2packets (pageScan $ L.unpack input)))))
+
 countPages :: String -> IO ()
 countPages filename = do
     handle <- openFile filename ReadMode
@@ -53,3 +59,4 @@ main = do
       "pagecount" -> countPages filename
       "pagedump" -> dumpPages filename
       "rewrite" -> rewritePages filename
+      "repacket" -> rewritePackets filename
