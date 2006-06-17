@@ -43,63 +43,66 @@ data OggSegment =
 --
 
 packetsToPages :: [OggPacket] -> [OggPage]
-packetsToPages = packetsToPages_ [] Nothing
+packetsToPages = packetsToPages_ [] Nothing 0
 
-packetsToPages_ :: [OggPage] -> Maybe OggPage -> [OggPacket] -> [OggPage]
+packetsToPages_ :: [OggPage] -> Maybe OggPage -> Word32 -> [OggPacket] -> [OggPage]
 
-packetsToPages_ pages Nothing [] = pages
-packetsToPages_ pages (Just g) [] = pages++[g]
+packetsToPages_ pages Nothing _ [] = pages
+packetsToPages_ pages (Just g) _ [] = pages++[g]
 
-packetsToPages_ pages carry (p:ps)
-  = packetsToPages_ (pages++newPages) newCarry ps
+packetsToPages_ pages carry seqno (p:ps)
+  = packetsToPages_ (pages++newPages) newCarry (seqno+n) ps
   where
-    (newPages, newCarry) = segsToPages [] carry False p
+    (newPages, newCarry) = segsToPages [] carry False seqno p
+    n = fromIntegral (length newPages)
 
 -- | Convert segments of a packet into pages, and maybe a carry page
-segsToPages :: [OggPage] -> Maybe OggPage -> Bool -> OggPacket -> ([OggPage], Maybe OggPage)
+segsToPages :: [OggPage] -> Maybe OggPage -> Bool -> Word32 -> OggPacket
+               -> ([OggPage], Maybe OggPage)
 
-segsToPages pages _ _ (OggPacket _ _ _ _ _ Nothing) = (pages, Nothing)
-segsToPages pages _ _ (OggPacket _ _ _ _ _ (Just [])) = (pages, Nothing)
+segsToPages pages _ _ _ (OggPacket _ _ _ _ _ Nothing) = (pages, Nothing)
+segsToPages pages _ _ _ (OggPacket _ _ _ _ _ (Just [])) = (pages, Nothing)
 
-segsToPages pages carry cont p@(OggPacket _ _ _ _ _ (Just [s]))
+segsToPages pages carry cont seqno p@(OggPacket _ _ _ _ _ (Just [s]))
   | segmentEndsPage s = (pages++[newPage], Nothing)
   | otherwise         = (pages, Just newPage)
   where
-    newPage = appendToCarry carry cont p
+    newPage = appendToCarry carry cont seqno p
 
-segsToPages pages carry cont p@(OggPacket d serialno gp _ eos (Just (s:ss)))
-  = segsToPages (pages++[newPage]) Nothing True dropPacket
+segsToPages pages carry cont seqno
+            p@(OggPacket d serialno gp _ eos (Just (s:ss)))
+  = segsToPages (pages++[newPage]) Nothing True (seqno+1) dropPacket
   where
     dropPacket = OggPacket rest serialno gp False eos (Just ss)
     rest = drop (segmentLength s) d
-    newPage = appendToCarry carry cont p
+    newPage = appendToCarry carry cont seqno p
 
 -- | Append the first segment of a packet to the carry page
-appendToCarry :: Maybe OggPage -> Bool -> OggPacket -> OggPage
+appendToCarry :: Maybe OggPage -> Bool -> Word32 -> OggPacket -> OggPage
 
-appendToCarry Nothing cont (OggPacket d serialno gp bos eos (Just [_]))
-  = OggPage 0 cont bos eos gp serialno 0 [d]
+appendToCarry Nothing cont seqno (OggPacket d serialno gp bos eos (Just [_]))
+  = OggPage 0 cont bos eos gp serialno seqno [d]
 
-appendToCarry Nothing cont (OggPacket d serialno _ bos _ (Just (s:_)))
-  = OggPage 0 cont bos False (Granulepos Nothing) serialno 0 [seg]
+appendToCarry Nothing cont seqno (OggPacket d serialno _ bos _ (Just (s:_)))
+  = OggPage 0 cont bos False (Granulepos Nothing) serialno seqno [seg]
   where seg = take (segmentLength s) d
 
-appendToCarry (Just (OggPage o cont bos _ _ serialno seqno segs)) _
+appendToCarry (Just (OggPage o cont bos _ _ serialno seqno segs)) _ _
               (OggPacket d _ gp _ eos (Just [_]))
   = OggPage o cont bos eos gp serialno seqno (segs++[d])
 
-appendToCarry (Just (OggPage o cont bos _ gp serialno seqno segs)) _
+appendToCarry (Just (OggPage o cont bos _ gp serialno seqno segs)) _ _
               (OggPacket d _ _ _ eos (Just (s:_)))
   = OggPage o cont bos eos gp serialno seqno (segs++[seg])
   where seg = take (segmentLength s) d
         
 -- For completeness
-appendToCarry Nothing _ (OggPacket _ _ _ _ _ Nothing)
+appendToCarry Nothing _ _ (OggPacket _ _ _ _ _ Nothing)
   = OggPage 0 False False False (Granulepos Nothing) 0 0 []
-appendToCarry Nothing _ (OggPacket _ _ _ _ _ (Just []))
+appendToCarry Nothing _ _ (OggPacket _ _ _ _ _ (Just []))
   = OggPage 0 False False False (Granulepos Nothing) 0 0 []
-appendToCarry (Just carry) _ (OggPacket _ _ _ _ _ Nothing) = carry
-appendToCarry (Just carry) _ (OggPacket _ _ _ _ _ (Just [])) = carry
+appendToCarry (Just carry) _ _ (OggPacket _ _ _ _ _ Nothing) = carry
+appendToCarry (Just carry) _ _ (OggPacket _ _ _ _ _ (Just [])) = carry
 
 ------------------------------------------------------------
 -- pages2packets
