@@ -113,7 +113,7 @@ _pages2packets packets Nothing [] = packets
 _pages2packets packets (Just jcarry) [] = packets++[jcarry]
 
 _pages2packets packets carry [g] = packets++s
-    where s = prependCarry carry (pageToPackets g)
+    where s = prependCarry carry (pageToPackets g False)
 
 _pages2packets packets carry (g:gn:gs) =
     if (co && length ps == 1) then
@@ -123,12 +123,12 @@ _pages2packets packets carry (g:gn:gs) =
     where s = prependCarry carry ns
           newcarry = if co then Just (last ps) else Nothing
           ns = if co then init ps else ps
-          ps = pageToPackets g
+          ps = pageToPackets g co
           co = pageContinued gn
 
-pageToPackets :: OggPage -> [OggPacket]
-pageToPackets page = setLastSegmentEnds p3
-    where p3 = setGranulepos p2 (pageGranulepos page)
+pageToPackets :: OggPage -> Bool -> [OggPacket]
+pageToPackets page co = setLastSegmentEnds p3
+    where p3 = setGranulepos p2 (pageGranulepos page) co
           p2 = setEOS p1 (pageEOS page)
           p1 = setBOS p0 (pageBOS page)
           p0 = map (packetBuild (pageSerialno page)) (pageSegments page)
@@ -142,9 +142,18 @@ setSegmentEnds p@(OggPacket _ _ _ _ _ (Just [s])) =
   p{packetSegments = (Just [s{segmentEndsPage = True}])}
 setSegmentEnds p = p
 
-setGranulepos :: [OggPacket] -> Granulepos -> [OggPacket]
-setGranulepos [] _ = []
-setGranulepos ps gp = (init ps)++[(last ps){packetGranulepos = gp}]
+setGranulepos :: [OggPacket] -> Granulepos -> Bool -> [OggPacket]
+setGranulepos = setGranulepos_ []
+
+setGranulepos_ :: [OggPacket] -> [OggPacket] -> Granulepos -> Bool -> [OggPacket]
+setGranulepos_ rps [] _ _ = rps
+setGranulepos_ rps [p] gp False = rps++[p{packetGranulepos = gp}]
+setGranulepos_ rps [p] _ True = rps++[p] -- singleton segment, continued
+setGranulepos_ rps [p,pl] gp True = rps++[p{packetGranulepos = gp}]++[pl]
+setGranulepos_ rps (p:ps) gp co = setGranulepos_ (rps++[p]) ps gp co
+
+-- setGranulepos [] _ _ = []
+-- setGranulepos ps gp co = (init ps)++[(last ps){packetGranulepos = gp}]
 
 setBOS :: [OggPacket] -> Bool -> [OggPacket]
 setBOS [] _ = []
