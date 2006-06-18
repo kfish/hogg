@@ -18,6 +18,7 @@ import Ogg.Utils
 import Ogg.Granulepos
 import Ogg.Track
 
+import Data.List (find)
 import Data.Word (Word8, Word32)
 import Data.Bits
 
@@ -143,21 +144,21 @@ buildTab q r _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 
 -- | Read a list of data bytes into Ogg pages
 pageScan :: [Word8] -> [OggPage]
-pageScan = _pageScan 0 []
+pageScan = _pageScan 0 [] []
 
-_pageScan :: Int -> [OggPage] -> [Word8] -> [OggPage]
-_pageScan _ l [] = l
-_pageScan o l r@(r1:r2:r3:r4:_)
-    | [r1,r2,r3,r4] == pageMarker = _pageScan (o+pageLen) (l++[newpage]) rest
-    | otherwise	= _pageScan (o+1) l (tail r)
-      where (newpage, pageLen, rest) = pageBuild o r
-_pageScan _ l _ = l -- length r < 4
+_pageScan :: Int -> [OggTrack] -> [OggPage] -> [Word8] -> [OggPage]
+_pageScan _ _ l [] = l
+_pageScan o t l r@(r1:r2:r3:r4:_)
+    | [r1,r2,r3,r4] == pageMarker = _pageScan (o+pageLen) nt (l++[newpage]) rest
+    | otherwise	= _pageScan (o+1) t l (tail r)
+      where (newpage, pageLen, rest, nt) = pageBuild o t r
+_pageScan _ _ l _ = l -- length r < 4
 
-pageBuild :: Int -> [Word8] -> (OggPage, Int, [Word8])
-pageBuild o d = (newpage, pageLen, rest) where
+pageBuild :: Int -> [OggTrack] -> [Word8] -> (OggPage, Int, [Word8], [OggTrack])
+pageBuild o t d = (newpage, pageLen, rest, nt) where
   newpage = OggPage o track cont bos eos gp seqno segments
   htype = if (length d) > 5 then d !! 5 else 0
-  track = OggTrack serialno
+  (nt, track) = findOrAddTrack serialno t
   cont = testBit htype 0
   bos = testBit htype 1
   eos = testBit htype 2
@@ -174,6 +175,16 @@ pageBuild o d = (newpage, pageLen, rest) where
   segments = splitSegments [] 0 segtab body
   pageLen = headerSize + bodySize
   rest = drop pageLen d 
+
+findOrAddTrack :: Word32 -> [OggTrack] -> ([OggTrack], OggTrack)
+findOrAddTrack s t = foat fTrack
+  where
+    fTrack = find (\x -> trackSerialno x == s) t
+    foat :: Maybe OggTrack -> ([OggTrack], OggTrack)
+    foat (Just track) = (t, track)
+    foat Nothing      = (nt, newTrack)
+    newTrack = OggTrack s
+    nt = t++[newTrack]
 
 ixSeq :: Int -> Int -> [Word8] -> [Word8]
 ixSeq off len s = reverse (take len (drop off s))
