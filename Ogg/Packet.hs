@@ -25,7 +25,7 @@ import Data.Word (Word8, Word32)
 data OggPacket =
   OggPacket {
     packetData :: [Word8],
-    packetSerialno :: Word32,
+    packetTrack :: OggTrack,
     packetGranulepos :: Granulepos,
     packetBOS :: Bool,
     packetEOS :: Bool,
@@ -70,37 +70,37 @@ segsToPages pages carry cont seqno p@(OggPacket _ _ _ _ _ (Just [s]))
     newPage = appendToCarry carry cont seqno p
 
 segsToPages pages carry cont seqno
-            p@(OggPacket d serialno gp _ eos (Just (s:ss)))
+            p@(OggPacket d track gp _ eos (Just (s:ss)))
   = segsToPages (pages++[newPage]) Nothing True (seqno+1) dropPacket
   where
-    dropPacket = OggPacket rest serialno gp False eos (Just ss)
+    dropPacket = OggPacket rest track gp False eos (Just ss)
     rest = drop (segmentLength s) d
     newPage = appendToCarry carry cont seqno p
 
 -- | Append the first segment of a packet to the carry page
 appendToCarry :: Maybe OggPage -> Bool -> Word32 -> OggPacket -> OggPage
 
-appendToCarry Nothing cont seqno (OggPacket d serialno gp bos eos (Just [_]))
-  = OggPage 0 cont bos eos gp serialno seqno [d]
+appendToCarry Nothing cont seqno (OggPacket d track gp bos eos (Just [_]))
+  = OggPage 0 track cont bos eos gp seqno [d]
 
-appendToCarry Nothing cont seqno (OggPacket d serialno _ bos _ (Just (s:_)))
-  = OggPage 0 cont bos False (Granulepos Nothing) serialno seqno [seg]
+appendToCarry Nothing cont seqno (OggPacket d track _ bos _ (Just (s:_)))
+  = OggPage 0 track cont bos False (Granulepos Nothing) seqno [seg]
   where seg = take (segmentLength s) d
 
-appendToCarry (Just (OggPage o cont bos _ _ serialno seqno segs)) _ _
+appendToCarry (Just (OggPage o track cont bos _ _ seqno segs)) _ _
               (OggPacket d _ gp _ eos (Just [_]))
-  = OggPage o cont bos eos gp serialno seqno (segs++[d])
+  = OggPage o track cont bos eos gp seqno (segs++[d])
 
-appendToCarry (Just (OggPage o cont bos _ gp serialno seqno segs)) _ _
+appendToCarry (Just (OggPage o track cont bos _ gp seqno segs)) _ _
               (OggPacket d _ _ _ eos (Just (s:_)))
-  = OggPage o cont bos eos gp serialno seqno (segs++[seg])
+  = OggPage o track cont bos eos gp seqno (segs++[seg])
   where seg = take (segmentLength s) d
         
 -- For completeness
 appendToCarry Nothing _ _ (OggPacket _ _ _ _ _ Nothing)
-  = OggPage 0 False False False (Granulepos Nothing) 0 0 []
+  = OggPage 0 (OggTrack 0) False False False (Granulepos Nothing) 0 []
 appendToCarry Nothing _ _ (OggPacket _ _ _ _ _ (Just []))
-  = OggPage 0 False False False (Granulepos Nothing) 0 0 []
+  = OggPage 0 (OggTrack 0) False False False (Granulepos Nothing) 0 []
 appendToCarry (Just carry) _ _ (OggPacket _ _ _ _ _ Nothing) = carry
 appendToCarry (Just carry) _ _ (OggPacket _ _ _ _ _ (Just [])) = carry
 
@@ -134,7 +134,7 @@ pageToPackets page co = setLastSegmentEnds p3
     where p3 = setGranulepos p2 (pageGranulepos page) co
           p2 = setEOS p1 (pageEOS page)
           p1 = setBOS p0 (pageBOS page)
-          p0 = map (packetBuild (pageSerialno page)) (pageSegments page)
+          p0 = map (packetBuild (pageTrack page)) (pageSegments page)
 
 setLastSegmentEnds :: [OggPacket] -> [OggPacket]
 setLastSegmentEnds [] = []
@@ -168,9 +168,9 @@ setEOS [] _ = []
 setEOS ps False = ps
 setEOS ps True = (init ps)++[(last ps){packetEOS = True}]
 
--- | Build a partial packet given a serialno and a segment
-packetBuild :: Word32 -> [Word8] -> OggPacket
-packetBuild s r = OggPacket r s (Granulepos Nothing) False False (Just [seg])
+-- | Build a partial packet given a track and a segment
+packetBuild :: OggTrack -> [Word8] -> OggPacket
+packetBuild track r = OggPacket r track (Granulepos Nothing) False False (Just [seg])
     where seg = OggSegment l False
           l = length r
 
@@ -199,8 +199,8 @@ prependCarry (Just c) (s:ss) = (packetConcat c s):ss
 --
 
 instance Show OggPacket where
-  show (OggPacket d s gp bos eos _) =
-    ": serialno " ++ show s ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ hexDump d
+  show (OggPacket d track gp bos eos _) =
+    ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ hexDump d
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""

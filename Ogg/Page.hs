@@ -8,6 +8,7 @@
 
 module Ogg.Page (
   OggPage (..),
+  OggTrack (..),
   pageScan,
   pageWrite,
   pageLength
@@ -29,13 +30,18 @@ import Text.Printf
 data OggPage =
   OggPage {
     pageOffset :: Int,
+    pageTrack :: OggTrack,
     pageContinued :: Bool,
     pageBOS :: Bool,
     pageEOS :: Bool,
     pageGranulepos :: Granulepos,
-    pageSerialno :: Word32,
     pageSeqno :: Word32,
     pageSegments :: [[Word8]]
+  }
+
+data OggTrack =
+  OggTrack {
+    trackSerialno :: Word32
   }
 
 ------------------------------------------------------------
@@ -87,7 +93,7 @@ pageLength (OggPage _ _ _ _ _ _ _ s) = 27 + numsegs + sum (map length s)
 
 -- | Construct a binary representation of an Ogg page
 pageWrite :: OggPage -> [Word8]
-pageWrite (OggPage _ cont bos eos gp serialno seqno s) = newPageData
+pageWrite (OggPage _ track cont bos eos gp seqno s) = newPageData
   where
     newPageData = hData ++ crc ++ sData ++ body
     crcPageData = hData ++ zeroCRC ++ sData ++ body
@@ -100,12 +106,14 @@ pageWrite (OggPage _ cont bos eos gp serialno seqno s) = newPageData
     ser_ = fillField serialno 4
     seqno_ = fillField seqno 4
     crc = fillField (genCRC crcPageData) 4
- 
+
     headerType :: Word8
     headerType = c .|. b .|. e
     c = if cont then (bit 0 :: Word8) else 0
     b = if bos then (bit 1 :: Word8) else 0
     e = if eos then (bit 2 :: Word8) else 0
+
+    serialno = trackSerialno track
 
     -- Segment table
     segs = (toTwosComp (numsegs)) ++ segtab
@@ -152,8 +160,9 @@ _pageScan _ l _ = l -- length r < 4
 
 pageBuild :: Int -> [Word8] -> (OggPage, Int, [Word8])
 pageBuild o d = (newpage, pageLen, rest) where
-  newpage = OggPage o cont bos eos gp serialno seqno segments
+  newpage = OggPage o track cont bos eos gp seqno segments
   htype = if (length d) > 5 then d !! 5 else 0
+  track = OggTrack serialno
   cont = testBit htype 0
   bos = testBit htype 1
   eos = testBit htype 2
@@ -190,8 +199,8 @@ splitSegments segments accum (l:ls) body
 --
 
 instance Show OggPage where
-  show p@(OggPage o cont bos eos gp serialno seqno segment_table) =
-    (printf "%07x" o) ++ ": serialno " ++ show serialno ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
+  show p@(OggPage o track cont bos eos gp seqno segment_table) =
+    (printf "%07x" o) ++ ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ifb = if bos then " *** bos" else ""
