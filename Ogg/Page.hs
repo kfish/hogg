@@ -8,7 +8,6 @@
 
 module Ogg.Page (
   OggPage (..),
-  OggTrack (..),
   pageScan,
   pageWrite,
   pageLength
@@ -17,6 +16,7 @@ module Ogg.Page (
 import Ogg.CRC
 import Ogg.Utils
 import Ogg.Granulepos
+import Ogg.Track
 
 import Data.Word (Word8, Word32)
 import Data.Bits
@@ -37,11 +37,6 @@ data OggPage =
     pageGranulepos :: Granulepos,
     pageSeqno :: Word32,
     pageSegments :: [[Word8]]
-  }
-
-data OggTrack =
-  OggTrack {
-    trackSerialno :: Word32
   }
 
 ------------------------------------------------------------
