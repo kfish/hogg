@@ -13,6 +13,7 @@ module Ogg.Page (
   pageLength
 ) where
 
+import Ogg.ByteFields
 import Ogg.CRC
 import Ogg.Utils
 import Ogg.Granulepos
@@ -162,11 +163,11 @@ pageBuild o t d = (newpage, pageLen, rest, nt) where
   cont = testBit htype 0
   bos = testBit htype 1
   eos = testBit htype 2
-  gp = Granulepos (Just (fromTwosComp $ ixSeq 6 8 d))
-  serialno = fromTwosComp $ ixSeq 14 4 d
-  seqno = fromTwosComp $ ixSeq 18 4 d
-  -- crc = fromTwosComp $ ixSeq 22 4 d
-  numseg = fromTwosComp $ ixSeq 26 1 d
+  gp = Granulepos (Just (le64At 6 d))
+  serialno = le32At 14 d
+  seqno = le32At 18 d
+  -- crc = le32At 22 d
+  numseg = u8At 26 d
   st = take numseg (drop 27 d)
   segtab = map fromIntegral st
   headerSize = 27 + numseg
@@ -185,9 +186,6 @@ findOrAddTrack s t = foat fTrack
     foat Nothing      = (nt, newTrack)
     newTrack = OggTrack s
     nt = t++[newTrack]
-
-ixSeq :: Int -> Int -> [Word8] -> [Word8]
-ixSeq off len s = reverse (take len (drop off s))
 
 -- splitSegments segments accum segtab body
 splitSegments :: [[Word8]] -> Int -> [Int] -> [Word8] -> [[Word8]]
