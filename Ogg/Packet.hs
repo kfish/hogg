@@ -98,12 +98,7 @@ appendToCarry (Just (OggPage o track cont bos _ gp seqno segs)) _ _
   where seg = take (segmentLength s) d
         
 -- For completeness
-appendToCarry Nothing _ _ (OggPacket _ _ _ _ _ Nothing)
-  = OggPage 0 nullTrack False False False (Granulepos Nothing) 0 []
-appendToCarry Nothing _ _ (OggPacket _ _ _ _ _ (Just []))
-  = OggPage 0 nullTrack False False False (Granulepos Nothing) 0 []
-appendToCarry (Just carry) _ _ (OggPacket _ _ _ _ _ Nothing) = carry
-appendToCarry (Just carry) _ _ (OggPacket _ _ _ _ _ (Just [])) = carry
+appendToCarry _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 
 ------------------------------------------------------------
 -- pages2packets
