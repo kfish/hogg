@@ -159,7 +159,7 @@ pageBuild :: Int -> [OggTrack] -> [Word8] -> (OggPage, Int, [Word8], [OggTrack])
 pageBuild o t d = (newpage, pageLen, rest, nt) where
   newpage = OggPage o track cont bos eos gp seqno segments
   htype = if (length d) > 5 then d !! 5 else 0
-  (nt, track) = findOrAddTrack serialno t
+  (nt, track) = findOrAddTrack serialno body t
   cont = testBit htype 0
   bos = testBit htype 1
   eos = testBit htype 2
@@ -177,14 +177,15 @@ pageBuild o t d = (newpage, pageLen, rest, nt) where
   pageLen = headerSize + bodySize
   rest = drop pageLen d 
 
-findOrAddTrack :: Word32 -> [OggTrack] -> ([OggTrack], OggTrack)
-findOrAddTrack s t = foat fTrack
+findOrAddTrack :: Word32 -> [Word8] -> [OggTrack] -> ([OggTrack], OggTrack)
+findOrAddTrack s d t = foat fTrack
   where
     fTrack = find (\x -> trackSerialno x == s) t
     foat :: Maybe OggTrack -> ([OggTrack], OggTrack)
     foat (Just track) = (t, track)
     foat Nothing      = (nt, newTrack)
-    newTrack = OggTrack s
+    newTrack = OggTrack s ctype
+    ctype = readCType d
     nt = t++[newTrack]
 
 -- splitSegments segments accum segtab body
@@ -204,7 +205,7 @@ splitSegments segments accum (l:ls) body
 
 instance Show OggPage where
   show p@(OggPage o track cont bos eos gp seqno segment_table) =
-    (printf "%07x" o) ++ ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
+    (printf "%07x" o) ++ ": " ++ show track ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ifb = if bos then " *** bos" else ""
