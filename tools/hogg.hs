@@ -2,9 +2,11 @@ module Main where
 
 import Control.Monad
 
-import System.Environment
+import System.Environment (getArgs, getProgName)
 import System.IO
+
 import System.Console.GetOpt
+import System.Exit
 
 import qualified Data.ByteString.Lazy as L
 import Ogg.Page
@@ -16,8 +18,68 @@ countPackets filename = do
     input <- L.hGetContents handle
     putStrLn $ show (length (pages2packets (pageScan $ L.unpack input))) ++ " packets"
 
-dumpPackets :: String -> IO ()
-dumpPackets filename = do
+------------------------------------------------------------
+-- Options processing
+--
+
+data Config =
+  Config {
+    contentTypeCfg :: Maybe String,
+    files :: [FilePath]
+  }
+
+dftConfig =
+  Config {
+    contentTypeCfg = Nothing,
+    files = ["-"]
+  }
+
+-- Available options
+--
+data Option = Help
+            | ContentTypeOpt String
+            deriving Eq
+
+options :: [OptDescr Option]
+options = [ Option ['h', '?'] ["help"] (NoArg Help)
+              "Display this help and exit"
+          , Option ['c']      ["content-type"] (ReqArg ContentTypeOpt "Content-Type")
+              "Dump only the logical bitstreams for a specified content type."
+          ]
+
+processArgs :: [String] -> IO (Config, [String])
+processArgs args = do
+  case getOpt RequireOrder options args of
+    (opts, args  , []  ) -> do
+                        processHelp opts
+                        config <- processConfig dftConfig opts
+                        return (config, args)
+    -- (opts, args, []  ) -> abort [unrecErr ++ unwords args]
+    -- (_   , _   , errs) -> abort errs
+  where
+    unrecErr = "Unrecognised arguments: "
+
+processHelp :: [Option] -> IO ()
+processHelp opts = do
+  name <- getProgName
+  let header = "\nUsage: " ++ name ++ "[options] filename\n"
+  when (Help `elem` opts) $ do
+    putStrLn $ usageInfo header options
+    exitWith ExitSuccess
+  return ()
+
+processConfig :: Config -> [Option] -> IO Config
+processConfig = foldM processOneOption
+  where
+    processOneOption config (ContentTypeOpt ctype) =
+      return $ config {contentTypeCfg = Just ctype}
+
+dumpPackets :: [String] -> IO ()
+dumpPackets args = do
+    -- let filename = last args
+    (config, filenames) <- processArgs args
+    putStrLn $ "Content-Type: " ++ (show $ contentTypeCfg config)
+    let filename = head filenames
     handle <- openFile filename ReadMode
     input <- L.hGetContents handle
     mapM_ putStrLn (map show (pages2packets (pageScan $ L.unpack input)))
@@ -60,7 +122,7 @@ main = do
     (command:args) <- getArgs
     filename <- getFilename args
     case command of
-      "dump" -> dumpPackets filename
+      "dump" -> dumpPackets args
       "packetcount" -> countPackets filename
       "pagecount" -> countPages filename
       "pagedump" -> dumpPages filename
