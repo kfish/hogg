@@ -113,20 +113,20 @@ appendToCarry _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 --
 
 pagesToPackets :: [OggPage] -> [OggPacket]
-pagesToPackets = _pagesToPackets [] Nothing
+pagesToPackets = _pagesToPackets Nothing
 
-_pagesToPackets :: [OggPacket] -> Maybe OggPacket -> [OggPage] -> [OggPacket]
-_pagesToPackets packets Nothing [] = packets
-_pagesToPackets packets (Just jcarry) [] = packets++[jcarry]
+_pagesToPackets :: Maybe OggPacket -> [OggPage] -> [OggPacket]
+_pagesToPackets Nothing [] = []
+_pagesToPackets (Just jcarry) [] = [jcarry]
 
-_pagesToPackets packets carry [g] = packets++s
+_pagesToPackets carry [g] = s
     where s = prependCarry carry (pageToPackets g False)
 
-_pagesToPackets packets carry (g:gn:gs) =
+_pagesToPackets carry (g:gn:gs) =
     if (co && length ps == 1) then
-        _pagesToPackets packets (carryCarry carry newcarry) (gn:gs)
+        _pagesToPackets (carryCarry carry newcarry) (gn:gs)
     else
-        _pagesToPackets (packets++s) newcarry (gn:gs)
+        s ++ _pagesToPackets newcarry (gn:gs)
     where s = prependCarry carry ns
           newcarry = if co then Just (last ps) else Nothing
           ns = if co then init ps else ps
