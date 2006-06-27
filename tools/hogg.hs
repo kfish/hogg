@@ -11,6 +11,7 @@ import System.Exit
 import qualified Data.ByteString.Lazy as L
 import Ogg.Page
 import Ogg.Packet
+import Ogg.Track
 
 countPackets :: String -> IO ()
 countPackets filename = do
@@ -78,11 +79,17 @@ dumpPackets :: [String] -> IO ()
 dumpPackets args = do
     -- let filename = last args
     (config, filenames) <- processArgs args
-    putStrLn $ "Content-Type: " ++ (show $ contentTypeCfg config)
+    let ctype = contentTypeCfg config
+    putStrLn $ "Content-Type: " ++ (show ctype)
     let filename = head filenames
     handle <- openFile filename ReadMode
     input <- L.hGetContents handle
-    mapM_ putStrLn (map show (pages2packets (pageScan $ L.unpack input)))
+    let allPackets = pages2packets (pageScan $ L.unpack input)
+    mapM_ putStrLn (map show (packetMatch (parseType ctype) allPackets))
+    where
+      packetMatch Nothing ps = ps
+      packetMatch (Just t) ps = filter (packetIsType t) ps
+
 
 rewritePages :: String -> IO ()
 rewritePages filename = do

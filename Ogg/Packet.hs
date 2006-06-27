@@ -9,7 +9,8 @@
 module Ogg.Packet (
   OggPacket (..),
   packetsToPages,
-  pages2packets
+  pages2packets,
+  packetIsType
 ) where
 
 import Ogg.Dump
@@ -38,6 +39,13 @@ data OggSegment =
     segmentLength :: Int,
     segmentEndsPage :: Bool -- ^ whether or not the segment ends a page
   }
+
+------------------------------------------------------------
+-- Predicates
+--
+
+packetIsType :: OggType -> OggPacket -> Bool
+packetIsType t p = trackIsType t (packetTrack p)
 
 ------------------------------------------------------------
 -- packetsToPages

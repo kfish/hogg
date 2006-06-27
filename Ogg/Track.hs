@@ -8,9 +8,11 @@
 
 module Ogg.Track (
   OggTrack (..),
-  OggType,
+  OggType (..),
+  trackIsType,
   nullTrack,
-  readCType
+  readCType,
+  parseType
 ) where
 
 import Data.Word (Word8, Word32)
@@ -20,6 +22,13 @@ import Data.Word (Word8, Word32)
 --
 
 data OggType = Vorbis | Speex | Theora
+  -- deriving Eq
+
+instance Eq OggType where
+  Vorbis == Vorbis = True
+  Speex == Speex = True
+  Theora == Theora = True
+  _ == _ = False
 
 data OggTrack =
   OggTrack {
@@ -30,6 +39,12 @@ data OggTrack =
 ------------------------------------------------------------
 --
 --
+
+trackIsType :: OggType -> OggTrack -> Bool
+trackIsType t0 (OggTrack _ (Just t1))
+  | t0 == t1  = True
+  | otherwise = False
+trackIsType _ _ = False
 
 nullTrack :: OggTrack
 nullTrack = OggTrack 0 Nothing
@@ -50,6 +65,12 @@ readCType (r1:r2:r3:r4:r5:r6:r7:r8:_)
   | [r1,r2,r3,r4,r5,r6,r7] == theoraIdent = Just Theora
   | otherwise = Nothing
 readCType _ = Nothing
+
+parseType :: Maybe String -> Maybe OggType
+parseType (Just "vorbis") = Just Vorbis
+parseType (Just "speex") = Just Speex
+parseType (Just "theora") = Just Theora
+parseType _ = Nothing
 
 ------------------------------------------------------------
 -- Show
