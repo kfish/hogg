@@ -94,7 +94,8 @@ dumpPackets args = do
     putStrLn $ "Content-Type: " ++ (show ctype)
     let filename = head filenames
     allPackets <- getPackets filename
-    mapM_ putStrLn (map show (packetMatch ctype allPackets))
+    let matchPackets = packetMatch ctype allPackets
+    mapM_ putStrLn (map show matchPackets)
 
 rewritePages :: String -> IO ()
 rewritePages filename = do
@@ -102,11 +103,14 @@ rewritePages filename = do
     input <- L.hGetContents handle
     mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
 
-rewritePackets :: String -> IO ()
-rewritePackets filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    mapM_ L.putStr (map L.pack (map pageWrite (packetsToPages (pages2packets (pageScan $ L.unpack input)))))
+rewritePackets :: [String] -> IO ()
+rewritePackets args = do
+    (config, filenames) <- processArgs args
+    let ctype = parseType $ contentTypeCfg config
+    let filename = head filenames
+    allPackets <- getPackets filename
+    let matchPackets = packetMatch ctype allPackets
+    mapM_ L.putStr (map L.pack (map pageWrite (packetsToPages matchPackets)))
 
 countrwPages :: String -> IO ()
 countrwPages filename = do
@@ -139,5 +143,5 @@ main = do
       "pagecount" -> countPages filename
       "pagedump" -> dumpPages filename
       "rewrite" -> rewritePages filename
-      "repacket" -> rewritePackets filename
+      "repacket" -> rewritePackets args
       "countrw" -> countrwPages filename
