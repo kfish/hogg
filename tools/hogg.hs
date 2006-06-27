@@ -88,71 +88,57 @@ packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
 packetMatch Nothing ps = ps
 packetMatch (Just t) ps = filter (packetIsType t) ps
 
+mPages :: [String] -> IO [OggPage]
+mPages args = do
+    (config, filenames) <- processArgs args
+    let ctype = parseType $ contentTypeCfg config
+    let filename = head filenames
+    allPages <- getPages filename
+    return $ pageMatch ctype allPages
 
-dumpPackets :: [String] -> IO ()
-dumpPackets args = do
+mPackets :: [String] -> IO [OggPacket]
+mPackets args = do
     (config, filenames) <- processArgs args
     let ctype = parseType $ contentTypeCfg config
     putStrLn $ "Content-Type: " ++ (show ctype)
     let filename = head filenames
     allPackets <- getPackets filename
-    let matchPackets = packetMatch ctype allPackets
+    return $ packetMatch ctype allPackets
+
+dumpPackets :: [String] -> IO ()
+dumpPackets args = do
+    matchPackets <- mPackets args
     mapM_ putStrLn (map show matchPackets)
 
 countPackets :: [String] -> IO ()
 countPackets args = do
-    (config, filenames) <- processArgs args
-    let ctype = parseType $ contentTypeCfg config
-    putStrLn $ "Content-Type: " ++ (show ctype)
-    let filename = head filenames
-    allPackets <- getPackets filename
-    let matchPackets = packetMatch ctype allPackets
+    matchPackets <- mPackets args
     putStrLn $ show (length matchPackets) ++ " packets"
 
 rewritePages :: [String] -> IO ()
 rewritePages args = do
-    (config, filenames) <- processArgs args
-    let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
-    allPages <- getPages filename
-    let matchPages = pageMatch ctype allPages
+    matchPages <- mPages args
     mapM_ L.putStr (map L.pack (map pageWrite matchPages))
 
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
-    (config, filenames) <- processArgs args
-    let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
-    allPackets <- getPackets filename
-    let matchPackets = packetMatch ctype allPackets
+    matchPackets <- mPackets args
     mapM_ L.putStr (map L.pack (map pageWrite (packetsToPages matchPackets)))
 
 countrwPages :: [String] -> IO ()
 countrwPages args = do
-    (config, filenames) <- processArgs args
-    let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
-    allPages <- getPages filename
-    let matchPages = pageMatch ctype allPages
+    matchPages <- mPages args
     putStrLn $ show $ length (packetsToPages (pages2packets matchPages))
 
 countPages :: [String] -> IO ()
 countPages args = do
-    (config, filenames) <- processArgs args
-    let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
-    allPages <- getPages filename
-    let matchPages = pageMatch ctype allPages
+    matchPages <- mPages args
     putStrLn $ (show $ length matchPages) ++ " pages"
 
 dumpPages :: [String] -> IO ()
 dumpPages args = do
-    (config, filenames) <- processArgs args
-    let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
-    allPages <- getPages filename
-    let matchPages = pageMatch ctype allPages
-    mapM_ putStrLn (map show matchPages)
+  matchPages <- mPages args
+  mapM_ putStrLn (map show matchPages)
 
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
