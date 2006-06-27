@@ -13,12 +13,6 @@ import Ogg.Page
 import Ogg.Packet
 import Ogg.Track
 
-countPackets :: String -> IO ()
-countPackets filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    putStrLn $ show (length (pages2packets (pageScan $ L.unpack input))) ++ " packets"
-
 ------------------------------------------------------------
 -- Options processing
 --
@@ -97,7 +91,6 @@ packetMatch (Just t) ps = filter (packetIsType t) ps
 
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
-    -- let filename = last args
     (config, filenames) <- processArgs args
     let ctype = parseType $ contentTypeCfg config
     putStrLn $ "Content-Type: " ++ (show ctype)
@@ -105,6 +98,16 @@ dumpPackets args = do
     allPackets <- getPackets filename
     let matchPackets = packetMatch ctype allPackets
     mapM_ putStrLn (map show matchPackets)
+
+countPackets :: [String] -> IO ()
+countPackets args = do
+    (config, filenames) <- processArgs args
+    let ctype = parseType $ contentTypeCfg config
+    putStrLn $ "Content-Type: " ++ (show ctype)
+    let filename = head filenames
+    allPackets <- getPackets filename
+    let matchPackets = packetMatch ctype allPackets
+    putStrLn $ show (length matchPackets) ++ " packets"
 
 rewritePages :: [String] -> IO ()
 rewritePages args = do
@@ -115,10 +118,6 @@ rewritePages args = do
     let matchPages = pageMatch ctype allPages
     mapM_ L.putStr (map L.pack (map pageWrite matchPages))
 
-    -- handle <- openFile filename ReadMode
-    -- input <- L.hGetContents handle
-    -- mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
-
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
     (config, filenames) <- processArgs args
@@ -128,23 +127,32 @@ rewritePackets args = do
     let matchPackets = packetMatch ctype allPackets
     mapM_ L.putStr (map L.pack (map pageWrite (packetsToPages matchPackets)))
 
-countrwPages :: String -> IO ()
-countrwPages filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    putStrLn $ show $ length (packetsToPages (pages2packets (pageScan $ L.unpack input)))
+countrwPages :: [String] -> IO ()
+countrwPages args = do
+    (config, filenames) <- processArgs args
+    let ctype = parseType $ contentTypeCfg config
+    let filename = head filenames
+    allPages <- getPages filename
+    let matchPages = pageMatch ctype allPages
+    putStrLn $ show $ length (packetsToPages (pages2packets matchPages))
 
-countPages :: String -> IO ()
-countPages filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    putStrLn $ (show $ length (pageScan $ L.unpack input)) ++ " pages"
+countPages :: [String] -> IO ()
+countPages args = do
+    (config, filenames) <- processArgs args
+    let ctype = parseType $ contentTypeCfg config
+    let filename = head filenames
+    allPages <- getPages filename
+    let matchPages = pageMatch ctype allPages
+    putStrLn $ (show $ length matchPages) ++ " pages"
 
-dumpPages :: String -> IO ()
-dumpPages filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    mapM_ putStrLn (map show (pageScan $ L.unpack input))
+dumpPages :: [String] -> IO ()
+dumpPages args = do
+    (config, filenames) <- processArgs args
+    let ctype = parseType $ contentTypeCfg config
+    let filename = head filenames
+    allPages <- getPages filename
+    let matchPages = pageMatch ctype allPages
+    mapM_ putStrLn (map show matchPages)
 
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
@@ -155,9 +163,9 @@ main = do
     filename <- getFilename args
     case command of
       "dump" -> dumpPackets args
-      "packetcount" -> countPackets filename
-      "pagecount" -> countPages filename
-      "pagedump" -> dumpPages filename
+      "packetcount" -> countPackets args
+      "pagecount" -> countPages args
+      "pagedump" -> dumpPages args
       "rewrite" -> rewritePages args
       "repacket" -> rewritePackets args
-      "countrw" -> countrwPages filename
+      "countrw" -> countrwPages args
