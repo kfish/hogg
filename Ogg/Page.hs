@@ -153,15 +153,15 @@ buildTab q r _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 
 -- | Read a list of data bytes into Ogg pages
 pageScan :: [Word8] -> [OggPage]
-pageScan = _pageScan 0 [] []
+pageScan = _pageScan 0 []
 
-_pageScan :: Int -> [OggTrack] -> [OggPage] -> [Word8] -> [OggPage]
-_pageScan _ _ l [] = l
-_pageScan o t l r@(r1:r2:r3:r4:_)
-    | [r1,r2,r3,r4] == pageMarker = _pageScan (o+pageLen) nt (l++[newpage]) rest
-    | otherwise	= _pageScan (o+1) t l (tail r)
+_pageScan :: Int -> [OggTrack] -> [Word8] -> [OggPage]
+_pageScan _ _ [] = []
+_pageScan o t r@(r1:r2:r3:r4:_)
+    | [r1,r2,r3,r4] == pageMarker = newpage : _pageScan (o+pageLen) nt rest
+    | otherwise	= _pageScan (o+1) t (tail r)
       where (newpage, pageLen, rest, nt) = pageBuild o t r
-_pageScan _ _ l _ = l -- length r < 4
+_pageScan _ _ _ = [] -- length r < 4
 
 pageBuild :: Int -> [OggTrack] -> [Word8] -> (OggPage, Int, [Word8], [OggTrack])
 pageBuild o t d = (newpage, pageLen, rest, nt) where
@@ -181,7 +181,7 @@ pageBuild o t d = (newpage, pageLen, rest, nt) where
   headerSize = 27 + numseg
   bodySize = sum segtab
   body = take bodySize (drop headerSize d)
-  segments = splitSegments [] 0 segtab body
+  segments = splitSegments 0 segtab body
   pageLen = headerSize + bodySize
   rest = drop pageLen d 
 
@@ -197,14 +197,14 @@ findOrAddTrack s d t = foat fTrack
     nt = t++[newTrack]
 
 -- splitSegments segments accum segtab body
-splitSegments :: [[Word8]] -> Int -> [Int] -> [Word8] -> [[Word8]]
-splitSegments segments _ _ [] = segments
-splitSegments segments 0 [] _ = segments
-splitSegments segments accum [] body = segments++[take accum body]
-splitSegments segments 0 (0:ls) body = splitSegments (segments++[]) 0 ls body
-splitSegments segments accum (l:ls) body 
-  | l == 255	= splitSegments segments (accum+255) ls body
-  | otherwise	= splitSegments (segments++[newseg]) 0 ls newbody
+splitSegments :: Int -> [Int] -> [Word8] -> [[Word8]]
+splitSegments _ _ [] = []
+splitSegments 0 [] _ = []
+splitSegments accum [] body = [take accum body]
+splitSegments 0 (0:ls) body = [] : splitSegments 0 ls body
+splitSegments accum (l:ls) body 
+  | l == 255	= splitSegments (accum+255) ls body
+  | otherwise	= newseg : splitSegments 0 ls newbody
                   where (newseg, newbody) = splitAt (accum+l) body
 
 ------------------------------------------------------------
