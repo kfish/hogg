@@ -75,21 +75,26 @@ processConfig = foldM processOneOption
     processOneOption config (ContentTypeOpt ctype) =
       return $ config {contentTypeCfg = Just ctype}
 
+getPackets :: FilePath -> IO [OggPacket]
+getPackets filename = do
+    handle <- openFile filename ReadMode
+    input <- L.hGetContents handle
+    return $ pages2packets (pageScan $ L.unpack input)
+
+packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
+packetMatch Nothing ps = ps
+packetMatch (Just t) ps = filter (packetIsType t) ps
+
+
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
     -- let filename = last args
     (config, filenames) <- processArgs args
-    let ctype = contentTypeCfg config
+    let ctype = parseType $ contentTypeCfg config
     putStrLn $ "Content-Type: " ++ (show ctype)
     let filename = head filenames
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    let allPackets = pages2packets (pageScan $ L.unpack input)
-    mapM_ putStrLn (map show (packetMatch (parseType ctype) allPackets))
-    where
-      packetMatch Nothing ps = ps
-      packetMatch (Just t) ps = filter (packetIsType t) ps
-
+    allPackets <- getPackets filename
+    mapM_ putStrLn (map show (packetMatch ctype allPackets))
 
 rewritePages :: String -> IO ()
 rewritePages filename = do
