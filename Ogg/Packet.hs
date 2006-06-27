@@ -9,7 +9,7 @@
 module Ogg.Packet (
   OggPacket (..),
   packetsToPages,
-  pages2packets,
+  pagesToPackets,
   packetIsType
 ) where
 
@@ -109,24 +109,24 @@ appendToCarry (Just (OggPage o track cont bos _ gp seqno segs)) _ _
 appendToCarry _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 
 ------------------------------------------------------------
--- pages2packets
+-- pagesToPackets
 --
 
-pages2packets :: [OggPage] -> [OggPacket]
-pages2packets = _pages2packets [] Nothing
+pagesToPackets :: [OggPage] -> [OggPacket]
+pagesToPackets = _pagesToPackets [] Nothing
 
-_pages2packets :: [OggPacket] -> Maybe OggPacket -> [OggPage] -> [OggPacket]
-_pages2packets packets Nothing [] = packets
-_pages2packets packets (Just jcarry) [] = packets++[jcarry]
+_pagesToPackets :: [OggPacket] -> Maybe OggPacket -> [OggPage] -> [OggPacket]
+_pagesToPackets packets Nothing [] = packets
+_pagesToPackets packets (Just jcarry) [] = packets++[jcarry]
 
-_pages2packets packets carry [g] = packets++s
+_pagesToPackets packets carry [g] = packets++s
     where s = prependCarry carry (pageToPackets g False)
 
-_pages2packets packets carry (g:gn:gs) =
+_pagesToPackets packets carry (g:gn:gs) =
     if (co && length ps == 1) then
-        _pages2packets packets (carryCarry carry newcarry) (gn:gs)
+        _pagesToPackets packets (carryCarry carry newcarry) (gn:gs)
     else
-        _pages2packets (packets++s) newcarry (gn:gs)
+        _pagesToPackets (packets++s) newcarry (gn:gs)
     where s = prependCarry carry ns
           newcarry = if co then Just (last ps) else Nothing
           ns = if co then init ps else ps

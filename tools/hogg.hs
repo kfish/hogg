@@ -78,7 +78,7 @@ getPages filename = do
 getPackets :: FilePath -> IO [OggPacket]
 getPackets filename = do
     allPages <- getPages filename
-    return $ pages2packets allPages
+    return $ pagesToPackets allPages
 
 pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
 pageMatch Nothing gs = gs
@@ -128,7 +128,7 @@ rewritePackets args = do
 countrwPages :: [String] -> IO ()
 countrwPages args = do
     matchPages <- mPages args
-    putStrLn $ show $ length (packetsToPages (pages2packets matchPages))
+    putStrLn $ show $ length (packetsToPages (pagesToPackets matchPages))
 
 countPages :: [String] -> IO ()
 countPages args = do
