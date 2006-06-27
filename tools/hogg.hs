@@ -57,7 +57,7 @@ processArgs args = do
 processHelp :: [Option] -> IO ()
 processHelp opts = do
   name <- getProgName
-  let header = "\nUsage: " ++ name ++ "[options] filename\n"
+  let header = "\nUsage: " ++ name ++ " [options] filename\n"
   when (Help `elem` opts) $ do
     putStrLn $ usageInfo header options
     exitWith ExitSuccess
@@ -100,7 +100,6 @@ mPackets :: [String] -> IO [OggPacket]
 mPackets args = do
     (config, filenames) <- processArgs args
     let ctype = parseType $ contentTypeCfg config
-    putStrLn $ "Content-Type: " ++ (show ctype)
     let filename = head filenames
     allPackets <- getPackets filename
     return $ packetMatch ctype allPackets
@@ -109,6 +108,8 @@ dumpPackets :: [String] -> IO ()
 dumpPackets args = do
     matchPackets <- mPackets args
     mapM_ putStrLn (map show matchPackets)
+    -- foldM putStrLn "" (map show matchPackets)
+    -- foldM putStrLn (show matchPackets)
 
 countPackets :: [String] -> IO ()
 countPackets args = do
