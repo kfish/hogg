@@ -10,7 +10,8 @@ module Ogg.Page (
   OggPage (..),
   pageScan,
   pageWrite,
-  pageLength
+  pageLength,
+  pageIsType
 ) where
 
 import Ogg.ByteFields
@@ -83,6 +84,13 @@ pageVersion = 0x00
 pageLength :: OggPage -> Int
 pageLength (OggPage _ _ _ _ _ _ _ s) = 27 + numsegs + sum (map length s)
     where (numsegs, _) = buildSegtab 0 [] s
+
+------------------------------------------------------------
+-- Predicates
+--
+
+pageIsType :: OggType -> OggPage -> Bool
+pageIsType t g = trackIsType t (pageTrack g)
 
 ------------------------------------------------------------
 -- pageWrite

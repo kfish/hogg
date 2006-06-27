@@ -75,11 +75,21 @@ processConfig = foldM processOneOption
     processOneOption config (ContentTypeOpt ctype) =
       return $ config {contentTypeCfg = Just ctype}
 
+getPages :: FilePath -> IO [OggPage]
+getPages filename = do
+    handle <- openFile filename ReadMode
+    input <- L.hGetContents handle
+    return $ pageScan (L.unpack input)
+
 getPackets :: FilePath -> IO [OggPacket]
 getPackets filename = do
     handle <- openFile filename ReadMode
     input <- L.hGetContents handle
     return $ pages2packets (pageScan $ L.unpack input)
+
+pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
+pageMatch Nothing gs = gs
+pageMatch (Just t) gs = filter (pageIsType t) gs
 
 packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
 packetMatch Nothing ps = ps
@@ -97,11 +107,18 @@ dumpPackets args = do
     let matchPackets = packetMatch ctype allPackets
     mapM_ putStrLn (map show matchPackets)
 
-rewritePages :: String -> IO ()
-rewritePages filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
+rewritePages :: [String] -> IO ()
+rewritePages args = do
+    (config, filenames) <- processArgs args
+    let ctype = parseType $ contentTypeCfg config
+    let filename = head filenames
+    allPages <- getPages filename
+    let matchPages = pageMatch ctype allPages
+    mapM_ L.putStr (map L.pack (map pageWrite matchPages))
+
+    -- handle <- openFile filename ReadMode
+    -- input <- L.hGetContents handle
+    -- mapM_ L.putStr (map L.pack (map pageWrite (pageScan $ L.unpack input)))
 
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
@@ -142,6 +159,6 @@ main = do
       "packetcount" -> countPackets filename
       "pagecount" -> countPages filename
       "pagedump" -> dumpPages filename
-      "rewrite" -> rewritePages filename
+      "rewrite" -> rewritePages args
       "repacket" -> rewritePackets args
       "countrw" -> countrwPages filename
