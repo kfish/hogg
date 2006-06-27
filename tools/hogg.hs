@@ -83,9 +83,8 @@ getPages filename = do
 
 getPackets :: FilePath -> IO [OggPacket]
 getPackets filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    return $ pages2packets (pageScan $ L.unpack input)
+    allPages <- getPages filename
+    return $ pages2packets allPages
 
 pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
 pageMatch Nothing gs = gs
