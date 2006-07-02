@@ -22,13 +22,7 @@ import Data.Word (Word8, Word32)
 --
 
 data OggType = Vorbis | Speex | Theora
-  -- deriving Eq
-
-instance Eq OggType where
-  Vorbis == Vorbis = True
-  Speex == Speex = True
-  Theora == Theora = True
-  _ == _ = False
+  deriving Eq
 
 data OggTrack =
   OggTrack {
