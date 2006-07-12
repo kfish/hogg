@@ -52,15 +52,15 @@ packetIsType t p = trackIsType t (packetTrack p)
 --
 
 packetsToPages :: [OggPacket] -> [OggPage]
-packetsToPages = packetsToPages_ [] Nothing 0
+packetsToPages = packetsToPages_ Nothing 0
 
-packetsToPages_ :: [OggPage] -> Maybe OggPage -> Word32 -> [OggPacket] -> [OggPage]
+packetsToPages_ :: Maybe OggPage -> Word32 -> [OggPacket] -> [OggPage]
 
-packetsToPages_ pages Nothing _ [] = pages
-packetsToPages_ pages (Just g) _ [] = pages++[g]
+packetsToPages_ Nothing _ [] = []
+packetsToPages_ (Just g) _ [] = [g]
 
-packetsToPages_ pages carry seqno (p:ps)
-  = packetsToPages_ (pages++newPages) newCarry (seqno+n) ps
+packetsToPages_ carry seqno (p:ps)
+  = newPages ++ packetsToPages_ newCarry (seqno+n) ps
   where
     (newPages, newCarry) = segsToPages [] carry False seqno p
     n = fromIntegral (length newPages)
