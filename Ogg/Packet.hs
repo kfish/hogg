@@ -150,17 +150,11 @@ setSegmentEnds p@(OggPacket _ _ _ _ _ (Just [s])) =
 setSegmentEnds p = p
 
 setGranulepos :: [OggPacket] -> Granulepos -> Bool -> [OggPacket]
-setGranulepos = setGranulepos_ []
-
-setGranulepos_ :: [OggPacket] -> [OggPacket] -> Granulepos -> Bool -> [OggPacket]
-setGranulepos_ rps [] _ _ = rps
-setGranulepos_ rps [p] gp False = rps++[p{packetGranulepos = gp}]
-setGranulepos_ rps [p] _ True = rps++[p] -- singleton segment, continued
-setGranulepos_ rps [p,pl] gp True = rps++[p{packetGranulepos = gp}]++[pl]
-setGranulepos_ rps (p:ps) gp co = setGranulepos_ (rps++[p]) ps gp co
-
--- setGranulepos [] _ _ = []
--- setGranulepos ps gp co = (init ps)++[(last ps){packetGranulepos = gp}]
+setGranulepos [] _ _ = []
+setGranulepos [p] gp False = [p{packetGranulepos = gp}]
+setGranulepos [p] _ True = [p] -- singleton segment, continued
+setGranulepos [p,pl] gp True = [p{packetGranulepos = gp}]++[pl]
+setGranulepos (p:ps) gp co = [p] ++ setGranulepos ps gp co
 
 setBOS :: [OggPacket] -> Bool -> [OggPacket]
 setBOS [] _ = []
