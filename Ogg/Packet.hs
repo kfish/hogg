@@ -117,11 +117,11 @@ appendToCarry _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 --
 
 pagesToPackets :: [OggPage] -> [OggPacket]
-pagesToPackets = _pagesToPackets Nothing
+pagesToPackets = _pagesToPackets []
 
-_pagesToPackets :: Maybe OggPacket -> [OggPage] -> [OggPacket]
-_pagesToPackets Nothing [] = []
-_pagesToPackets (Just jcarry) [] = [jcarry]
+_pagesToPackets :: [OggPacket] -> [OggPage] -> [OggPacket]
+_pagesToPackets [] [] = []
+_pagesToPackets [cps] [] = [cps]
 
 _pagesToPackets carry [g] = s
     where s = prependCarry carry (pageToPackets g)
@@ -132,7 +132,7 @@ _pagesToPackets carry (g:gs) =
     else
         s ++ _pagesToPackets newcarry gs
     where s = prependCarry carry ns
-          newcarry = if incplt then Just (last ps) else Nothing
+          newcarry = if incplt then [last ps] else []
           ns = if incplt then init ps else ps
           ps = pageToPackets g
           incplt = pageIncomplete g
@@ -186,16 +186,16 @@ packetConcat (OggPacket r1 s1 _ b1 _ (Just x1)) (OggPacket r2 _ g2 _ e2 (Just x2
 packetConcat (OggPacket r1 s1 _ b1 _ _) (OggPacket r2 _ g2 _ e2 _) =
     OggPacket (r1++r2) s1 g2 b1 e2 Nothing
 
-carryCarry :: Maybe OggPacket -> Maybe OggPacket -> Maybe OggPacket
-carryCarry Nothing Nothing = Nothing
-carryCarry Nothing (Just p) = Just p
-carryCarry (Just c) Nothing = Just c
-carryCarry (Just c) (Just p) = Just (packetConcat c p)
+carryCarry :: [OggPacket] -> [OggPacket] -> [OggPacket]
+carryCarry [] [] = []
+carryCarry [] [p] = [p]
+carryCarry [c] [] = [c]
+carryCarry [c] [p] = [packetConcat c p]
 
-prependCarry :: Maybe OggPacket -> [OggPacket] -> [OggPacket]
-prependCarry Nothing s = s
-prependCarry (Just c) [] = [c]
-prependCarry (Just c) (s:ss) = (packetConcat c s):ss
+prependCarry :: [OggPacket] -> [OggPacket] -> [OggPacket]
+prependCarry [] s = s
+prependCarry [c] [] = [c]
+prependCarry [c] (s:ss) = (packetConcat c s):ss
 
 ------------------------------------------------------------
 -- Show
