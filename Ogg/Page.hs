@@ -14,7 +14,7 @@ module Ogg.Page (
   pageIsType
 ) where
 
-import Ogg.ByteFields
+import Ogg.RawPage
 import Ogg.CRC
 import Ogg.Utils
 import Ogg.Granulepos
@@ -168,24 +168,19 @@ _pageScan _ _ _ = [] -- length r < 4
 pageBuild :: Int -> [OggTrack] -> [Word8] -> (OggPage, Int, [Word8], [OggTrack])
 pageBuild o t d = (newpage, pageLen, rest, nt) where
   newpage = OggPage o track cont incplt bos eos gp seqno segments
-  htype = if (length d) > 5 then d !! 5 else 0
+  (r, pageLen) = rawPageBuild d
+  htype = rawPageHType r
   (nt, track) = findOrAddTrack serialno body t
   cont = testBit htype 0
   incplt = last segtab == 255
   bos = testBit htype 1
   eos = testBit htype 2
-  gp = Granulepos (Just (le64At 6 d))
-  serialno = le32At 14 d
-  seqno = le32At 18 d
-  -- crc = le32At 22 d
-  numseg = u8At 26 d
-  st = take numseg (drop 27 d)
-  segtab = map fromIntegral st
-  headerSize = 27 + numseg
-  bodySize = sum segtab
-  body = take bodySize (drop headerSize d)
+  gp = Granulepos (Just (rawPageGranulepos r))
+  serialno = rawPageSerialno r
+  seqno = rawPageSeqno r
+  segtab = rawPageSegtab r
+  body = rawPageBody r
   segments = splitSegments 0 segtab body
-  pageLen = headerSize + bodySize
   rest = drop pageLen d 
 
 findOrAddTrack :: Word32 -> [Word8] -> [OggTrack] -> ([OggTrack], OggTrack)
