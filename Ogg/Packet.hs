@@ -18,6 +18,8 @@ import Ogg.Granulepos
 import Ogg.Page
 import Ogg.Track
 
+import Data.List as List
+import Data.Map as Map
 import Data.Word (Word8, Word32)
 
 ------------------------------------------------------------
@@ -51,19 +53,25 @@ packetIsType t p = trackIsType t (packetTrack p)
 -- packetsToPages
 --
 
-packetsToPages :: [OggPacket] -> [OggPage]
-packetsToPages = packetsToPages_ Nothing 0
+-- A map from serialno to seqno
+type SeqnoMap = Map.Map OggTrack Word32
 
-packetsToPages_ :: Maybe OggPage -> Word32 -> [OggPacket] -> [OggPage]
+packetsToPages :: [OggPacket] -> [OggPage]
+packetsToPages = packetsToPages_ Nothing Map.empty
+
+packetsToPages_ :: Maybe OggPage -> SeqnoMap -> [OggPacket] -> [OggPage]
 
 packetsToPages_ Nothing _ [] = []
 packetsToPages_ (Just g) _ [] = [g]
 
-packetsToPages_ carry seqno (p:ps)
-  = newPages ++ packetsToPages_ newCarry (seqno+n) ps
+packetsToPages_ carry sqMap (p:ps)
+  = newPages ++ packetsToPages_ newCarry newSqMap ps
   where
     (newPages, newCarry) = segsToPages [] carry False seqno p
     n = fromIntegral (length newPages)
+    track = packetTrack p
+    seqno = Map.findWithDefault 0 track sqMap
+    newSqMap = Map.insert track (seqno+n) sqMap
 
 -- | Convert segments of a packet into pages, and maybe a carry page
 segsToPages :: [OggPage] -> Maybe OggPage -> Bool -> Word32 -> OggPacket
@@ -133,7 +141,7 @@ _pagesToPackets carry (g:gs) =
         s ++ _pagesToPackets newcarry gs
     where s = prependCarry carry ns
           newcarry = updateCarry ++ thisCarry
-          updateCarry = filter (\x -> packetTrack x /= (pageTrack g)) carry
+          updateCarry = List.filter (\x -> packetTrack x /= (pageTrack g)) carry
           thisCarry = if incplt then [last ps] else []
           ns = if incplt then init ps else ps
           ps = pageToPackets g
@@ -145,7 +153,7 @@ pageToPackets page = setLastSegmentEnds p3
     where p3 = setGranulepos p2 (pageGranulepos page) (pageIncomplete page)
           p2 = setEOS p1 (pageEOS page)
           p1 = setBOS p0 (pageBOS page)
-          p0 = map (packetBuild (pageTrack page)) (pageSegments page)
+          p0 = List.map (packetBuild (pageTrack page)) (pageSegments page)
 
 setLastSegmentEnds :: [OggPacket] -> [OggPacket]
 setLastSegmentEnds [] = []

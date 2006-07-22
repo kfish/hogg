@@ -70,6 +70,9 @@ parseType _ = Nothing
 instance Eq OggTrack where
   (==) (OggTrack s1 _) (OggTrack s2 _) = s1 == s2
 
+instance Ord OggTrack where
+  compare (OggTrack s1 _) (OggTrack s2 _) = compare s1 s2
+
 ------------------------------------------------------------
 -- Show
 --
