@@ -35,6 +35,7 @@ data OggPage =
     pageOffset :: Int,
     pageTrack :: OggTrack,
     pageContinued :: Bool,
+    pageIncomplete :: Bool,
     pageBOS :: Bool,
     pageEOS :: Bool,
     pageGranulepos :: Granulepos,
@@ -99,7 +100,7 @@ pageIsType t g = trackIsType t (pageTrack g)
 
 -- | Construct a binary representation of an Ogg page
 pageWrite :: OggPage -> [Word8]
-pageWrite (OggPage _ track cont bos eos gp seqno s) = newPageData
+pageWrite (OggPage _ track cont _ bos eos gp seqno s) = newPageData
   where
     newPageData = hData ++ crc ++ sData ++ body
     crcPageData = hData ++ zeroCRC ++ sData ++ body
@@ -166,10 +167,11 @@ _pageScan _ _ _ = [] -- length r < 4
 
 pageBuild :: Int -> [OggTrack] -> [Word8] -> (OggPage, Int, [Word8], [OggTrack])
 pageBuild o t d = (newpage, pageLen, rest, nt) where
-  newpage = OggPage o track cont bos eos gp seqno segments
+  newpage = OggPage o track cont incplt bos eos gp seqno segments
   htype = if (length d) > 5 then d !! 5 else 0
   (nt, track) = findOrAddTrack serialno body t
   cont = testBit htype 0
+  incplt = last segtab == 255
   bos = testBit htype 1
   eos = testBit htype 2
   gp = Granulepos (Just (le64At 6 d))
@@ -213,9 +215,10 @@ splitSegments accum (l:ls) body
 --
 
 instance Show OggPage where
-  show p@(OggPage o track cont bos eos gp seqno segment_table) =
+  show p@(OggPage o track cont incplt bos eos gp seqno segment_table) =
     (printf "%07x" o) ++ ": " ++ show track ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
-    where flags = ifc ++ ifb ++ ife
+    where flags = ifc ++ ift ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
+          ift = if incplt then " (incplt)" else ""
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""

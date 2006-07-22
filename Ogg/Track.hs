@@ -66,6 +66,10 @@ parseType (Just "speex") = Just Speex
 parseType (Just "theora") = Just Theora
 parseType _ = Nothing
 
+-- | Tracks are equal if their serialnos are equal
+instance Eq OggTrack where
+  (==) (OggTrack s1 _) (OggTrack s2 _) = s1 == s2
+
 ------------------------------------------------------------
 -- Show
 --

@@ -89,20 +89,24 @@ segsToPages pages carry cont seqno
 -- | Append the first segment of a packet to the carry page
 appendToCarry :: Maybe OggPage -> Bool -> Word32 -> OggPacket -> OggPage
 
+-- Case of no carry page, packet has only one segment
 appendToCarry Nothing cont seqno (OggPacket d track gp bos eos (Just [_]))
-  = OggPage 0 track cont bos eos gp seqno [d]
+  = OggPage 0 track cont True bos eos gp seqno [d]
 
+-- Case of no carry page, packet has >1 segment
 appendToCarry Nothing cont seqno (OggPacket d track _ bos _ (Just (s:_)))
-  = OggPage 0 track cont bos False (Granulepos Nothing) seqno [seg]
+  = OggPage 0 track cont False bos False (Granulepos Nothing) seqno [seg]
   where seg = take (segmentLength s) d
 
-appendToCarry (Just (OggPage o track cont bos _ _ seqno segs)) _ _
+-- Case of a carry page, packet has only one segment
+appendToCarry (Just (OggPage o track cont _ bos _ _ seqno segs)) _ _
               (OggPacket d _ gp _ eos (Just [_]))
-  = OggPage o track cont bos eos gp seqno (segs++[d])
+  = OggPage o track cont True bos eos gp seqno (segs++[d])
 
-appendToCarry (Just (OggPage o track cont bos _ gp seqno segs)) _ _
+-- Case of a carry page, packet has >1 segment
+appendToCarry (Just (OggPage o track cont _ bos _ gp seqno segs)) _ _
               (OggPacket d _ _ _ eos (Just (s:_)))
-  = OggPage o track cont bos eos gp seqno (segs++[seg])
+  = OggPage o track cont False bos eos gp seqno (segs++[seg])
   where seg = take (segmentLength s) d
         
 -- For completeness
@@ -120,22 +124,23 @@ _pagesToPackets Nothing [] = []
 _pagesToPackets (Just jcarry) [] = [jcarry]
 
 _pagesToPackets carry [g] = s
-    where s = prependCarry carry (pageToPackets g False)
+    where s = prependCarry carry (pageToPackets g)
 
-_pagesToPackets carry (g:gn:gs) =
-    if (co && length ps == 1) then
-        _pagesToPackets (carryCarry carry newcarry) (gn:gs)
+_pagesToPackets carry (g:gs) =
+    if (incplt && length ps == 1) then
+        _pagesToPackets (carryCarry carry newcarry) gs
     else
-        s ++ _pagesToPackets newcarry (gn:gs)
+        s ++ _pagesToPackets newcarry gs
     where s = prependCarry carry ns
-          newcarry = if co then Just (last ps) else Nothing
-          ns = if co then init ps else ps
-          ps = pageToPackets g co
-          co = pageContinued gn
+          newcarry = if incplt then Just (last ps) else Nothing
+          ns = if incplt then init ps else ps
+          ps = pageToPackets g
+          incplt = pageIncomplete g
 
-pageToPackets :: OggPage -> Bool -> [OggPacket]
-pageToPackets page co = setLastSegmentEnds p3
-    where p3 = setGranulepos p2 (pageGranulepos page) co
+-- | Construct (partial) packets from the segments of a page
+pageToPackets :: OggPage -> [OggPacket]
+pageToPackets page = setLastSegmentEnds p3
+    where p3 = setGranulepos p2 (pageGranulepos page) (pageIncomplete page)
           p2 = setEOS p1 (pageEOS page)
           p1 = setBOS p0 (pageBOS page)
           p0 = map (packetBuild (pageTrack page)) (pageSegments page)
