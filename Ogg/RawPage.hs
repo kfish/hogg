@@ -108,23 +108,11 @@ rawPageBuild d = (newRawPage, pageLen) where
 
 instance Show OggRawPage where
   show r =
-    " 0                   1                   2                   3\n" ++
-    " 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1| Byte\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n" ++
-    "| capture_pattern: Magic number for page start \"OggS\"           | 0-3\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n" ++
-    "| version       | header_type   | granule_position              | 4-7\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n" ++
-    "|                                                               | 8-11\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n" ++
-    "|                               | bitstream_serial_number       | 12-15\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n" ++
-    "|                               | page_sequence_number          | 16-19\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n" ++
-    "|                               | CRC_checksum                  | 20-23\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n" ++
-    "|                               |page_segments  | segment_table | 24-27\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n" ++
-    "| ...                                                           | 28-\n" ++
-    "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n"
-
+    "Version: " ++ show (rawPageVersion r) ++ "\n" ++
+    "HType: " ++ show (rawPageHType r) ++ "\n" ++
+    "Granulepos: " ++ show (rawPageGranulepos r) ++ "\n" ++
+    "Serialno: " ++ show (rawPageSerialno r) ++ "\n" ++
+    "Seqno: " ++ show (rawPageSeqno r) ++ "\n" ++
+    "CRC: " ++ show (rawPageCRC r) ++ "\n" ++
+    "Numseg: " ++ show (rawPageNumseg r) ++ "\n" ++
+    "Segtab: " ++ show (rawPageSegtab r) ++ "\n"
