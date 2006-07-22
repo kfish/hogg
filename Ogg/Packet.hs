@@ -191,8 +191,10 @@ packetConcat (OggPacket r1 s1 _ b1 _ _) (OggPacket r2 _ g2 _ e2 _) =
 carryCarry :: [OggPacket] -> [OggPacket] -> [OggPacket]
 carryCarry [] [] = []
 carryCarry [] [p] = [p]
-carryCarry [c] [] = [c]
-carryCarry (c:cs) [p] = (packetConcat c p):cs
+carryCarry oldCarry [] = oldCarry
+carryCarry (c:cs) [p]
+  | packetTrack c == packetTrack p = (packetConcat c p):cs
+  | otherwise                      = c:(carryCarry cs [p])
 
 prependCarry :: [OggPacket] -> [OggPacket] -> [OggPacket]
 prependCarry [] s = s
