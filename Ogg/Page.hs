@@ -82,8 +82,9 @@ pageVersion = 0x00
 
 -- | Determine the length of a page that would be written
 pageLength :: OggPage -> Int
-pageLength (OggPage _ _ _ _ _ _ _ s) = 27 + numsegs + sum (map length s)
+pageLength g = 27 + numsegs + sum (map length s)
     where (numsegs, _) = buildSegtab 0 [] s
+          s = pageSegments g
 
 ------------------------------------------------------------
 -- Predicates
