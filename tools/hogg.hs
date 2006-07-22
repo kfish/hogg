@@ -9,6 +9,7 @@ import System.Console.GetOpt
 import System.Exit
 
 import qualified Data.ByteString.Lazy as L
+import Ogg.RawPage
 import Ogg.Page
 import Ogg.Packet
 import Ogg.Track
@@ -69,6 +70,12 @@ processConfig = foldM processOneOption
     processOneOption config (ContentTypeOpt ctype) =
       return $ config {contentTypeCfg = Just ctype}
 
+getRawPages :: FilePath -> IO [OggRawPage]
+getRawPages filename = do
+    handle <- openFile filename ReadMode
+    input <- L.hGetContents handle
+    return $ rawPageScan (L.unpack input)
+
 getPages :: FilePath -> IO [OggPage]
 getPages filename = do
     handle <- openFile filename ReadMode
@@ -87,6 +94,14 @@ pageMatch (Just t) gs = filter (pageIsType t) gs
 packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
 packetMatch Nothing ps = ps
 packetMatch (Just t) ps = filter (packetIsType t) ps
+
+mRawPages :: [String] -> IO [OggRawPage]
+mRawPages args = do
+    (config, filenames) <- processArgs args
+    -- let ctype = parseType $ contentTypeCfg config
+    let filename = head filenames
+    allRawPages <- getRawPages filename
+    return allRawPages
 
 mPages :: [String] -> IO [OggPage]
 mPages args = do
@@ -141,6 +156,11 @@ dumpPages args = do
   matchPages <- mPages args
   mapM_ putStrLn (map show matchPages)
 
+dumpRawPages :: [String] -> IO ()
+dumpRawPages args = do
+  matchPages <- mRawPages args
+  mapM_ putStrLn (map show matchPages)
+
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
 
@@ -156,3 +176,4 @@ main = do
       "rewrite" -> rewritePages args
       "repacket" -> rewritePackets args
       "countrw" -> countrwPages args
+      "dumpraw" -> dumpRawPages args
