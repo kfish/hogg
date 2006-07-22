@@ -132,7 +132,8 @@ _pagesToPackets carry (g:gs) =
     else
         s ++ _pagesToPackets newcarry gs
     where s = prependCarry carry ns
-          newcarry = updateCarry carry thisCarry
+          newcarry = updateCarry ++ thisCarry
+          updateCarry = filter (\x -> packetTrack x /= (pageTrack g)) carry
           thisCarry = if incplt then [last ps] else []
           ns = if incplt then init ps else ps
           ps = pageToPackets g
@@ -199,9 +200,6 @@ prependCarry oldCarry [] = oldCarry
 prependCarry (c:cs) (s:ss)
   | packetTrack c == packetTrack s = (packetConcat c s):ss
   | otherwise                      = prependCarry cs (s:ss)
-
-updateCarry :: [OggPacket] -> [OggPacket] -> [OggPacket]
-updateCarry _ newCarry = newCarry
 
 ------------------------------------------------------------
 -- Show
