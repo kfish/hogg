@@ -55,15 +55,14 @@ packetIsType t p = trackIsType t (packetTrack p)
 
 -- A map from track serialno to seqno
 type SeqnoMap = Map.Map OggTrack Word32
-type CarryPages = Maybe OggPage
+type CarryPages = Map.Map OggTrack OggPage
 
 packetsToPages :: [OggPacket] -> [OggPage]
-packetsToPages = packetsToPages_ Nothing Map.empty
+packetsToPages = packetsToPages_ Map.empty Map.empty
 
 packetsToPages_ :: CarryPages -> SeqnoMap -> [OggPacket] -> [OggPage]
 
-packetsToPages_ Nothing _ [] = []
-packetsToPages_ (Just g) _ [] = [g]
+packetsToPages_ carry _ [] = elems carry
 
 packetsToPages_ carry sqMap (p:ps)
   = newPages ++ packetsToPages_ newCarry newSqMap ps
@@ -78,22 +77,27 @@ packetsToPages_ carry sqMap (p:ps)
 segsToPages :: [OggPage] -> CarryPages -> Bool -> Word32 -> OggPacket
                -> ([OggPage], CarryPages)
 
-segsToPages pages _ _ _ (OggPacket _ _ _ _ _ Nothing) = (pages, Nothing)
-segsToPages pages _ _ _ (OggPacket _ _ _ _ _ (Just [])) = (pages, Nothing)
+segsToPages pages carry _ _ (OggPacket _ _ _ _ _ Nothing) = (pages, carry)
+segsToPages pages carry _ _ (OggPacket _ _ _ _ _ (Just [])) = (pages, carry)
 
-segsToPages pages carry cont seqno p@(OggPacket _ _ _ _ _ (Just [s]))
-  | segmentEndsPage s = (pages++[newPage], Nothing)
-  | otherwise         = (pages, Just newPage)
+segsToPages pages carry cont seqno p@(OggPacket _ track _ _ _ (Just [s]))
+  | segmentEndsPage s = (pages++[newPage], deleteCarry)
+  | otherwise         = (pages, replaceCarry)
   where
-    newPage = appendToCarry carry cont seqno p
+    newPage = appendToCarry carryPage cont seqno p
+    carryPage = Map.lookup track carry
+    deleteCarry = Map.delete track carry
+    replaceCarry = Map.insert track newPage carry
 
 segsToPages pages carry cont seqno
             p@(OggPacket d track gp _ eos (Just (s:ss)))
-  = segsToPages (pages++[newPage]) Nothing True (seqno+1) dropPacket
+  = segsToPages (pages++[newPage]) deleteCarry True (seqno+1) dropPacket
   where
     dropPacket = OggPacket rest track gp False eos (Just ss)
     rest = drop (segmentLength s) d
-    newPage = appendToCarry carry cont seqno p
+    deleteCarry = Map.delete track carry
+    newPage = appendToCarry carryPage cont seqno p
+    carryPage = Map.lookup track carry
 
 -- | Append the first segment of a packet to (maybe) a carry page
 appendToCarry :: Maybe OggPage -> Bool -> Word32 -> OggPacket -> OggPage
