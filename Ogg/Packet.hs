@@ -124,12 +124,17 @@ appendToCarry _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 -- pagesToPackets
 --
 
+-- type CarryMap = Map.Map OggTrack OggPacket
+type CarryBag = [OggPacket]
+
 pagesToPackets :: [OggPage] -> [OggPacket]
 pagesToPackets = _pagesToPackets []
 
-_pagesToPackets :: [OggPacket] -> [OggPage] -> [OggPacket]
+_pagesToPackets :: CarryBag -> [OggPage] -> [OggPacket]
 _pagesToPackets [] [] = []
 _pagesToPackets [cps] [] = [cps]
+-- _pagesToPackets carry [] = carry
+-- _pagesToPackets carry [] = elems carry
 
 _pagesToPackets carry [g] = s
     where s = prependCarry carry (pageToPackets g)
@@ -196,7 +201,7 @@ packetConcat (OggPacket r1 s1 _ b1 _ (Just x1)) (OggPacket r2 _ g2 _ e2 (Just x2
 packetConcat (OggPacket r1 s1 _ b1 _ _) (OggPacket r2 _ g2 _ e2 _) =
     OggPacket (r1++r2) s1 g2 b1 e2 Nothing
 
-carryCarry :: [OggPacket] -> [OggPacket] -> [OggPacket]
+carryCarry :: CarryBag -> CarryBag -> CarryBag
 carryCarry [] [] = []
 carryCarry [] [p] = [p]
 carryCarry oldCarry [] = oldCarry
@@ -204,7 +209,7 @@ carryCarry (c:cs) [p]
   | packetTrack c == packetTrack p = (packetConcat c p):cs
   | otherwise                      = c:(carryCarry cs [p])
 
-prependCarry :: [OggPacket] -> [OggPacket] -> [OggPacket]
+prependCarry :: CarryBag -> [OggPacket] -> [OggPacket]
 prependCarry [] s = s
 prependCarry oldCarry [] = oldCarry
 prependCarry (c:cs) (s:ss)
