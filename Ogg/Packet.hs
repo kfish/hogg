@@ -124,20 +124,14 @@ appendToCarry _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 -- pagesToPackets
 --
 
--- type CarryMap = Map.Map OggTrack OggPacket
-type CarryBag = [OggPacket]
+type CarryMap = Map.Map OggTrack OggPacket
 
 pagesToPackets :: [OggPage] -> [OggPacket]
-pagesToPackets = _pagesToPackets []
+pagesToPackets = _pagesToPackets Map.empty
 
-_pagesToPackets :: CarryBag -> [OggPage] -> [OggPacket]
-_pagesToPackets [] [] = []
-_pagesToPackets [cps] [] = [cps]
--- _pagesToPackets carry [] = carry
--- _pagesToPackets carry [] = elems carry
-
-_pagesToPackets carry [g] = s
-    where s = prependCarry carry (pageToPackets g)
+_pagesToPackets :: CarryMap -> [OggPage] -> [OggPacket]
+_pagesToPackets carry [] = elems carry
+_pagesToPackets carry [g] = prependCarry carry (pageToPackets g)
 
 _pagesToPackets carry (g:gs) =
     if (incplt && length ps == 1) then
@@ -145,9 +139,9 @@ _pagesToPackets carry (g:gs) =
     else
         s ++ _pagesToPackets newcarry gs
     where s = prependCarry carry ns
-          newcarry = updateCarry ++ thisCarry
-          updateCarry = List.filter (\x -> packetTrack x /= (pageTrack g)) carry
-          thisCarry = if incplt then [last ps] else []
+          newcarry = if incplt then Map.insert track (last ps) carry
+                               else Map.delete track carry
+          track = pageTrack g
           ns = if incplt then init ps else ps
           ps = pageToPackets g
           incplt = pageIncomplete g
@@ -201,20 +195,23 @@ packetConcat (OggPacket r1 s1 _ b1 _ (Just x1)) (OggPacket r2 _ g2 _ e2 (Just x2
 packetConcat (OggPacket r1 s1 _ b1 _ _) (OggPacket r2 _ g2 _ e2 _) =
     OggPacket (r1++r2) s1 g2 b1 e2 Nothing
 
-carryCarry :: CarryBag -> CarryBag -> CarryBag
-carryCarry [] [] = []
-carryCarry [] [p] = [p]
-carryCarry oldCarry [] = oldCarry
-carryCarry (c:cs) [p]
-  | packetTrack c == packetTrack p = (packetConcat c p):cs
-  | otherwise                      = c:(carryCarry cs [p])
+carryCarry :: CarryMap -> CarryMap -> CarryMap
+carryCarry oldCarry newCarry
+  | Map.null oldCarry = newCarry
+  | Map.null newCarry = oldCarry
+  | otherwise     = Map.insert track combinedCarry oldCarry
+  where (track, p) = (head . Map.assocs) newCarry
+        combinedCarry = concatTo $ Map.lookup track oldCarry
+        concatTo Nothing = p
+        concatTo (Just c) = packetConcat c p
 
-prependCarry :: CarryBag -> [OggPacket] -> [OggPacket]
-prependCarry [] s = s
-prependCarry oldCarry [] = oldCarry
-prependCarry (c:cs) (s:ss)
-  | packetTrack c == packetTrack s = (packetConcat c s):ss
-  | otherwise                      = prependCarry cs (s:ss)
+prependCarry :: CarryMap -> [OggPacket] -> [OggPacket]
+prependCarry oldCarry [] = elems oldCarry
+prependCarry oldCarry segs@(s:ss) = newPackets
+  where track = packetTrack s
+        newPackets = appendTo $ Map.lookup track oldCarry
+        appendTo Nothing = segs
+        appendTo (Just c) = (packetConcat c s):ss
 
 ------------------------------------------------------------
 -- Show
