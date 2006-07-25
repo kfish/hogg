@@ -53,7 +53,7 @@ packetIsType t p = trackIsType t (packetTrack p)
 -- packetsToPages
 --
 
--- A map from serialno to seqno
+-- A map from track serialno to seqno
 type SeqnoMap = Map.Map OggTrack Word32
 
 packetsToPages :: [OggPacket] -> [OggPage]
