@@ -55,11 +55,12 @@ packetIsType t p = trackIsType t (packetTrack p)
 
 -- A map from track serialno to seqno
 type SeqnoMap = Map.Map OggTrack Word32
+type CarryPages = Maybe OggPage
 
 packetsToPages :: [OggPacket] -> [OggPage]
 packetsToPages = packetsToPages_ Nothing Map.empty
 
-packetsToPages_ :: Maybe OggPage -> SeqnoMap -> [OggPacket] -> [OggPage]
+packetsToPages_ :: CarryPages -> SeqnoMap -> [OggPacket] -> [OggPage]
 
 packetsToPages_ Nothing _ [] = []
 packetsToPages_ (Just g) _ [] = [g]
@@ -74,8 +75,8 @@ packetsToPages_ carry sqMap (p:ps)
     newSqMap = Map.insert track (seqno+n) sqMap
 
 -- | Convert segments of a packet into pages, and maybe a carry page
-segsToPages :: [OggPage] -> Maybe OggPage -> Bool -> Word32 -> OggPacket
-               -> ([OggPage], Maybe OggPage)
+segsToPages :: [OggPage] -> CarryPages -> Bool -> Word32 -> OggPacket
+               -> ([OggPage], CarryPages)
 
 segsToPages pages _ _ _ (OggPacket _ _ _ _ _ Nothing) = (pages, Nothing)
 segsToPages pages _ _ _ (OggPacket _ _ _ _ _ (Just [])) = (pages, Nothing)
@@ -94,7 +95,7 @@ segsToPages pages carry cont seqno
     rest = drop (segmentLength s) d
     newPage = appendToCarry carry cont seqno p
 
--- | Append the first segment of a packet to the carry page
+-- | Append the first segment of a packet to (maybe) a carry page
 appendToCarry :: Maybe OggPage -> Bool -> Word32 -> OggPacket -> OggPage
 
 -- Case of no carry page, packet has only one segment
