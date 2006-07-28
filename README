@@ -1,0 +1,40 @@
+------------------------------------------------------------
+HOgg -- Ogg encapsulation stuffz
+------------------------------------------------------------
+
+Requirements:
+	- Cabal
+
+Building:
+	chmod +x Setup.hs
+	./Setup.hs configure
+	./Setup.hs build
+	./Setup.hs install
+
+Usage:
+
+	Dump packets of an Ogg file:
+
+	hogg dump file.ogg
+
+	Dump pages of an Ogg file
+
+	hogg pagedump file.ogg
+
+	Dump vorbis (theora, speex) packets
+
+	hogg dump -c vorbis file.ogg
+	hogg pagedump -c vorbis file.ogg
+	hogg dumpraw -c vorbis file.ogg
+
+Checking stuff works:
+
+	Rewrite a file (parse pages, rewrite page data):
+
+	hogg rewrite file.ogg > newfile.ogg
+	diff file.ogg newfile.ogg
+
+	Repacket a file (parse to packets, rewrite with original segmentation):
+
+	hogg repacket file.ogg > newfile.ogg
+	diff file.ogg newfile.ogg
