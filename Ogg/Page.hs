@@ -142,13 +142,6 @@ pageScan' offset tracks input
   | otherwise                           = pageScan' (offset+1) tracks (L.tail input)
   where (newPage, pageLen, rest, newTracks) = pageBuild offset tracks input
 
--- pageScan' _ _ [] = []
--- pageScan' o t r@(r1:r2:r3:r4:_)
---     | [r1,r2,r3,r4] == pageMarker = newpage : _pageScan (o+pageLen) nt rest
---     | otherwise	= _pageScan (o+1) t (tail r)
---       where (newpage, pageLen, rest, nt) = pageBuild o t r
--- pageScan' _ _ _ = [] -- length r < 4
-
 pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, [OggTrack])
 pageBuild o t d = (newPage, pageLen, rest, newTracks) where
   newPage = OggPage o track cont incplt bos eos gp seqno segments

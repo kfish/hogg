@@ -90,18 +90,10 @@ rawPageScan input
   where (newPage, pageLen) = rawPageBuild input
         rest = L.drop pageLen input
 
--- rawPageScan r@(r1:r2:r3:r4:_)
---   | [r1,r2,r3,r4] == pageMarker = newpage : rawPageScan rest
---   | otherwise                   = rawPageScan (tail r)
---   where (newpage, pageLen) = rawPageBuild r
---         rest = drop pageLen r
--- rawPageScan _ = [] -- length r < 4
-
 rawPageBuild :: L.ByteString -> (OggRawPage, Int64)
 rawPageBuild d = (newRawPage, pageLen) where
   newRawPage = OggRawPage v htype gp serialno seqno crc numseg segtab body
   v = u8At 4 d
-  -- htype = if (L.length d) > 5 then d !! 5 else 0
   htype = u8At 5 d
   gp = le64At 6 d
   serialno = le32At 14 d
