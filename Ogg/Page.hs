@@ -21,8 +21,10 @@ import Ogg.Granulepos
 import Ogg.Track
 
 import Data.List (find)
+import Data.Int (Int64)
 import Data.Word (Word8, Word32)
 import Data.Bits
+import qualified Data.ByteString.Lazy as L
 
 import Text.Printf
 
@@ -32,7 +34,7 @@ import Text.Printf
 
 data OggPage =
   OggPage {
-    pageOffset :: Int,
+    pageOffset :: Int64,
     pageTrack :: OggTrack,
     pageContinued :: Bool,
     pageIncomplete :: Bool,
@@ -49,6 +51,9 @@ data OggPage =
 
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
+
+pageMarkerString :: L.ByteString
+pageMarkerString = L.pack pageMarker
 
 -- | Ogg version supported by this library
 pageVersion :: Word8
@@ -127,23 +132,29 @@ buildTab q r _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 --
 
 -- | Read a list of data bytes into Ogg pages
-pageScan :: [Word8] -> [OggPage]
-pageScan = _pageScan 0 []
+pageScan :: L.ByteString -> [OggPage]
+pageScan = pageScan' 0 []
 
-_pageScan :: Int -> [OggTrack] -> [Word8] -> [OggPage]
-_pageScan _ _ [] = []
-_pageScan o t r@(r1:r2:r3:r4:_)
-    | [r1,r2,r3,r4] == pageMarker = newpage : _pageScan (o+pageLen) nt rest
-    | otherwise	= _pageScan (o+1) t (tail r)
-      where (newpage, pageLen, rest, nt) = pageBuild o t r
-_pageScan _ _ _ = [] -- length r < 4
+pageScan' :: Int64 -> [OggTrack] -> L.ByteString -> [OggPage]
+pageScan' offset tracks input
+  | L.null input = []
+  | L.isPrefixOf pageMarkerString input = newPage : pageScan' (offset+pageLen) newTracks rest
+  | otherwise                           = pageScan' (offset+1) tracks (L.tail input)
+  where (newPage, pageLen, rest, newTracks) = pageBuild offset tracks input
 
-pageBuild :: Int -> [OggTrack] -> [Word8] -> (OggPage, Int, [Word8], [OggTrack])
-pageBuild o t d = (newpage, pageLen, rest, nt) where
-  newpage = OggPage o track cont incplt bos eos gp seqno segments
+-- pageScan' _ _ [] = []
+-- pageScan' o t r@(r1:r2:r3:r4:_)
+--     | [r1,r2,r3,r4] == pageMarker = newpage : _pageScan (o+pageLen) nt rest
+--     | otherwise	= _pageScan (o+1) t (tail r)
+--       where (newpage, pageLen, rest, nt) = pageBuild o t r
+-- pageScan' _ _ _ = [] -- length r < 4
+
+pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, [OggTrack])
+pageBuild o t d = (newPage, pageLen, rest, newTracks) where
+  newPage = OggPage o track cont incplt bos eos gp seqno segments
   (r, pageLen) = rawPageBuild d
   htype = rawPageHType r
-  (nt, track) = findOrAddTrack serialno body t
+  (newTracks, track) = findOrAddTrack serialno body t
   cont = testBit htype 0
   incplt = last segtab == 255
   bos = testBit htype 1
@@ -154,7 +165,7 @@ pageBuild o t d = (newpage, pageLen, rest, nt) where
   segtab = rawPageSegtab r
   body = rawPageBody r
   segments = splitSegments 0 segtab body
-  rest = drop pageLen d 
+  rest = L.drop pageLen d 
 
 findOrAddTrack :: Word32 -> [Word8] -> [OggTrack] -> ([OggTrack], OggTrack)
 findOrAddTrack s d t = foat fTrack
@@ -184,7 +195,7 @@ splitSegments accum (l:ls) body
 
 instance Show OggPage where
   show p@(OggPage o track cont incplt bos eos gp seqno segment_table) =
-    (printf "%07x" o) ++ ": " ++ show track ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
+    (show o) ++ ": " ++ show track ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
     where flags = ifc ++ ift ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ift = if incplt then " (incplt)" else ""

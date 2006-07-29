@@ -14,6 +14,8 @@ module Ogg.RawPage (
 
 import Ogg.ByteFields
 
+import qualified Data.ByteString.Lazy as L
+import Data.Int (Int64)
 import Data.Word (Word8, Word32, Word64)
 
 import Text.Printf
@@ -69,6 +71,9 @@ data OggRawPage =
 pageMarker :: [Word8]
 pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
+pageMarkerString :: L.ByteString
+pageMarkerString = L.pack pageMarker
+
 -- | Ogg version supported by this library
 pageVersion :: Word8
 pageVersion = 0x00
@@ -77,30 +82,39 @@ pageVersion = 0x00
 -- rawPageScan
 --
 
-rawPageScan :: [Word8] -> [OggRawPage]
-rawPageScan r@(r1:r2:r3:r4:_)
-  | [r1,r2,r3,r4] == pageMarker = newpage : rawPageScan rest
-  | otherwise                   = rawPageScan (tail r)
-  where (newpage, pageLen) = rawPageBuild r
-        rest = drop pageLen r
-rawPageScan _ = [] -- length r < 4
+rawPageScan :: L.ByteString -> [OggRawPage]
+rawPageScan input
+  | L.null input = []
+  | L.isPrefixOf pageMarkerString input = newPage : rawPageScan rest
+  | otherwise    = rawPageScan (L.tail input)
+  where (newPage, pageLen) = rawPageBuild input
+        rest = L.drop pageLen input
 
-rawPageBuild :: [Word8] -> (OggRawPage, Int)
+-- rawPageScan r@(r1:r2:r3:r4:_)
+--   | [r1,r2,r3,r4] == pageMarker = newpage : rawPageScan rest
+--   | otherwise                   = rawPageScan (tail r)
+--   where (newpage, pageLen) = rawPageBuild r
+--         rest = drop pageLen r
+-- rawPageScan _ = [] -- length r < 4
+
+rawPageBuild :: L.ByteString -> (OggRawPage, Int64)
 rawPageBuild d = (newRawPage, pageLen) where
   newRawPage = OggRawPage v htype gp serialno seqno crc numseg segtab body
   v = u8At 4 d
-  htype = if (length d) > 5 then d !! 5 else 0
+  -- htype = if (L.length d) > 5 then d !! 5 else 0
+  htype = u8At 5 d
   gp = le64At 6 d
   serialno = le32At 14 d
   seqno = le32At 18 d
   crc = le32At 22 d
-  numseg = u8At 26 d
-  st = take numseg (drop 27 d)
+  numseg64 = u8At 26 d
+  numseg = fromIntegral numseg64
+  st = L.unpack $ L.take numseg64 (L.drop 27 d)
   segtab = map fromIntegral st
-  headerSize = 27 + numseg
-  bodySize = sum segtab
-  body = take bodySize (drop headerSize d)
-  pageLen = headerSize + bodySize
+  headerSize = 27 + numseg64
+  bodySize = fromIntegral $ sum segtab
+  body = L.unpack $ L.take bodySize (L.drop headerSize d)
+  pageLen = fromIntegral $ headerSize + bodySize
 
 ------------------------------------------------------------
 -- Show

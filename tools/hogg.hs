@@ -74,13 +74,13 @@ getRawPages :: FilePath -> IO [OggRawPage]
 getRawPages filename = do
     handle <- openFile filename ReadMode
     input <- L.hGetContents handle
-    return $ rawPageScan (L.unpack input)
+    return $ rawPageScan input
 
 getPages :: FilePath -> IO [OggPage]
 getPages filename = do
     handle <- openFile filename ReadMode
     input <- L.hGetContents handle
-    return $ pageScan (L.unpack input)
+    return $ pageScan input
 
 getPackets :: FilePath -> IO [OggPacket]
 getPackets filename = do

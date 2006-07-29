@@ -14,7 +14,8 @@ Other-modules:       Ogg.Utils
                      Ogg.ByteFields
                      Ogg.CRC
                      Ogg.Dump
-ghc-options:         -Wall -fglasgow-exts -O -optc-O2 -funbox-strict-fields 
+ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields 
+-- ghc-options:         -prof -auto-all
 
 Executable:          hogg
 Main-Is:             hogg.hs
