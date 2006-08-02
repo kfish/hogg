@@ -28,19 +28,19 @@ import Data.Word (Word8, Word32)
 
 data OggPacket =
   OggPacket {
-    packetData :: [Word8],
-    packetTrack :: OggTrack,
-    packetGranulepos :: Granulepos,
-    packetBOS :: Bool,
-    packetEOS :: Bool,
-    packetSegments :: Maybe [OggSegment]
+    packetData :: !([Word8]),
+    packetTrack :: !OggTrack,
+    packetGranulepos :: !Granulepos,
+    packetBOS :: !Bool,
+    packetEOS :: !Bool,
+    packetSegments :: !(Maybe [OggSegment])
   }
 
 data OggSegment =
   OggSegment {
-    segmentLength :: Int,
-    segmentPageIx :: Int, -- ^ page index (NOT seqno) of this segment
-    segmentEndsPage :: Bool -- ^ whether or not the segment ends a page
+    segmentLength :: !Int,
+    segmentPageIx :: !Int, -- ^ page index (NOT seqno) of this segment
+    segmentEndsPage :: !Bool -- ^ whether or not the segment ends a page
   }
 
 ------------------------------------------------------------

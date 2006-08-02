@@ -34,15 +34,15 @@ import Text.Printf
 
 data OggPage =
   OggPage {
-    pageOffset :: Int64,
-    pageTrack :: OggTrack,
-    pageContinued :: Bool,
-    pageIncomplete :: Bool,
-    pageBOS :: Bool,
-    pageEOS :: Bool,
-    pageGranulepos :: Granulepos,
-    pageSeqno :: Word32,
-    pageSegments :: [[Word8]]
+    pageOffset :: !Int64,
+    pageTrack :: !OggTrack,
+    pageContinued :: !Bool,
+    pageIncomplete :: !Bool,
+    pageBOS :: !Bool,
+    pageEOS :: !Bool,
+    pageGranulepos :: !Granulepos,
+    pageSeqno :: !Word32,
+    pageSegments :: !([[Word8]])
   }
 
 ------------------------------------------------------------

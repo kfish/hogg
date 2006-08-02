@@ -53,15 +53,15 @@ import Text.Printf
 
 data OggRawPage =
   OggRawPage {
-    rawPageVersion :: Word8,
-    rawPageHType :: Word8,
-    rawPageGranulepos :: Word64,
-    rawPageSerialno :: Word32,
-    rawPageSeqno :: Word32,
-    rawPageCRC :: Word32,
-    rawPageNumseg :: Int,
-    rawPageSegtab :: [Int],
-    rawPageBody :: [Word8]
+    rawPageVersion :: !Word8,
+    rawPageHType :: !Word8,
+    rawPageGranulepos :: !Word64,
+    rawPageSerialno :: !Word32,
+    rawPageSeqno :: !Word32,
+    rawPageCRC :: !Word32,
+    rawPageNumseg :: !Int,
+    rawPageSegtab :: !([Int]),
+    rawPageBody :: !([Word8])
   }
 
 ------------------------------------------------------------
