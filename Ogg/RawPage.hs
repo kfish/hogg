@@ -61,7 +61,7 @@ data OggRawPage =
     rawPageCRC :: !Word32,
     rawPageNumseg :: !Int,
     rawPageSegtab :: !([Int]),
-    rawPageBody :: !([Word8])
+    rawPageBody :: !L.ByteString
   }
 
 ------------------------------------------------------------
@@ -105,7 +105,7 @@ rawPageBuild d = (newRawPage, pageLen) where
   segtab = map fromIntegral st
   headerSize = 27 + numseg64
   bodySize = fromIntegral $ sum segtab
-  body = L.unpack $ L.take bodySize (L.drop headerSize d)
+  body = L.take bodySize (L.drop headerSize d)
   pageLen = fromIntegral $ headerSize + bodySize
 
 ------------------------------------------------------------

@@ -20,7 +20,9 @@ import Ogg.Track
 
 import Data.List as List
 import Data.Map as Map
-import Data.Word (Word8, Word32)
+import Data.Int (Int64)
+import Data.Word (Word32)
+import qualified Data.ByteString.Lazy as L
 
 ------------------------------------------------------------
 -- Data
@@ -28,7 +30,7 @@ import Data.Word (Word8, Word32)
 
 data OggPacket =
   OggPacket {
-    packetData :: !([Word8]),
+    packetData :: !(L.ByteString),
     packetTrack :: !OggTrack,
     packetGranulepos :: !Granulepos,
     packetBOS :: !Bool,
@@ -117,7 +119,7 @@ segsToPages pages carry cont sqMap
   where
     newPages = List.insert newPage pages
     dropPacket = OggPacket rest track gp False eos (Just ss)
-    rest = drop (segmentLength s) d
+    rest = L.drop (fromIntegral $ segmentLength s) d
     seqno = Map.findWithDefault 0 track sqMap
     newSqMap = Map.insert track (seqno+1) sqMap
     deleteCarry = Map.delete track carry
@@ -135,7 +137,7 @@ appendToCarry Nothing ix cont seqno (OggPacket d track gp bos eos (Just [_]))
 appendToCarry Nothing ix cont seqno (OggPacket d track _ bos _ (Just (s:_)))
   = CarryPage ix (OggPage 0 track cont False bos False (Granulepos Nothing) seqno [seg])
   where
-    seg = take (segmentLength s) d
+    seg = L.take (fromIntegral $ segmentLength s) d
 
 -- Case of a carry page, packet has only one segment
 appendToCarry (Just (CarryPage ix (OggPage o track cont _ bos _ _ seqno segs))) _ _ _
@@ -146,7 +148,7 @@ appendToCarry (Just (CarryPage ix (OggPage o track cont _ bos _ _ seqno segs))) 
 appendToCarry (Just (CarryPage ix (OggPage o track cont _ bos _ gp seqno segs))) _ _ _
               (OggPacket d _ _ _ eos (Just (s:_)))
   = CarryPage ix (OggPage o track cont False bos eos gp seqno (segs++[seg]))
-  where seg = take (segmentLength s) d
+  where seg = L.take (fromIntegral $ segmentLength s) d
         
 -- For completeness
 appendToCarry _ _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
@@ -212,19 +214,19 @@ setEOS ps False = ps
 setEOS ps True = (init ps)++[(last ps){packetEOS = True}]
 
 -- | Build a partial packet given a track, seqno and a segment
-packetBuild :: OggTrack -> Int -> [Word8] -> OggPacket
+packetBuild :: OggTrack -> Int -> L.ByteString -> OggPacket
 packetBuild track ix r = OggPacket r track (Granulepos Nothing) False False (Just [seg])
-    where seg = OggSegment l ix False
-          l = length r
+    where seg = OggSegment (fromIntegral l) ix False
+          l = L.length r
 
 -- | Concatenate data of two (partial) packets into one (partial) packet
 packetConcat :: OggPacket -> OggPacket -> OggPacket
 packetConcat (OggPacket r1 s1 _ b1 _ (Just x1)) (OggPacket r2 _ g2 _ e2 (Just x2)) =
-    OggPacket (r1++r2) s1 g2 b1 e2 (Just (x1++x2))
+    OggPacket (L.append r1 r2) s1 g2 b1 e2 (Just (x1++x2))
 
 -- If either of the packets have unknown segmentation, ditch all segmentation
 packetConcat (OggPacket r1 s1 _ b1 _ _) (OggPacket r2 _ g2 _ e2 _) =
-    OggPacket (r1++r2) s1 g2 b1 e2 Nothing
+    OggPacket (L.append r1 r2) s1 g2 b1 e2 Nothing
 
 carryCarry :: CarryPackets -> CarryPackets -> CarryPackets
 carryCarry oldCarry newCarry
@@ -250,7 +252,7 @@ prependCarry oldCarry segs@(s:ss) = newPackets
 
 instance Show OggPacket where
   show (OggPacket d track gp bos eos _) =
-    ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (length d) ++ " bytes\n" ++ hexDump d
+    ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""

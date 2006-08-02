@@ -6,21 +6,30 @@ module Ogg.CRC (
 
 import Data.Array
 import Data.Bits
-import Data.Word (Word8, Word32)
+import Data.Word (Word32)
+
+import qualified Data.ByteString.Lazy as L
 
 -- | A zeroed out block of data the size of a CRC
-zeroCRC :: [Word8]
-zeroCRC = [0x00, 0x00, 0x00, 0x00]
+zeroCRC :: L.ByteString
+zeroCRC = L.pack [0x00, 0x00, 0x00, 0x00]
 
 -- | Generate the CRC for a block of data
-genCRC :: [Word8] -> Word32
+genCRC :: L.ByteString -> Word32
 genCRC = genCRC_ 0x00
 
-genCRC_ :: Word32 -> [Word8] -> Word32
-genCRC_ crc [] = crc
-genCRC_ crc (x:xs) = genCRC_ nCRC xs
-  where nCRC = (lookupCRC ! ix) `xor` (crc `shiftL` 8)
+genCRC_ :: Word32 -> L.ByteString -> Word32
+genCRC_ crc d
+  | L.null d  = crc
+  | otherwise = genCRC_ nCRC xs
+  where (x, xs) = (L.head d, L.tail d)
+        nCRC = (lookupCRC ! ix) `xor` (crc `shiftL` 8)
         ix = (fromIntegral x) `xor` ((crc `shiftR` 24) .&. 0xFF)
+
+-- genCRC_ crc [] = crc
+-- genCRC_ crc (x:xs) = genCRC_ nCRC xs
+--   where nCRC = (lookupCRC ! ix) `xor` (crc `shiftL` 8)
+--         ix = (fromIntegral x) `xor` ((crc `shiftR` 24) .&. 0xFF)
 
 lookupCRC :: Array Word32 Word32
 lookupCRC = listArray (0, 255) listCRC

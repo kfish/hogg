@@ -42,7 +42,7 @@ data OggPage =
     pageEOS :: !Bool,
     pageGranulepos :: !Granulepos,
     pageSeqno :: !Word32,
-    pageSegments :: !([[Word8]])
+    pageSegments :: !([L.ByteString])
   }
 
 ------------------------------------------------------------
@@ -61,7 +61,7 @@ pageVersion = 0x00
 
 -- | Determine the length of a page that would be written
 pageLength :: OggPage -> Int
-pageLength g = 27 + numsegs + sum (map length s)
+pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
     where (numsegs, _) = buildSegtab 0 [] s
           s = pageSegments g
 
@@ -77,16 +77,16 @@ pageIsType t g = trackIsType t (pageTrack g)
 --
 
 -- | Construct a binary representation of an Ogg page
-pageWrite :: OggPage -> [Word8]
+pageWrite :: OggPage -> L.ByteString
 pageWrite (OggPage _ track cont _ bos eos gp seqno s) = newPageData
   where
-    newPageData = hData ++ crc ++ sData ++ body
-    crcPageData = hData ++ zeroCRC ++ sData ++ body
-    hData = pageMarker ++ version ++ htype ++ gp_ ++ ser_ ++ seqno_
+    newPageData = L.concat [hData, crc, sData, body]
+    crcPageData = L.concat [hData, zeroCRC, sData, body]
+    hData = L.concat [pageMarkerString, version, htype, gp_, ser_, seqno_]
     sData = segs
 
     version = fillField pageVersion 1
-    htype = [headerType]
+    htype = L.pack [headerType]
     gp_ = fillField (gpUnpack gp) 8
     ser_ = fillField serialno 4
     seqno_ = fillField seqno 4
@@ -101,24 +101,32 @@ pageWrite (OggPage _ track cont _ bos eos gp seqno s) = newPageData
     serialno = trackSerialno track
 
     -- Segment table
-    segs = (toTwosComp (numsegs)) ++ segtab
+    segs = L.pack $ (toTwosComp (numsegs)) ++ segtab
     (numsegs, segtab) = buildSegtab 0 [] s
 
     -- Body data
-    body = concat s
+    body = L.concat s
 
-fillField :: Integral a => a -> Int -> [Word8]
+fillField :: Integral a => a -> Int -> L.ByteString
 fillField x n
-  | l < n	= reverse ((take (n-l) $ repeat 0x00) ++ i)
-  | l > n	= reverse (drop (l-n) i)
-  | otherwise	= reverse i
+  | l < n	= L.pack $ reverse ((take (n-l) $ repeat 0x00) ++ i)
+  | l > n	= L.pack $ reverse (drop (l-n) i)
+  | otherwise	= L.pack $ reverse i
                   where l = length i
                         i = toTwosComp x
 
-buildSegtab :: Int -> [Word8] -> [[Word8]] -> (Int, [Word8])
+buildSegtab :: Int -> [Word8] -> [L.ByteString] -> (Int, [Word8])
+-- buildSegtab numsegs accum segments
+--   | L.null segments = (numsegs, accum)
+--   | otherwise       = buildSegtab (numsegs+length(tab)) (accum ++ tab) ss
+--   where
+--     (s, ss) = (B.unsafeHead segments, B.unsafeTail segments)
+--     (q,r) = quotRem (L.length s) 255
+--     tab = buildTab q r ss
+
 buildSegtab numsegs accum [] = (numsegs, accum)
 buildSegtab numsegs accum (x:xs) = buildSegtab (numsegs+length(tab)) (accum ++ tab) xs where
-  (q,r) = quotRem (length x) 255
+  (q,r) = quotRem (fromIntegral $ L.length x) 255
   tab = buildTab q r xs
 
 buildTab :: Int -> Int -> [a] -> [Word8]
@@ -160,7 +168,7 @@ pageBuild o t d = (newPage, pageLen, rest, newTracks) where
   segments = splitSegments 0 segtab body
   rest = L.drop pageLen d 
 
-findOrAddTrack :: Word32 -> [Word8] -> [OggTrack] -> ([OggTrack], OggTrack)
+findOrAddTrack :: Word32 -> L.ByteString -> [OggTrack] -> ([OggTrack], OggTrack)
 findOrAddTrack s d t = foat fTrack
   where
     fTrack = find (\x -> trackSerialno x == s) t
@@ -171,16 +179,35 @@ findOrAddTrack s d t = foat fTrack
     ctype = readCType d
     nt = t++[newTrack]
 
--- splitSegments segments accum segtab body
-splitSegments :: Int -> [Int] -> [Word8] -> [[Word8]]
-splitSegments _ _ [] = []
-splitSegments 0 [] _ = []
-splitSegments accum [] body = [take accum body]
-splitSegments 0 (0:ls) body = [] : splitSegments 0 ls body
-splitSegments accum (l:ls) body 
-  | l == 255	= splitSegments (accum+255) ls body
-  | otherwise	= newseg : splitSegments 0 ls newbody
-                  where (newseg, newbody) = splitAt (accum+l) body
+-- splitSegments accum segtab body
+splitSegments :: Int -> [Int] -> L.ByteString -> [L.ByteString]
+splitSegments accum segments body
+  | L.null body          = []
+  -- | accum == 0 &&  L.null segments = []
+  | null segments        = [L.take (fromIntegral accum) body]
+  | accum == 0 && l == 0 = L.empty : splitSegments 0 ls body
+  | l == 255             = splitSegments (accum+255) ls body
+  | otherwise            = newseg : splitSegments 0 ls newbody
+  where (newseg, newbody) = L.splitAt (fromIntegral (accum+l)) body
+        (l:ls) = segments
+
+-- splitSegments _ _ L.empty = []
+-- splitSegments 0 [] _ = []
+-- splitSegments accum [] body = [L.take accum body]
+-- splitSegments 0 (0:ls) body = [] : splitSegments 0 ls body
+-- splitSegments accum (l:ls) body 
+--   | l == 255	= splitSegments (accum+255) ls body
+--   | otherwise	= newseg : splitSegments 0 ls newbody
+--                   where (newseg, newbody) = L.splitAt (accum+l) body
+
+-- splitSegments _ _ [] = []
+-- splitSegments 0 [] _ = []
+-- splitSegments accum [] body = [take accum body]
+-- splitSegments 0 (0:ls) body = [] : splitSegments 0 ls body
+-- splitSegments accum (l:ls) body 
+--   | l == 255	= splitSegments (accum+255) ls body
+--   | otherwise	= newseg : splitSegments 0 ls newbody
+--                  where (newseg, newbody) = splitAt (accum+l) body
 
 ------------------------------------------------------------
 -- Show
@@ -188,7 +215,7 @@ splitSegments accum (l:ls) body
 
 instance Show OggPage where
   show p@(OggPage o track cont incplt bos eos gp seqno segment_table) =
-    (show o) ++ ": " ++ show track ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map length segment_table) ++ "\n"
+    (show o) ++ ": " ++ show track ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map L.length segment_table) ++ "\n"
     where flags = ifc ++ ift ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ift = if incplt then " (incplt)" else ""

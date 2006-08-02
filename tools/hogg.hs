@@ -134,12 +134,12 @@ countPackets args = do
 rewritePages :: [String] -> IO ()
 rewritePages args = do
     matchPages <- mPages args
-    mapM_ L.putStr (map L.pack (map pageWrite matchPages))
+    mapM_ L.putStr (map pageWrite matchPages)
 
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
     matchPackets <- mPackets args
-    mapM_ L.putStr (map L.pack (map pageWrite (packetsToPages matchPackets)))
+    mapM_ L.putStr (map pageWrite (packetsToPages matchPackets))
 
 countrwPages :: [String] -> IO ()
 countrwPages args = do
@@ -157,9 +157,9 @@ dumpPages args = do
   mapM_ putStrLn (map show matchPages)
 
 dumpRawPages :: [String] -> IO ()
-dumpRawPages args = do
-  matchPages <- mRawPages args
-  mapM_ putStrLn (map show matchPages)
+dumpRawPages args =
+  do matchPages <- mRawPages args
+     mapM_ putStrLn (map show matchPages)
 
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
