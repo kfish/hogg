@@ -116,14 +116,6 @@ fillField x n
                         i = toTwosComp x
 
 buildSegtab :: Int -> [Word8] -> [L.ByteString] -> (Int, [Word8])
--- buildSegtab numsegs accum segments
---   | L.null segments = (numsegs, accum)
---   | otherwise       = buildSegtab (numsegs+length(tab)) (accum ++ tab) ss
---   where
---     (s, ss) = (B.unsafeHead segments, B.unsafeTail segments)
---     (q,r) = quotRem (L.length s) 255
---     tab = buildTab q r ss
-
 buildSegtab numsegs accum [] = (numsegs, accum)
 buildSegtab numsegs accum (x:xs) = buildSegtab (numsegs+length(tab)) (accum ++ tab) xs where
   (q,r) = quotRem (fromIntegral $ L.length x) 255
@@ -190,24 +182,6 @@ splitSegments accum segments body
   | otherwise            = newseg : splitSegments 0 ls newbody
   where (newseg, newbody) = L.splitAt (fromIntegral (accum+l)) body
         (l:ls) = segments
-
--- splitSegments _ _ L.empty = []
--- splitSegments 0 [] _ = []
--- splitSegments accum [] body = [L.take accum body]
--- splitSegments 0 (0:ls) body = [] : splitSegments 0 ls body
--- splitSegments accum (l:ls) body 
---   | l == 255	= splitSegments (accum+255) ls body
---   | otherwise	= newseg : splitSegments 0 ls newbody
---                   where (newseg, newbody) = L.splitAt (accum+l) body
-
--- splitSegments _ _ [] = []
--- splitSegments 0 [] _ = []
--- splitSegments accum [] body = [take accum body]
--- splitSegments 0 (0:ls) body = [] : splitSegments 0 ls body
--- splitSegments accum (l:ls) body 
---   | l == 255	= splitSegments (accum+255) ls body
---   | otherwise	= newseg : splitSegments 0 ls newbody
---                  where (newseg, newbody) = splitAt (accum+l) body
 
 ------------------------------------------------------------
 -- Show
