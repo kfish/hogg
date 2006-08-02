@@ -49,11 +49,8 @@ data OggPage =
 -- OggPage functions
 --
 
-pageMarker :: [Word8]
-pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
-
-pageMarkerString :: L.ByteString
-pageMarkerString = L.pack pageMarker
+pageMarker :: L.ByteString
+pageMarker = L.pack [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
 -- | Ogg version supported by this library
 pageVersion :: Word8
@@ -82,7 +79,7 @@ pageWrite (OggPage _ track cont _ bos eos gp seqno s) = newPageData
   where
     newPageData = L.concat [hData, crc, sData, body]
     crcPageData = L.concat [hData, zeroCRC, sData, body]
-    hData = L.concat [pageMarkerString, version, htype, gp_, ser_, seqno_]
+    hData = L.concat [pageMarker, version, htype, gp_, ser_, seqno_]
     sData = segs
 
     version = fillField pageVersion 1
@@ -137,9 +134,9 @@ pageScan = pageScan' 0 []
 
 pageScan' :: Int64 -> [OggTrack] -> L.ByteString -> [OggPage]
 pageScan' offset tracks input
-  | L.null input = []
-  | L.isPrefixOf pageMarkerString input = newPage : pageScan' (offset+pageLen) newTracks rest
-  | otherwise                           = pageScan' (offset+1) tracks (L.tail input)
+  | L.null input                  = []
+  | L.isPrefixOf pageMarker input = newPage : pageScan' (offset+pageLen) newTracks rest
+  | otherwise                     = pageScan' (offset+1) tracks (L.tail input)
   where (newPage, pageLen, rest, newTracks) = pageBuild offset tracks input
 
 pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, [OggTrack])

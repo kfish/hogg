@@ -68,11 +68,8 @@ data OggRawPage =
 -- OggPage functions
 --
 
-pageMarker :: [Word8]
-pageMarker = [0x4f, 0x67, 0x67, 0x53] -- "OggS"
-
-pageMarkerString :: L.ByteString
-pageMarkerString = L.pack pageMarker
+pageMarker :: L.ByteString
+pageMarker = L.pack [0x4f, 0x67, 0x67, 0x53] -- "OggS"
 
 -- | Ogg version supported by this library
 pageVersion :: Word8
@@ -84,9 +81,9 @@ pageVersion = 0x00
 
 rawPageScan :: L.ByteString -> [OggRawPage]
 rawPageScan input
-  | L.null input = []
-  | L.isPrefixOf pageMarkerString input = newPage : rawPageScan rest
-  | otherwise    = rawPageScan (L.tail input)
+  | L.null input                  = []
+  | L.isPrefixOf pageMarker input = newPage : rawPageScan rest
+  | otherwise                     = rawPageScan (L.tail input)
   where (newPage, pageLen) = rawPageBuild input
         rest = L.drop pageLen input
 
