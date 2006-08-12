@@ -146,7 +146,7 @@ pageBuild o t d = (newPage, pageLen, rest, newTracks) where
   htype = rawPageHType r
   (newTracks, track) = findOrAddTrack serialno body t
   cont = testBit htype 0
-  incplt = last segtab == 255
+  incplt = (not . null) segtab && last segtab == 255
   bos = testBit htype 1
   eos = testBit htype 2
   gp = Granulepos (Just (rawPageGranulepos r))
