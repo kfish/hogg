@@ -170,6 +170,7 @@ findOrAddTrack s d t = foat fTrack
 
 -- splitSegments accum segtab body
 splitSegments :: Int -> [Int] -> L.ByteString -> [L.ByteString]
+splitSegments 0 [0] _ = [L.empty]
 splitSegments accum segments body
   | L.null body          = []
   -- | accum == 0 &&  L.null segments = []
