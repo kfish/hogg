@@ -131,23 +131,23 @@ appendToCarry :: Maybe CarryPage -> Int -> Bool -> Word32 -> OggPacket -> CarryP
 
 -- Case of no carry page, packet has only one segment
 appendToCarry Nothing ix cont seqno (OggPacket d track gp bos eos (Just [_]))
-  = CarryPage ix (OggPage 0 track cont True bos eos gp seqno [d])
+  = CarryPage ix (OggPage 0 track cont False bos eos gp seqno [d])
 
 -- Case of no carry page, packet has >1 segment
 appendToCarry Nothing ix cont seqno (OggPacket d track _ bos _ (Just (s:_)))
-  = CarryPage ix (OggPage 0 track cont False bos False (Granulepos Nothing) seqno [seg])
+  = CarryPage ix (OggPage 0 track cont True bos False (Granulepos Nothing) seqno [seg])
   where
     seg = L.take (fromIntegral $ segmentLength s) d
 
 -- Case of a carry page, packet has only one segment
 appendToCarry (Just (CarryPage ix (OggPage o track cont _ bos _ _ seqno segs))) _ _ _
               (OggPacket d _ gp _ eos (Just [_]))
-  = CarryPage ix (OggPage o track cont True bos eos gp seqno (segs++[d]))
+  = CarryPage ix (OggPage o track cont False bos eos gp seqno (segs++[d]))
 
 -- Case of a carry page, packet has >1 segment
 appendToCarry (Just (CarryPage ix (OggPage o track cont _ bos _ gp seqno segs))) _ _ _
               (OggPacket d _ _ _ eos (Just (s:_)))
-  = CarryPage ix (OggPage o track cont False bos eos gp seqno (segs++[seg]))
+  = CarryPage ix (OggPage o track cont True bos eos gp seqno (segs++[seg]))
   where seg = L.take (fromIntegral $ segmentLength s) d
         
 -- For completeness

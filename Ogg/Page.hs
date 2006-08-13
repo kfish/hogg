@@ -59,7 +59,8 @@ pageVersion = 0x00
 -- | Determine the length of a page that would be written
 pageLength :: OggPage -> Int
 pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
-    where (numsegs, _) = buildSegtab 0 [] s
+    where (numsegs, _) = buildSegtab 0 [] incplt s
+          incplt = pageIncomplete g
           s = pageSegments g
 
 ------------------------------------------------------------
@@ -75,7 +76,7 @@ pageIsType t g = trackIsType t (pageTrack g)
 
 -- | Construct a binary representation of an Ogg page
 pageWrite :: OggPage -> L.ByteString
-pageWrite (OggPage _ track cont _ bos eos gp seqno s) = newPageData
+pageWrite (OggPage _ track cont incplt bos eos gp seqno s) = newPageData
   where
     newPageData = L.concat [hData, crc, sData, body]
     crcPageData = L.concat [hData, zeroCRC, sData, body]
@@ -99,7 +100,7 @@ pageWrite (OggPage _ track cont _ bos eos gp seqno s) = newPageData
 
     -- Segment table
     segs = L.pack $ (toTwosComp (numsegs)) ++ segtab
-    (numsegs, segtab) = buildSegtab 0 [] s
+    (numsegs, segtab) = buildSegtab 0 [] incplt s
 
     -- Body data
     body = L.concat s
@@ -112,17 +113,17 @@ fillField x n
                   where l = length i
                         i = toTwosComp x
 
-buildSegtab :: Int -> [Word8] -> [L.ByteString] -> (Int, [Word8])
-buildSegtab numsegs accum [] = (numsegs, accum)
-buildSegtab numsegs accum (x:xs) = buildSegtab (numsegs+length(tab)) (accum ++ tab) xs where
+buildSegtab :: Int -> [Word8] -> Bool -> [L.ByteString] -> (Int, [Word8])
+buildSegtab numsegs accum _ [] = (numsegs, accum)
+buildSegtab numsegs accum incplt (x:xs) = buildSegtab (numsegs+length(tab)) (accum ++ tab) incplt xs where
   (q,r) = quotRem (fromIntegral $ L.length x) 255
-  tab = buildTab q r xs
+  tab = buildTab q r xs incplt
 
-buildTab :: Int -> Int -> [a] -> [Word8]
-buildTab 0 r _ = [fromIntegral r]
+buildTab :: Int -> Int -> [a] -> Bool -> [Word8]
+buildTab 0 r _ _ = [fromIntegral r]
 -- don't add [0] if the last seg is cont
-buildTab q 0 [] = take q $ repeat (255 :: Word8)
-buildTab q r _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
+buildTab q 0 [] True = take q $ repeat (255 :: Word8)
+buildTab q r _ _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 
 ------------------------------------------------------------
 -- pageScan
