@@ -9,6 +9,7 @@ import System.Console.GetOpt
 import System.Exit
 
 import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.Char8 as C
 import Ogg.RawPage
 import Ogg.Page
 import Ogg.Packet
@@ -122,9 +123,8 @@ mPackets args = do
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
     matchPackets <- mPackets args
-    mapM_ putStrLn (map show matchPackets)
-    -- foldM putStrLn "" (map show matchPackets)
-    -- foldM putStrLn (show matchPackets)
+    -- mapM_ putStrLn (map show matchPackets)
+    C.putStrLn $ C.concat $ map (C.pack . show) matchPackets
 
 countPackets :: [String] -> IO ()
 countPackets args = do
@@ -134,12 +134,14 @@ countPackets args = do
 rewritePages :: [String] -> IO ()
 rewritePages args = do
     matchPages <- mPages args
-    mapM_ L.putStr (map pageWrite matchPages)
+    -- mapM_ L.putStr (map pageWrite matchPages)
+    L.putStr $ L.concat (map pageWrite matchPages)
 
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
     matchPackets <- mPackets args
-    mapM_ L.putStr (map pageWrite (packetsToPages matchPackets))
+    -- mapM_ L.putStr (map pageWrite (packetsToPages matchPackets))
+    L.putStr $ L.concat (map pageWrite (packetsToPages matchPackets))
 
 countrwPages :: [String] -> IO ()
 countrwPages args = do
@@ -154,12 +156,13 @@ countPages args = do
 dumpPages :: [String] -> IO ()
 dumpPages args = do
   matchPages <- mPages args
-  mapM_ putStrLn (map show matchPages)
+  C.putStrLn $ C.concat $ map (C.pack . show) matchPages
 
 dumpRawPages :: [String] -> IO ()
-dumpRawPages args =
-  do matchPages <- mRawPages args
-     mapM_ putStrLn (map show matchPages)
+dumpRawPages args = do
+  matchPages <- mRawPages args
+  -- mapM_ putStrLn (map show matchPages)
+  C.putStrLn $ C.concat $ map (C.pack . show) matchPages
 
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
