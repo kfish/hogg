@@ -19,6 +19,7 @@ import Ogg.CRC
 import Ogg.Utils
 import Ogg.Granulepos
 import Ogg.Track
+import Ogg.Timestamp
 
 import Data.List (find)
 import Data.Int (Int64)
@@ -62,6 +63,12 @@ pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
     where (numsegs, _) = buildSegtab 0 [] incplt s
           incplt = pageIncomplete g
           s = pageSegments g
+
+pageTimestamp :: OggPage -> Timestamp
+pageTimestamp g = timestamp
+  where gp = pageGranulepos g
+        track = pageTrack g
+        timestamp =  gpToTimestamp gp track
 
 ------------------------------------------------------------
 -- Predicates
@@ -196,10 +203,13 @@ splitSegments accum segments body
 --
 
 instance Show OggPage where
-  show p@(OggPage o track cont incplt bos eos gp seqno segment_table) =
-    (show o) ++ ": " ++ show track ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength p) ++ " bytes\n" ++ "\t" ++ show (map L.length segment_table) ++ "\n"
+  show g@(OggPage o track cont incplt bos eos gp seqno segment_table) =
+    off ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength g) ++ " bytes\n" ++ "\t" ++ show (map L.length segment_table) ++ " " ++ show ts ++ "\n" ++ "\n"
     where flags = ifc ++ ift ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ift = if incplt then " (incplt)" else ""
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
+          off = printf "0x%08x" ((fromIntegral o) :: Int)
+          ts = pageTimestamp g
+          t = maybe "(Unknown)" show (trackType track)
