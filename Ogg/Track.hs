@@ -22,7 +22,7 @@ import qualified Data.ByteString.Lazy as L
 -- Data
 --
 
-data OggType = Skeleton | Vorbis | Speex | Theora
+data OggType = Skeleton | CMML | Vorbis | Speex | Theora
   deriving Eq
 
 data OggTrack =
@@ -48,6 +48,10 @@ nullTrack = OggTrack 0 Nothing
 skeletonIdent :: L.ByteString
 skeletonIdent = L.pack [0x66, 0x69, 0x73, 0x68, 0x65, 0x61, 0x64, 0x00]
 
+-- cmmlIdent = 'CMML\0\0\0\0\'
+cmmlIdent :: L.ByteString
+cmmlIdent = L.pack [0x43, 0x4d, 0x4d, 0x4c, 0x00, 0x00, 0x00, 0x00]
+
 vorbisIdent :: L.ByteString
 vorbisIdent = L.pack [0x01, 0x76, 0x6f, 0x72, 0x62, 0x69, 0x73]
 
@@ -60,6 +64,7 @@ speexIdent = L.pack [0x53, 0x70, 0x65, 0x65, 0x78, 0x20, 0x20, 0x20]
 readCType :: L.ByteString -> Maybe OggType
 readCType d
   | L.isPrefixOf skeletonIdent d = Just Skeleton
+  | L.isPrefixOf cmmlIdent d = Just CMML
   | L.isPrefixOf vorbisIdent d = Just Vorbis
   | L.isPrefixOf speexIdent d = Just Speex
   | L.isPrefixOf theoraIdent d = Just Theora
@@ -74,6 +79,7 @@ readCType d
 
 parseType :: Maybe String -> Maybe OggType
 parseType (Just "skeleton") = Just Skeleton
+parseType (Just "cmml") = Just CMML
 parseType (Just "vorbis") = Just Vorbis
 parseType (Just "speex") = Just Speex
 parseType (Just "theora") = Just Theora
@@ -99,6 +105,7 @@ instance Show OggTrack where
 
 instance Show OggType where
   show Skeleton = "Skeleton"
+  show CMML = "CMML"
   show Vorbis = "Vorbis"
   show Speex  = "Speex"
   show Theora = "Theora"
