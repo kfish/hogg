@@ -94,7 +94,8 @@ readCType d
 readGR :: Maybe OggType -> L.ByteString -> Maybe Granulerate
 readGR Nothing _ = Nothing
 readGR (Just Skeleton) _ = Nothing
-readGR (Just Speex) d = Just (Granulerate (le32At 36 d % 1))
+-- readGR (Just Speex) d = Just (Granulerate (le32At 36 d % 1))
+readGR (Just Speex) d = Just (intRate (le32At 36 d))
 readGR _ _ = Nothing
 
 parseType :: Maybe String -> Maybe OggType

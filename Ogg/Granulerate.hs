@@ -7,7 +7,8 @@
 -- Portability : portable
 
 module Ogg.Granulerate (
-  Granulerate (..)
+  Granulerate (..),
+  intRate
 ) where
 
 import Data.Ratio
@@ -19,8 +20,11 @@ import Data.Ratio
 newtype Granulerate = Granulerate Rational
 
 ------------------------------------------------------------
--- Granulepos functions
+-- Granulerate functions
 --
+
+intRate :: Integer -> Granulerate
+intRate x = Granulerate (x % 1)
 
 instance Show Granulerate where
   show (Granulerate r)
