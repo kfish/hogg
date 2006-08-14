@@ -18,6 +18,8 @@ module Ogg.Track (
 import Data.Word (Word32)
 import qualified Data.ByteString.Lazy as L
 
+import Text.Printf
+
 ------------------------------------------------------------
 -- Data
 --
@@ -98,10 +100,12 @@ instance Ord OggTrack where
 
 instance Show OggTrack where
   show (OggTrack serialno (Just t)) =
-    "serialno " ++ show serialno ++ " " ++ show t
+    show t ++ ": serialno " ++ s ++ "\n"
+    where s = printf "%010d" ((fromIntegral serialno) :: Int)
 
   show (OggTrack serialno Nothing) =
-    "serialno " ++ show serialno ++ " (Unknown)"
+    "(Unknown): serialno " ++ s ++ "\n"
+    where s = printf "%010d" ((fromIntegral serialno) :: Int)
 
 instance Show OggType where
   show Skeleton = "Skeleton"

@@ -136,17 +136,27 @@ pageScan = pageScan' 0 []
 pageScan' :: Int64 -> [OggTrack] -> L.ByteString -> ([OggTrack], [OggPage])
 pageScan' offset tracks input
   | L.null input                  = ([], [])
-  | L.isPrefixOf pageMarker input = (newTracks, newPage : nextPages)
+  | L.isPrefixOf pageMarker input = (newTrack ++ nextTracks, newPage : nextPages)
   | otherwise                     = pageScan' (offset+1) tracks (L.tail input)
-  where (newPage, pageLen, rest, newTracks) = pageBuild offset tracks input
+  where (newPage, pageLen, rest, mNewTrack) = pageBuild offset tracks input
         (nextTracks, nextPages) = pageScan' (offset+pageLen) newTracks rest
+        newTrack = listIf mNewTrack
+        newTracks = consIf mNewTrack tracks
 
-pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, [OggTrack])
-pageBuild o t d = (newPage, pageLen, rest, newTracks) where
+listIf :: Maybe a -> [a]
+listIf Nothing = []
+listIf (Just x) = [x]
+
+consIf :: Maybe a -> [a] -> [a]
+consIf Nothing xs = xs
+consIf (Just x) xs = x:xs
+
+pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, Maybe OggTrack)
+pageBuild o t d = (newPage, pageLen, rest, mNewTrack) where
   newPage = OggPage o track cont incplt bos eos gp seqno segments
   (r, pageLen) = rawPageBuild d
   htype = rawPageHType r
-  (newTracks, track) = findOrAddTrack serialno body t
+  (mNewTrack, track) = findOrAddTrack serialno body t
   cont = testBit htype 0
   incplt = (not . null) segtab && last segtab == 255
   bos = testBit htype 1
@@ -159,16 +169,16 @@ pageBuild o t d = (newPage, pageLen, rest, newTracks) where
   segments = splitSegments 0 segtab body
   rest = L.drop pageLen d 
 
-findOrAddTrack :: Word32 -> L.ByteString -> [OggTrack] -> ([OggTrack], OggTrack)
+findOrAddTrack :: Word32 -> L.ByteString -> [OggTrack] -> (Maybe OggTrack, OggTrack)
 findOrAddTrack s d t = foat fTrack
   where
     fTrack = find (\x -> trackSerialno x == s) t
-    foat :: Maybe OggTrack -> ([OggTrack], OggTrack)
-    foat (Just track) = (t, track)
-    foat Nothing      = (nt, newTrack)
+    foat :: Maybe OggTrack -> (Maybe OggTrack, OggTrack)
+    foat (Just track) = (Nothing, track)
+    foat Nothing      = (Just newTrack, newTrack)
     newTrack = OggTrack s ctype
     ctype = readCType d
-    nt = newTrack : t
+    -- nt = newTrack : t
 
 -- splitSegments accum segtab body
 splitSegments :: Int -> [Int] -> L.ByteString -> [L.ByteString]

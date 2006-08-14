@@ -78,6 +78,11 @@ getChain filename = do
   input <- L.hGetContents handle
   return $ chainScan input
 
+getTracks :: FilePath -> IO [OggTrack]
+getTracks filename = do
+    chain <- getChain filename
+    return $ chainTracks $ head chain
+
 getRawPages :: FilePath -> IO [OggRawPage]
 getRawPages filename = do
     handle <- openFile filename ReadMode
@@ -94,6 +99,10 @@ getPackets filename = do
     chain <- getChain filename
     return $ chainPackets $ head chain
 
+trackMatch :: Maybe OggType -> [OggTrack] -> [OggTrack]
+trackMatch Nothing ts = ts
+trackMatch (Just t) ts = filter (trackIsType t) ts
+
 pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
 pageMatch Nothing gs = gs
 pageMatch (Just t) gs = filter (pageIsType t) gs
@@ -101,6 +110,14 @@ pageMatch (Just t) gs = filter (pageIsType t) gs
 packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
 packetMatch Nothing ps = ps
 packetMatch (Just t) ps = filter (packetIsType t) ps
+
+mTracks :: [String] -> IO [OggTrack]
+mTracks args = do
+    (config, filenames) <- processArgs args
+    let ctype = parseType $ contentTypeCfg config
+    let filename = head filenames
+    allTracks <- getTracks filename
+    return $ trackMatch ctype allTracks
 
 mRawPages :: [String] -> IO [OggRawPage]
 mRawPages args = do
@@ -125,6 +142,11 @@ mPackets args = do
     let filename = head filenames
     allPackets <- getPackets filename
     return $ packetMatch ctype allPackets
+
+info :: [String] -> IO ()
+info args = do
+    matchTracks <- mTracks args
+    C.putStr $ C.concat $ map (C.pack . show) matchTracks
 
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
@@ -178,6 +200,7 @@ main = do
     (command:args) <- getArgs
     filename <- getFilename args
     case command of
+      "info" -> info args
       "dump" -> dumpPackets args
       "packetcount" -> countPackets args
       "pagecount" -> countPages args
