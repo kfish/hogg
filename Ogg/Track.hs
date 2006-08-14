@@ -16,6 +16,7 @@ module Ogg.Track (
 ) where
 
 import qualified Data.ByteString.Lazy as L
+import Data.Bits
 import Data.Word (Word32)
 import Data.Ratio
 
@@ -105,7 +106,9 @@ readGR _ _ = Nothing
 readGS :: Maybe OggType -> L.ByteString -> Maybe Int
 readGS Nothing _ = Nothing
 readGS (Just CMML) d = Just (u8At 28 d)
--- readGR (Just Theora) d = Just (
+readGS (Just Theora) d = Just (h40 .|. h41)
+  where h40 = (u8At 40 d .&. 0x03) `shiftL` 3
+        h41 = (u8At 41 d .&. 0xe0) `shiftR` 5
 readGS _ _ = Nothing
 
 parseType :: Maybe String -> Maybe OggType
