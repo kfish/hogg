@@ -21,7 +21,6 @@ import Ogg.Timestamp
 
 import Data.List as List
 import Data.Map as Map
-import Data.Int (Int64)
 import Data.Word (Word32)
 import qualified Data.ByteString.Lazy as L
 
