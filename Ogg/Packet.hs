@@ -17,6 +17,7 @@ import Ogg.Dump
 import Ogg.Granulepos
 import Ogg.Page
 import Ogg.Track
+import Ogg.Timestamp
 
 import Data.List as List
 import Data.Map as Map
@@ -52,10 +53,10 @@ data OggSegment =
 packetIsType :: OggType -> OggPacket -> Bool
 packetIsType t p = trackIsType t (packetTrack p)
 
-packetTimestamp :: OggPacket -> Maybe Rational
-packetTimestamp p
-  | gp == Granulepos Nothing = Nothing
-  | otherwise                = timestamp
+packetTimestamp :: OggPacket -> Timestamp
+packetTimestamp p = timestamp
+  -- | gp == Granulepos Nothing = Timestamp Nothing
+  -- | otherwise                = timestamp
   where gp = packetGranulepos p
         track = packetTrack p
         timestamp =  gpToTimestamp gp track
@@ -260,11 +261,8 @@ prependCarry oldCarry segs@(s:ss) = newPackets
 
 instance Show OggPacket where
   show p@(OggPacket d track gp bos eos _) =
-    ts ++ ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d
+    show ts ++ ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
-          tim = packetTimestamp p
-          ts = fluc tim
-          fluc Nothing = "--:--:--"
-          fluc (Just gzij) = show gzij
+          ts = packetTimestamp p

@@ -12,6 +12,7 @@ Exposed-modules:     Ogg.Chain
                      Ogg.Packet
                      Ogg.Granulepos
                      Ogg.Granulerate
+                     Ogg.Timestamp
 Other-modules:       Ogg.Utils
                      Ogg.ByteFields
                      Ogg.CRC

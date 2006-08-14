@@ -26,6 +26,7 @@ import Text.Printf
 import Ogg.ByteFields
 import Ogg.Granulepos
 import Ogg.Granulerate
+import Ogg.Timestamp
 
 ------------------------------------------------------------
 -- Data
@@ -63,14 +64,16 @@ bosToTrack s d = OggTrack s ctype gr gs
     gr = readGR ctype d
     gs = readGS ctype d
 
-gpToTimestamp :: Granulepos -> OggTrack -> Maybe Rational
+gpToTimestamp :: Granulepos -> OggTrack -> Timestamp
 gpToTimestamp mgp track
-  | g == Nothing = Nothing
-  | r == Nothing = Nothing
-  | otherwise    = Just timestamp
+  | g == Nothing = Timestamp Nothing
+  | r == Nothing = Timestamp Nothing
+  | otherwise    = Timestamp timestamp
   where g = gpToGranules mgp track
         r = trackGranulerate track
-        timestamp = (fromIntegral granules) / gr
+        timestamp = Just (fromIntegral granules*d, fromIntegral n)
+        n = numerator gr
+        d = denominator gr
         Just granules = g
         Just (Granulerate gr) = r
 
