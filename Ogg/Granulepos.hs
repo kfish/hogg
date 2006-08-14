@@ -8,6 +8,7 @@
 
 module Ogg.Granulepos (
   Granulepos (..),
+  gpPack,
   gpUnpack
 ) where
 
@@ -22,6 +23,10 @@ newtype Granulepos = Granulepos (Maybe Word64)
 ------------------------------------------------------------
 -- Granulepos functions
 --
+
+gpPack :: Word64 -> Granulepos
+gpPack 0xffffffffffffffff = Granulepos Nothing
+gpPack gp = Granulepos (Just gp)
 
 gpUnpack :: Granulepos -> Word64
 gpUnpack (Granulepos (Nothing)) = -1

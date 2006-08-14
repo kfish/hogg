@@ -150,7 +150,7 @@ pageBuild o t d = (newPage, pageLen, rest, newTracks) where
   incplt = (not . null) segtab && last segtab == 255
   bos = testBit htype 1
   eos = testBit htype 2
-  gp = Granulepos (Just (rawPageGranulepos r))
+  gp = gpPack (rawPageGranulepos r)
   serialno = rawPageSerialno r
   seqno = rawPageSeqno r
   segtab = rawPageSegtab r
