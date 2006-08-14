@@ -54,8 +54,6 @@ packetIsType t p = trackIsType t (packetTrack p)
 
 packetTimestamp :: OggPacket -> Timestamp
 packetTimestamp p = timestamp
-  -- | gp == Granulepos Nothing = Timestamp Nothing
-  -- | otherwise                = timestamp
   where gp = packetGranulepos p
         track = packetTrack p
         timestamp =  gpToTimestamp gp track
@@ -260,7 +258,7 @@ prependCarry oldCarry segs@(s:ss) = newPackets
 
 instance Show OggPacket where
   show p@(OggPacket d track gp bos eos _) =
-    show ts ++ ": " ++ t ++ " serialno: " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d ++ "\n"
+    show ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d ++ "\n"
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
