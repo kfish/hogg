@@ -172,10 +172,10 @@ _pagesToPackets :: CarryPackets -> Int -> [OggPage] -> [OggPacket]
 _pagesToPackets carry _ [] = elems carry
 _pagesToPackets carry ix [g] = prependCarry carry (pageToPackets ix g)
 
-_pagesToPackets carry ix (g:gs) =
-    if (incplt && length ps == 1) then
-        _pagesToPackets (carryCarry carry newcarry) (ix+1) gs
-    else
+_pagesToPackets carry ix (g:gs)
+    | incplt && length ps == 1 =
+        _pagesToPackets (appendCarry carry track p) (ix+1) gs
+    | otherwise =
         s ++ _pagesToPackets newcarry (ix+1) gs
     where s = prependCarry carry ns
           newcarry = if incplt then Map.insert track (last ps) carry
@@ -183,6 +183,7 @@ _pagesToPackets carry ix (g:gs) =
           track = pageTrack g
           ns = if incplt then init ps else ps
           ps = pageToPackets ix g
+          [p] = ps
           incplt = pageIncomplete g
 
 -- | Construct (partial) packets from the segments of a page
@@ -234,13 +235,9 @@ packetConcat (OggPacket r1 s1 _ b1 _ (Just x1)) (OggPacket r2 _ g2 _ e2 (Just x2
 packetConcat (OggPacket r1 s1 _ b1 _ _) (OggPacket r2 _ g2 _ e2 _) =
     OggPacket (L.append r1 r2) s1 g2 b1 e2 Nothing
 
-carryCarry :: CarryPackets -> CarryPackets -> CarryPackets
-carryCarry oldCarry newCarry
-  | Map.null oldCarry = newCarry
-  | Map.null newCarry = oldCarry
-  | otherwise     = Map.insert track combinedCarry oldCarry
-  where (track, p) = (head . Map.assocs) newCarry
-        combinedCarry = concatTo $ Map.lookup track oldCarry
+appendCarry :: CarryPackets -> OggTrack -> OggPacket -> CarryPackets
+appendCarry oldCarry track p = Map.insert track combinedCarry oldCarry
+  where combinedCarry = concatTo $ Map.lookup track oldCarry
         concatTo Nothing = p
         concatTo (Just c) = packetConcat c p
 
