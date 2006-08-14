@@ -94,6 +94,7 @@ readCType d
 readGR :: Maybe OggType -> L.ByteString -> Maybe Granulerate
 readGR Nothing _ = Nothing
 readGR (Just Skeleton) _ = Nothing
+readGR (Just CMML) d = Just (fracRate (le64At 12 d) (le64At 20 d))
 readGR (Just Vorbis) d = Just (intRate (le32At 12 d))
 readGR (Just Speex) d = Just (intRate (le32At 36 d))
 readGR (Just Theora) d = Just (fracRate (be32At 22 d) (be32At 26 d))
