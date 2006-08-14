@@ -19,6 +19,7 @@ import Data.Ratio
 --
 
 newtype Granulerate = Granulerate Rational
+  deriving Eq
 
 ------------------------------------------------------------
 -- Granulerate functions

@@ -12,7 +12,8 @@ module Ogg.Track (
   trackIsType,
   nullTrack,
   bosToTrack,
-  parseType
+  parseType,
+  gpToTimestamp
 ) where
 
 import qualified Data.ByteString.Lazy as L
@@ -23,6 +24,7 @@ import Data.Ratio
 import Text.Printf
 
 import Ogg.ByteFields
+import Ogg.Granulepos
 import Ogg.Granulerate
 
 ------------------------------------------------------------
@@ -60,6 +62,35 @@ bosToTrack s d = OggTrack s ctype gr gs
     ctype = readCType d
     gr = readGR ctype d
     gs = readGS ctype d
+
+gpToTimestamp :: Granulepos -> OggTrack -> Maybe Rational
+gpToTimestamp mgp track
+  | g == Nothing = Nothing
+  | r == Nothing = Nothing
+  | otherwise    = Just timestamp
+  where g = gpToGranules mgp track
+        r = trackGranulerate track
+        timestamp = (fromIntegral granules) / gr
+        Just granules = g
+        Just (Granulerate gr) = r
+
+gpToGranules :: Granulepos -> OggTrack -> Maybe Integer
+gpToGranules mgp track
+  | s == Nothing = Nothing
+  | otherwise    = Just (keyframe + delta)
+  where s = gpSplit mgp track
+        Just (keyframe, delta) = s
+
+gpSplit :: Granulepos -> OggTrack -> Maybe (Integer, Integer)
+gpSplit mgp track
+  | mgp == Granulepos Nothing          = Nothing
+  | trackGranuleshift track == Nothing = Just (gp, 0)
+  | otherwise                          = Just (keyframe, delta)
+  where Granulepos (Just w64gp) = mgp
+        Just gShift = trackGranuleshift track
+        gp = fromIntegral w64gp
+        keyframe = fromIntegral $ w64gp `shiftR` gShift
+        delta = fromIntegral $ gp - (keyframe `shiftL` gShift)
 
 -- skeletonIdent = 'fishead\0'
 skeletonIdent :: L.ByteString

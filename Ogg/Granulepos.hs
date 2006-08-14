@@ -19,6 +19,7 @@ import Data.Word (Word64)
 --
 
 newtype Granulepos = Granulepos (Maybe Word64)
+  deriving Eq
 
 ------------------------------------------------------------
 -- Granulepos functions

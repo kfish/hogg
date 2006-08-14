@@ -52,6 +52,14 @@ data OggSegment =
 packetIsType :: OggType -> OggPacket -> Bool
 packetIsType t p = trackIsType t (packetTrack p)
 
+packetTimestamp :: OggPacket -> Maybe Rational
+packetTimestamp p
+  | gp == Granulepos Nothing = Nothing
+  | otherwise                = timestamp
+  where gp = packetGranulepos p
+        track = packetTrack p
+        timestamp =  gpToTimestamp gp track
+
 ------------------------------------------------------------
 -- packetsToPages
 --
@@ -251,8 +259,12 @@ prependCarry oldCarry segs@(s:ss) = newPackets
 --
 
 instance Show OggPacket where
-  show (OggPacket d track gp bos eos _) =
-    ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d
+  show p@(OggPacket d track gp bos eos _) =
+    ts ++ ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
+          tim = packetTimestamp p
+          ts = fluc tim
+          fluc Nothing = "--:--:--"
+          fluc (Just gzij) = show gzij
