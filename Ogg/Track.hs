@@ -35,7 +35,8 @@ data OggTrack =
   OggTrack {
     trackSerialno :: Word32,
     trackType :: Maybe OggType,
-    trackGranulerate :: Maybe Granulerate
+    trackGranulerate :: Maybe Granulerate,
+    trackGranuleshift :: Maybe Int
   }
 
 ------------------------------------------------------------
@@ -49,14 +50,15 @@ trackIsType t0 track
   where t1 = trackType track
 
 nullTrack :: OggTrack
-nullTrack = OggTrack 0 Nothing Nothing
+nullTrack = OggTrack 0 Nothing Nothing Nothing
 
 -- bosToTrack
 bosToTrack :: Word32 -> L.ByteString -> OggTrack
-bosToTrack s d = OggTrack s ctype gr
+bosToTrack s d = OggTrack s ctype gr gs
   where
     ctype = readCType d
     gr = readGR ctype d
+    gs = readGS ctype d
 
 -- skeletonIdent = 'fishead\0'
 skeletonIdent :: L.ByteString
@@ -100,6 +102,12 @@ readGR (Just Speex) d = Just (intRate (le32At 36 d))
 readGR (Just Theora) d = Just (fracRate (be32At 22 d) (be32At 26 d))
 readGR _ _ = Nothing
 
+readGS :: Maybe OggType -> L.ByteString -> Maybe Int
+readGS Nothing _ = Nothing
+readGS (Just CMML) d = Just (u8At 28 d)
+-- readGR (Just Theora) d = Just (
+readGS _ _ = Nothing
+
 parseType :: Maybe String -> Maybe OggType
 parseType (Just "skeleton") = Just Skeleton
 parseType (Just "cmml") = Just CMML
@@ -125,11 +133,12 @@ instance Ord OggTrack where
 
 instance Show OggTrack where
   -- show (OggTrack serialno (Just t) (Just gr)) =
-  show (OggTrack serialno ctype gr) =
-    t ++ ": serialno " ++ s ++ " Rate: " ++ g ++ "\n"
+  show (OggTrack serialno ctype gr gs) =
+    t ++ ": serialno " ++ s ++ " Rate: " ++ g ++ " Shift: " ++ sgs ++ "\n"
     where s = printf "%010d" ((fromIntegral serialno) :: Int)
           t = maybe "(Unknown)" show ctype
           g = maybe "--" show gr
+          sgs = maybe "None" show gs
 
   -- show (OggTrack serialno _ _) =
   --   "(Unknown): serialno " ++ s ++ "\n"
