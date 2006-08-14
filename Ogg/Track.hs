@@ -15,10 +15,14 @@ module Ogg.Track (
   parseType
 ) where
 
-import Data.Word (Word32)
 import qualified Data.ByteString.Lazy as L
+import Data.Word (Word32)
+import Data.Ratio
 
 import Text.Printf
+
+import Ogg.ByteFields
+import Ogg.Granulerate
 
 ------------------------------------------------------------
 -- Data
@@ -30,7 +34,8 @@ data OggType = Skeleton | CMML | Vorbis | Speex | Theora
 data OggTrack =
   OggTrack {
     trackSerialno :: Word32,
-    trackType :: Maybe OggType
+    trackType :: Maybe OggType,
+    trackGranulerate :: Maybe Granulerate
   }
 
 ------------------------------------------------------------
@@ -38,19 +43,20 @@ data OggTrack =
 --
 
 trackIsType :: OggType -> OggTrack -> Bool
-trackIsType t0 (OggTrack _ (Just t1))
-  | t0 == t1  = True
-  | otherwise = False
-trackIsType _ _ = False
+trackIsType t0 track
+  | (Just t0) == t1  = True
+  | otherwise        = False
+  where t1 = trackType track
 
 nullTrack :: OggTrack
-nullTrack = OggTrack 0 Nothing
+nullTrack = OggTrack 0 Nothing Nothing
 
 -- bosToTrack
 bosToTrack :: Word32 -> L.ByteString -> OggTrack
-bosToTrack s d = OggTrack s ctype
+bosToTrack s d = OggTrack s ctype gr
   where
     ctype = readCType d
+    gr = readGR ctype d
 
 -- skeletonIdent = 'fishead\0'
 skeletonIdent :: L.ByteString
@@ -85,6 +91,12 @@ readCType d
 --   | otherwise = Nothing
 -- readCType _ = Nothing
 
+readGR :: Maybe OggType -> L.ByteString -> Maybe Granulerate
+readGR Nothing _ = Nothing
+readGR (Just Skeleton) _ = Nothing
+readGR (Just Speex) d = Just (Granulerate (le32At 36 d % 1))
+readGR _ _ = Nothing
+
 parseType :: Maybe String -> Maybe OggType
 parseType (Just "skeleton") = Just Skeleton
 parseType (Just "cmml") = Just CMML
@@ -95,23 +107,30 @@ parseType _ = Nothing
 
 -- | Tracks are equal if their serialnos are equal
 instance Eq OggTrack where
-  (==) (OggTrack s1 _) (OggTrack s2 _) = s1 == s2
+  (==) track1 track2 = s1 == s2
+       where s1 = trackSerialno track1
+             s2 = trackSerialno track2
 
 instance Ord OggTrack where
-  compare (OggTrack s1 _) (OggTrack s2 _) = compare s1 s2
+  compare track1 track2 = compare s1 s2
+          where s1 = trackSerialno track1
+                s2 = trackSerialno track2
 
 ------------------------------------------------------------
 -- Show
 --
 
 instance Show OggTrack where
-  show (OggTrack serialno (Just t)) =
-    show t ++ ": serialno " ++ s ++ "\n"
+  -- show (OggTrack serialno (Just t) (Just gr)) =
+  show (OggTrack serialno ctype gr) =
+    t ++ ": serialno " ++ s ++ " Rate: " ++ g ++ "\n"
     where s = printf "%010d" ((fromIntegral serialno) :: Int)
+          t = maybe "(Unknown)" show ctype
+          g = maybe "--" show gr
 
-  show (OggTrack serialno Nothing) =
-    "(Unknown): serialno " ++ s ++ "\n"
-    where s = printf "%010d" ((fromIntegral serialno) :: Int)
+  -- show (OggTrack serialno _ _) =
+  --   "(Unknown): serialno " ++ s ++ "\n"
+  --   where s = printf "%010d" ((fromIntegral serialno) :: Int)
 
 instance Show OggType where
   show Skeleton = "Skeleton"
