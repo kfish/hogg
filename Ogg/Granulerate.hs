@@ -8,7 +8,8 @@
 
 module Ogg.Granulerate (
   Granulerate (..),
-  intRate
+  intRate,
+  fracRate
 ) where
 
 import Data.Ratio
@@ -26,9 +27,12 @@ newtype Granulerate = Granulerate Rational
 intRate :: Integer -> Granulerate
 intRate x = Granulerate (x % 1)
 
+fracRate :: Integer -> Integer -> Granulerate
+fracRate n d = Granulerate (n % d)
+
 instance Show Granulerate where
   show (Granulerate r)
     | d == 1    = show n
-    | otherwise = show r
+    | otherwise = show n ++ "/" ++ show d
     where n = numerator r
           d = denominator r

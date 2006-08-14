@@ -96,6 +96,7 @@ readGR Nothing _ = Nothing
 readGR (Just Skeleton) _ = Nothing
 readGR (Just Vorbis) d = Just (intRate (le32At 12 d))
 readGR (Just Speex) d = Just (intRate (le32At 36 d))
+readGR (Just Theora) d = Just (fracRate (be32At 22 d) (be32At 26 d))
 readGR _ _ = Nothing
 
 parseType :: Maybe String -> Maybe OggType

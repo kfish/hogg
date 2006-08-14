@@ -13,6 +13,9 @@
 -----------------------------------------------------------------------------
 
 module Ogg.ByteFields (
+  be64At,
+  be32At,
+  be16At,
   le64At,
   le32At,
   le16At,
@@ -23,6 +26,18 @@ import Data.Int (Int64)
 import qualified Data.ByteString.Lazy as L
 
 import Ogg.Utils (fromTwosComp)
+
+beNAt :: Integral a => Int64 -> Int64 -> L.ByteString -> a
+beNAt len off s = fromTwosComp $ L.unpack (L.take len (L.drop off s))
+
+be64At :: Integral a => Int64 -> L.ByteString -> a
+be64At = beNAt 8
+
+be32At :: Integral a => Int64 -> L.ByteString -> a
+be32At = beNAt 4
+
+be16At :: Integral a => Int64 -> L.ByteString -> a
+be16At = beNAt 2
 
 leNAt :: Integral a => Int64 -> Int64 -> L.ByteString -> a
 leNAt len off s = fromTwosComp $ reverse $ L.unpack (L.take len (L.drop off s))
