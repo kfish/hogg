@@ -10,6 +10,7 @@ import System.Exit
 
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
+import Ogg.Chain
 import Ogg.RawPage
 import Ogg.Page
 import Ogg.Packet
@@ -71,6 +72,12 @@ processConfig = foldM processOneOption
     processOneOption config (ContentTypeOpt ctype) =
       return $ config {contentTypeCfg = Just ctype}
 
+getChain :: FilePath -> IO [OggChain]
+getChain filename = do
+  handle <- openFile filename ReadMode
+  input <- L.hGetContents handle
+  return $ chainScan input
+
 getRawPages :: FilePath -> IO [OggRawPage]
 getRawPages filename = do
     handle <- openFile filename ReadMode
@@ -79,14 +86,13 @@ getRawPages filename = do
 
 getPages :: FilePath -> IO [OggPage]
 getPages filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
-    return $ pageScan input
+    chain <- getChain filename
+    return $ chainPages $ head chain
 
 getPackets :: FilePath -> IO [OggPacket]
 getPackets filename = do
-    allPages <- getPages filename
-    return $ pagesToPackets allPages
+    chain <- getChain filename
+    return $ chainPackets $ head chain
 
 pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
 pageMatch Nothing gs = gs

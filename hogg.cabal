@@ -6,7 +6,8 @@ License-file:        LICENSE
 Author:              Conrad Parker
 Maintainer:          conradp@cse.unsw.edu.au
 Build-Depends:       base, fps
-Exposed-modules:     Ogg.RawPage
+Exposed-modules:     Ogg.Chain
+                     Ogg.RawPage
                      Ogg.Page
                      Ogg.Packet
                      Ogg.Granulepos

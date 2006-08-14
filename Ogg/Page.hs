@@ -130,15 +130,16 @@ buildTab q r _ _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 --
 
 -- | Read a list of data bytes into Ogg pages
-pageScan :: L.ByteString -> [OggPage]
+pageScan :: L.ByteString -> ([OggTrack], [OggPage])
 pageScan = pageScan' 0 []
 
-pageScan' :: Int64 -> [OggTrack] -> L.ByteString -> [OggPage]
+pageScan' :: Int64 -> [OggTrack] -> L.ByteString -> ([OggTrack], [OggPage])
 pageScan' offset tracks input
-  | L.null input                  = []
-  | L.isPrefixOf pageMarker input = newPage : pageScan' (offset+pageLen) newTracks rest
+  | L.null input                  = ([], [])
+  | L.isPrefixOf pageMarker input = (newTracks, newPage : nextPages)
   | otherwise                     = pageScan' (offset+1) tracks (L.tail input)
   where (newPage, pageLen, rest, newTracks) = pageBuild offset tracks input
+        (nextTracks, nextPages) = pageScan' (offset+pageLen) newTracks rest
 
 pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, [OggTrack])
 pageBuild o t d = (newPage, pageLen, rest, newTracks) where
@@ -167,7 +168,7 @@ findOrAddTrack s d t = foat fTrack
     foat Nothing      = (nt, newTrack)
     newTrack = OggTrack s ctype
     ctype = readCType d
-    nt = t++[newTrack]
+    nt = newTrack : t
 
 -- splitSegments accum segtab body
 splitSegments :: Int -> [Int] -> L.ByteString -> [L.ByteString]
