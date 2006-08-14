@@ -176,9 +176,7 @@ findOrAddTrack s d t = foat fTrack
     foat :: Maybe OggTrack -> (Maybe OggTrack, OggTrack)
     foat (Just track) = (Nothing, track)
     foat Nothing      = (Just newTrack, newTrack)
-    newTrack = OggTrack s ctype
-    ctype = readCType d
-    -- nt = newTrack : t
+    newTrack = bosToTrack s d
 
 -- splitSegments accum segtab body
 splitSegments :: Int -> [Int] -> L.ByteString -> [L.ByteString]

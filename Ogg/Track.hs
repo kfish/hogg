@@ -11,6 +11,7 @@ module Ogg.Track (
   OggType (..),
   trackIsType,
   nullTrack,
+  bosToTrack,
   readCType,
   parseType
 ) where
@@ -45,6 +46,12 @@ trackIsType _ _ = False
 
 nullTrack :: OggTrack
 nullTrack = OggTrack 0 Nothing
+
+-- bosToTrack
+bosToTrack :: Word32 -> L.ByteString -> OggTrack
+bosToTrack s d = OggTrack s ctype
+  where
+    ctype = readCType d
 
 -- skeletonIdent = 'fishead\0'
 skeletonIdent :: L.ByteString
