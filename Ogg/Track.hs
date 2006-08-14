@@ -12,7 +12,6 @@ module Ogg.Track (
   trackIsType,
   nullTrack,
   bosToTrack,
-  readCType,
   parseType
 ) where
 
