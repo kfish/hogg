@@ -260,8 +260,9 @@ prependCarry oldCarry segs@(s:ss) = newPackets
 
 instance Show OggPacket where
   show p@(OggPacket d track gp bos eos _) =
-    show ts ++ ": serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d
+    show ts ++ ": " ++ t ++ " serialno: " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d ++ "\n"
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
           ts = packetTimestamp p
+          t = maybe "(Unknown)" show (trackType track)
