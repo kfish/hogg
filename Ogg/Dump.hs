@@ -12,6 +12,7 @@ module Ogg.Dump (
 
 import Data.Char (isSpace, chr, ord)
 import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.Char8 as C
 
 import Numeric
 
@@ -21,15 +22,15 @@ import Numeric
 
 -- | Generate a hexdump for a block of data
 
-hexDump :: L.ByteString -> String
+hexDump :: L.ByteString -> C.ByteString
 hexDump = {-# SCC "hexDump" #-} hexDump' 0
 
-hexDump' :: Int -> L.ByteString -> String
+hexDump' :: Int -> L.ByteString -> C.ByteString
 hexDump' o d
-  | L.null d = ""
-  | otherwise = lineDump ++ hexDump' (o+16) rest
+  | L.null d = C.empty
+  | otherwise = lineDump `C.append` hexDump' (o+16) rest
     where (line, rest) = {-# SCC "LsplitAt" #-} L.splitAt 16 d
-          lineDump = {-# SCC "lineDump" #-} spaces 4 ++ offset ++ ": " ++ hexLine ++ spaces hexPad ++ ascLine ++ "\n"
+          lineDump = {-# "Cpack" #-} C.pack $ {-# SCC "lineDump" #-} spaces 4 ++ offset ++ ": " ++ hexLine ++ spaces hexPad ++ ascLine ++ "\n"
           spaces n = {-# SCC "spaces" #-} take n $ repeat ' '
           offset = {-# SCC "offset" #-} hexOffset o
 

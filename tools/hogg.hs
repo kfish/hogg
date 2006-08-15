@@ -152,7 +152,8 @@ dumpPackets :: [String] -> IO ()
 dumpPackets args = do
     matchPackets <- {-# SCC "matchPackets" #-}mPackets args
     -- mapM_ putStrLn (map show matchPackets)
-    C.putStrLn $ C.concat $ map (C.pack . show) matchPackets
+    -- C.putStrLn $ C.concat $ map ({-# SCC "Cpack" #-}C.pack . show) matchPackets
+    C.putStrLn $ C.concat $ map packetToBS matchPackets
 
 countPackets :: [String] -> IO ()
 countPackets args = do

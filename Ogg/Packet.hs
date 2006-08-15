@@ -10,7 +10,8 @@ module Ogg.Packet (
   OggPacket (..),
   packetsToPages,
   pagesToPackets,
-  packetIsType
+  packetIsType,
+  packetToBS
 ) where
 
 import Ogg.Dump
@@ -23,6 +24,7 @@ import Data.List as List
 import Data.Map as Map
 import Data.Word (Word32)
 import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.Char8 as C
 
 ------------------------------------------------------------
 -- Data
@@ -249,13 +251,26 @@ prependCarry oldCarry segs@(s:ss) = newPackets
         appendTo Nothing = segs
         appendTo (Just c) = (packetConcat c s):ss
 
+packetToBS :: OggPacket -> C.ByteString
+packetToBS p@(OggPacket d track gp bos eos _) = {-# SCC "packetToBS" #-}
+  C.concat [C.pack pHdr, pDump, C.singleton '\n']
+  where
+    pHdr = show ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
+    flags = ifb ++ ife
+    ifb = if bos then " *** bos" else ""
+    ife = if eos then " *** eos" else ""
+    ts = packetTimestamp p
+    t = maybe "(Unknown)" show (trackType track)
+    pDump = hexDump d
+
 ------------------------------------------------------------
 -- Show
 --
 
 instance Show OggPacket where
   show p@(OggPacket d track gp bos eos _) = {-# SCC "showOggPacket" #-}
-    show ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ (hexDump d) ++ "\n"
+    show ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
+    -- ++ (hexDump d) ++ "\n"
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
