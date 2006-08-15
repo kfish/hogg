@@ -8,6 +8,8 @@ import System.IO
 import System.Console.GetOpt
 import System.Exit
 
+import Text.Printf
+
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
 import Ogg.Chain
@@ -198,32 +200,39 @@ getFilename args = return $ last args
 
 helpCommand :: String -> String -> IO ()
 helpCommand command desc = do
-  putStrLn $ "\t" ++ command ++ "\t\t" ++ desc
+  putStrLn $ printf "  %-14s%s" command desc
 
 helpCommands :: IO ()
 helpCommands = do
-  putStrLn "hogg"
-  helpCommand "info" "Print info about tracks"
-  helpCommand "dump" "Dump packets"
-  helpCommand "pagecount" "Count pages" 
-  helpCommand "rewrite" "Rewrite the file via pages"
-  helpCommand "repacket" "Rewrite the file via packets"
-  helpCommand "countrw" "Rewrite and count"
-  helpCommand "dumpraw" "Dump raw pages"
+  putStrLn "Usage: hogg <subcommand> [options] filename\n"
+  putStrLn "Available subcommands:"
+  helpCommand "info" "Display information about the file and its bitstreams"
+  helpCommand "dump" "Hexdump packets of an Ogg file"
+  helpCommand "pagedump" "Display page structure of an Ogg file"
+  helpCommand "dumpraw" "Dump raw (unparsed) page data"
+  helpCommand "pagecount" "Count pages of an Ogg file" 
+  helpCommand "rewrite" "Rewrite an Ogg file via pages"
+  helpCommand "repacket" "Rewrite an Ogg file via packets"
+  helpCommand "countrw" "Rewrite an Ogg file via packets and display a count"
+  -- helpCommand "help" "Display this help and exit"
+  putStrLn "\nPlease report bugs to <ogg-dev@xiph.org>"
 
 main :: IO ()
 main = do
-    (command:args) <- getArgs
-    filename <- getFilename args
-    case command of
-      "help" -> helpCommands
-      "info" -> info args
-      "dump" -> dumpPackets args
-      "packetcount" -> countPackets args
-      "pagecount" -> countPages args
-      "pagedump" -> dumpPages args
-      "rewrite" -> rewritePages args
-      "repacket" -> rewritePackets args
-      "countrw" -> countrwPages args
-      "dumpraw" -> dumpRawPages args
-      _ -> helpCommands
+    allArgs <- getArgs
+    case allArgs of
+      []             -> helpCommands
+      (command:args) -> do
+        filename <- getFilename args
+        case command of
+          "help" -> helpCommands
+          "info" -> info args
+          "dump" -> dumpPackets args
+          "packetcount" -> countPackets args
+          "pagecount" -> countPages args
+          "pagedump" -> dumpPages args
+          "rewrite" -> rewritePages args
+          "repacket" -> rewritePackets args
+          "countrw" -> countrwPages args
+          "dumpraw" -> dumpRawPages args
+          _ -> helpCommands
