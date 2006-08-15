@@ -13,7 +13,7 @@ module Ogg.Dump (
 import Data.Char (isSpace, chr, ord)
 import qualified Data.ByteString.Lazy as L
 
-import Text.Printf
+import Numeric
 
 ------------------------------------------------------------
 -- Dump
@@ -22,33 +22,40 @@ import Text.Printf
 -- | Generate a hexdump for a block of data
 
 hexDump :: L.ByteString -> String
-hexDump = _hexDump 0 ""
+hexDump = {-# SCC "hexDump" #-} hexDump' 0
 
-_hexDump :: Int -> String -> L.ByteString -> String
-_hexDump o s d
-  | L.null d = s
-  | otherwise = _hexDump (o+16) (s++lineDump) rest
--- _hexDump _ s [] = s
--- _hexDump o s d = _hexDump (o+16) (s++lineDump) rest
-    where (line, rest) = L.splitAt 16 d
-          lineDump = spaces 4 ++ offset ++ ": " ++ hexLine ++ spaces hexPad ++ ascLine ++ "\n"
-          spaces n = take n $ repeat ' '
-          offset = printf "%04x" o
+hexDump' :: Int -> L.ByteString -> String
+hexDump' o d
+  | L.null d = ""
+  | otherwise = lineDump ++ hexDump' (o+16) rest
+    where (line, rest) = {-# SCC "LsplitAt" #-} L.splitAt 16 d
+          lineDump = {-# SCC "lineDump" #-} spaces 4 ++ offset ++ ": " ++ hexLine ++ spaces hexPad ++ ascLine ++ "\n"
+          spaces n = {-# SCC "spaces" #-} take n $ repeat ' '
+          offset = {-# SCC "offset" #-} hexOffset o
 
-          unline = L.unpack line
-          hexLine = hexSpace "" hexList False
-          hexPad = 1 + 8*5 - length hexLine
-          hexList = map hexByte unline
-          hexByte x = printf "%02x" ((fromIntegral x)::Int)
-          hexSpace x [] _ = x
-          hexSpace x (c:cs) True = hexSpace (x++c++" ") cs False
-          hexSpace x (c:cs) False = hexSpace (x++c) cs True
+          (hexLine, ascLine) = {-# SCC "makeDump" #-} makeDump line False
+          hexPad = {-# SCC "hexPad" #-} 1 + 8*5 - length hexLine
 
-          ascLine = concat $ map ascByte chars
-          chars = map chr (map fromIntegral unline)
+          hexOffset x
+            | x < 0x10   = showHex x "000"
+            | x < 0x100  = showHex x "00"
+            | x < 0x1000 = showHex x "0"
+            | otherwise  = showHex x ""
+
+makeDump :: L.ByteString -> Bool -> (String, String)
+makeDump d hexSpace
+  | L.null d = ([], [])
+  | otherwise = (newHex ++ nextHex, newChr ++ nextChr)
+    where (nextHex, nextChr) = {-# SCC "makeDumpREC" #-} makeDump ls (not hexSpace)
+          (l, ls) = {-# SCC "LHeadTail" #-} (L.head d, L.tail d)
+          newHex = {-# SCC "newHex" #-} if hexSpace then h ++ " " else h
+          h = hexByte l
+          newChr = {-# SCC "newChr" #-} ascByte $ chr $ fromIntegral l
+          hexByte x
+            | x < 16    = showHex x "0"
+            | otherwise = showHex x ""
           ascByte c
             | (ord c) > 126 = "."
             | isSpace c = " "
             | (ord c) < 32 = "."
             | otherwise = [c]
-

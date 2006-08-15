@@ -96,7 +96,7 @@ getPages filename = do
 
 getPackets :: FilePath -> IO [OggPacket]
 getPackets filename = do
-    chain <- getChain filename
+    chain <- {-# SCC "getChain" #-}getChain filename
     return $ chainPackets $ head chain
 
 trackMatch :: Maybe OggType -> [OggTrack] -> [OggTrack]
@@ -140,7 +140,7 @@ mPackets args = do
     (config, filenames) <- processArgs args
     let ctype = parseType $ contentTypeCfg config
     let filename = head filenames
-    allPackets <- getPackets filename
+    allPackets <- {-# SCC "getPackets" #-}getPackets filename
     return $ packetMatch ctype allPackets
 
 info :: [String] -> IO ()
@@ -150,7 +150,7 @@ info args = do
 
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
-    matchPackets <- mPackets args
+    matchPackets <- {-# SCC "matchPackets" #-}mPackets args
     -- mapM_ putStrLn (map show matchPackets)
     C.putStrLn $ C.concat $ map (C.pack . show) matchPackets
 

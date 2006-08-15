@@ -166,7 +166,7 @@ appendToCarry _ _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 type CarryPackets = Map.Map OggTrack OggPacket
 
 pagesToPackets :: [OggPage] -> [OggPacket]
-pagesToPackets = _pagesToPackets Map.empty 0
+pagesToPackets = {-#SCC "pagesToPackets" #-}_pagesToPackets Map.empty 0
 
 _pagesToPackets :: CarryPackets -> Int -> [OggPage] -> [OggPacket]
 _pagesToPackets carry _ [] = elems carry
@@ -254,8 +254,8 @@ prependCarry oldCarry segs@(s:ss) = newPackets
 --
 
 instance Show OggPacket where
-  show p@(OggPacket d track gp bos eos _) =
-    show ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ hexDump d ++ "\n"
+  show p@(OggPacket d track gp bos eos _) = {-# SCC "showOggPacket" #-}
+    show ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n" ++ (hexDump d) ++ "\n"
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
