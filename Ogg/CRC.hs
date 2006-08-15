@@ -4,7 +4,7 @@ module Ogg.CRC (
   genCRC
 ) where
 
-import Data.Array
+import Data.Array.Unboxed
 import Data.Bits
 import Data.Word (Word32)
 
@@ -31,7 +31,7 @@ genCRC_ crc d
 --   where nCRC = (lookupCRC ! ix) `xor` (crc `shiftL` 8)
 --         ix = (fromIntegral x) `xor` ((crc `shiftR` 24) .&. 0xFF)
 
-lookupCRC :: Array Word32 Word32
+lookupCRC :: UArray Word32 Word32
 lookupCRC = listArray (0, 255) listCRC
 
 -- | helper lookup table for the crc
