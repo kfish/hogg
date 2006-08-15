@@ -32,7 +32,7 @@ dftConfig =
     files = ["-"]
   }
 
--- Available options
+-- Options available for subcommands
 --
 data Option = Help
             | ContentTypeOpt String
@@ -196,11 +196,27 @@ dumpRawPages args = do
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
 
+helpCommand :: String -> String -> IO ()
+helpCommand command desc = do
+  putStrLn $ "\t" ++ command ++ "\t\t" ++ desc
+
+helpCommands :: IO ()
+helpCommands = do
+  putStrLn "hogg"
+  helpCommand "info" "Print info about tracks"
+  helpCommand "dump" "Dump packets"
+  helpCommand "pagecount" "Count pages" 
+  helpCommand "rewrite" "Rewrite the file via pages"
+  helpCommand "repacket" "Rewrite the file via packets"
+  helpCommand "countrw" "Rewrite and count"
+  helpCommand "dumpraw" "Dump raw pages"
+
 main :: IO ()
 main = do
     (command:args) <- getArgs
     filename <- getFilename args
     case command of
+      "help" -> helpCommands
       "info" -> info args
       "dump" -> dumpPackets args
       "packetcount" -> countPackets args
@@ -210,3 +226,4 @@ main = do
       "repacket" -> rewritePackets args
       "countrw" -> countrwPages args
       "dumpraw" -> dumpRawPages args
+      _ -> helpCommands
