@@ -12,6 +12,7 @@ Exposed-modules:     Ogg.Chain
                      Ogg.Packet
                      Ogg.Granulepos
                      Ogg.Granulerate
+                     Ogg.Track
                      Ogg.Timestamp
 Other-modules:       Ogg.Utils
                      Ogg.ByteFields
@@ -22,4 +23,5 @@ ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields
 
 Executable:          hogg
 Main-Is:             hogg.hs
-Hs-Source-Dirs:      tools
+Hs-Source-Dirs:      ., tools
+Other-modules:       Ogg.Track
