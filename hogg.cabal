@@ -24,4 +24,3 @@ ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields
 Executable:          hogg
 Main-Is:             hogg.hs
 Hs-Source-Dirs:      ., tools
-Other-modules:       Ogg.Track
