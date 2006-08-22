@@ -113,33 +113,29 @@ packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
 packetMatch Nothing ps = ps
 packetMatch (Just t) ps = filter (packetIsType t) ps
 
-mTracks :: [String] -> IO [OggTrack]
-mTracks args = do
-    (config, filenames) <- processArgs args
+mTracks :: Config -> [String] -> IO [OggTrack]
+mTracks config filenames = do
     let ctype = parseType $ contentTypeCfg config
     let filename = head filenames
     allTracks <- getTracks filename
     return $ trackMatch ctype allTracks
 
-mRawPages :: [String] -> IO [OggRawPage]
-mRawPages args = do
-    (config, filenames) <- processArgs args
+mRawPages :: Config -> [String] -> IO [OggRawPage]
+mRawPages config filenames = do
     -- let ctype = parseType $ contentTypeCfg config
     let filename = head filenames
     allRawPages <- getRawPages filename
     return allRawPages
 
-mPages :: [String] -> IO [OggPage]
-mPages args = do
-    (config, filenames) <- processArgs args
+mPages :: Config -> [String] -> IO [OggPage]
+mPages config filenames = do
     let ctype = parseType $ contentTypeCfg config
     let filename = head filenames
     allPages <- getPages filename
     return $ pageMatch ctype allPages
 
-mPackets :: [String] -> IO [OggPacket]
-mPackets args = do
-    (config, filenames) <- processArgs args
+mPackets :: Config -> [String] -> IO [OggPacket]
+mPackets config filenames = do
     let ctype = parseType $ contentTypeCfg config
     let filename = head filenames
     allPackets <- {-# SCC "getPackets" #-}getPackets filename
@@ -147,75 +143,84 @@ mPackets args = do
 
 info :: [String] -> IO ()
 info args = do
-    matchTracks <- mTracks args
+    (config, filenames) <- processArgs args
+    matchTracks <- mTracks config filenames
     C.putStr $ C.concat $ map (C.pack . show) matchTracks
 
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
-    matchPackets <- {-# SCC "matchPackets" #-}mPackets args
+    (config, filenames) <- processArgs args
+    matchPackets <- {-# SCC "matchPackets" #-}mPackets config filenames
     -- mapM_ putStrLn (map show matchPackets)
     -- C.putStrLn $ C.concat $ map ({-# SCC "Cpack" #-}C.pack . show) matchPackets
     C.putStrLn $ C.concat $ map packetToBS matchPackets
 
 countPackets :: [String] -> IO ()
 countPackets args = do
-    matchPackets <- mPackets args
+    (config, filenames) <- processArgs args
+    matchPackets <- mPackets config filenames
     putStrLn $ show (length matchPackets) ++ " packets"
 
 rewritePages :: [String] -> IO ()
 rewritePages args = do
-    matchPages <- mPages args
+    (config, filenames) <- processArgs args
+    matchPages <- mPages config filenames
     -- mapM_ L.putStr (map pageWrite matchPages)
     L.putStr $ L.concat (map pageWrite matchPages)
 
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
-    matchPackets <- mPackets args
+    (config, filenames) <- processArgs args
+    matchPackets <- mPackets config filenames
     -- mapM_ L.putStr (map pageWrite (packetsToPages matchPackets))
     L.putStr $ L.concat (map pageWrite (packetsToPages matchPackets))
 
 countrwPages :: [String] -> IO ()
 countrwPages args = do
-    matchPages <- mPages args
+    (config, filenames) <- processArgs args
+    matchPages <- mPages config filenames
     putStrLn $ show $ length (packetsToPages (pagesToPackets matchPages))
 
 countPages :: [String] -> IO ()
 countPages args = do
-    matchPages <- mPages args
+    (config, filenames) <- processArgs args
+    matchPages <- mPages config filenames
     putStrLn $ (show $ length matchPages) ++ " pages"
 
 dumpPages :: [String] -> IO ()
 dumpPages args = do
-  matchPages <- mPages args
-  C.putStrLn $ C.concat $ map (C.pack . show) matchPages
+    (config, filenames) <- processArgs args
+    matchPages <- mPages config filenames
+    C.putStrLn $ C.concat $ map (C.pack . show) matchPages
 
 dumpRawPages :: [String] -> IO ()
 dumpRawPages args = do
-  matchPages <- mRawPages args
-  -- mapM_ putStrLn (map show matchPages)
-  C.putStrLn $ C.concat $ map (C.pack . show) matchPages
+    (config, filenames) <- processArgs args
+    matchPages <- mRawPages config filenames
+    -- mapM_ putStrLn (map show matchPages)
+    C.putStrLn $ C.concat $ map (C.pack . show) matchPages
 
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
 
 helpCommand :: String -> String -> IO ()
 helpCommand command desc = do
-  putStrLn $ printf "  %-14s%s" command desc
+    putStrLn $ printf "  %-14s%s" command desc
 
 helpCommands :: IO ()
 helpCommands = do
-  putStrLn "Usage: hogg <subcommand> [options] filename\n"
-  putStrLn "Available subcommands:"
-  helpCommand "info" "Display information about the file and its bitstreams"
-  helpCommand "dump" "Hexdump packets of an Ogg file"
-  helpCommand "pagedump" "Display page structure of an Ogg file"
-  helpCommand "dumpraw" "Dump raw (unparsed) page data"
-  helpCommand "pagecount" "Count pages of an Ogg file" 
-  helpCommand "rip" "Rip selected logical bistreams from an Ogg file (default: all)"
-  helpCommand "reconstruct" "Reconstruct an Ogg file by doing a full packet demux"
-  helpCommand "countrw" "Rewrite an Ogg file via packets and display a count"
-  -- helpCommand "help" "Display this help and exit"
-  putStrLn "\nPlease report bugs to <ogg-dev@xiph.org>"
+    putStrLn "Usage: hogg <subcommand> [options] filename\n"
+    putStrLn "Available subcommands:"
+    helpCommand "info" "Display information about the file and its bitstreams"
+    helpCommand "dump" "Hexdump packets of an Ogg file"
+    helpCommand "pagedump" "Display page structure of an Ogg file"
+    helpCommand "dumpraw" "Dump raw (unparsed) page data"
+    helpCommand "pagecount" "Count pages of an Ogg file" 
+    helpCommand "rip" "Rip selected logical bistreams from an Ogg file (default: all)"
+    helpCommand "reconstruct" "Reconstruct an Ogg file by doing a full packet demux"
+    helpCommand "countrw" "Rewrite an Ogg file via packets and display a count"
+    -- helpCommand "help" "Display this help and exit"
+    putStrLn "\nPlease report bugs to <ogg-dev@xiph.org>"
 
 main :: IO ()
 main = do
@@ -223,7 +228,6 @@ main = do
     case allArgs of
       []             -> helpCommands
       (command:args) -> do
-        filename <- getFilename args
         case command of
           "help" -> helpCommands
           "info" -> info args
