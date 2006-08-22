@@ -10,10 +10,17 @@ module Ogg.Timestamp (
   Timestamp (..)
 ) where
 
+import Data.Ratio
 import Text.Printf
 
 newtype Timestamp = Timestamp (Maybe (Integer, Integer))
   deriving Eq
+
+instance Ord Timestamp where
+  compare (Timestamp Nothing) _ = EQ
+  compare _ (Timestamp Nothing) = EQ
+  compare (Timestamp (Just (n1, d1))) (Timestamp (Just (n2, d2))) =
+    compare (n1 % d1) (n2 % d2)
 
 instance Show Timestamp where
   show (Timestamp Nothing) = "--:--:--.---"

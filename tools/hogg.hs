@@ -18,6 +18,7 @@ import Ogg.RawPage
 import Ogg.Page
 import Ogg.Packet
 import Ogg.Track
+import Ogg.ListMerge
 
 ------------------------------------------------------------
 -- Options processing
@@ -135,10 +136,9 @@ mRawPages config filenames = do
     allRawPages <- getRawPages filename
     return allRawPages
 
-mPages :: Config -> [String] -> IO [OggPage]
-mPages config filenames = do
+mPages :: Config -> String -> IO [OggPage]
+mPages config filename = do
     let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
     allPages <- getPages filename
     return $ pageMatch ctype allPages
 
@@ -192,7 +192,8 @@ countPackets args = do
 rewritePages :: [String] -> IO ()
 rewritePages args = do
     (config, filenames) <- processArgs args
-    matchPages <- mPages config filenames
+    let filename = head filenames
+    matchPages <- mPages config filename
     outputL config $ L.concat (map pageWrite matchPages)
 
 rewritePackets :: [String] -> IO ()
@@ -204,20 +205,29 @@ rewritePackets args = do
 countrwPages :: [String] -> IO ()
 countrwPages args = do
     (config, filenames) <- processArgs args
-    matchPages <- mPages config filenames
+    let filename = head filenames
+    matchPages <- mPages config filename
     outputS config $ show $ length (packetsToPages (pagesToPackets matchPages))
 
 countPages :: [String] -> IO ()
 countPages args = do
     (config, filenames) <- processArgs args
-    matchPages <- mPages config filenames
+    let filename = head filenames
+    matchPages <- mPages config filename
     outputS config $ (show $ length matchPages) ++ " pages"
 
 dumpPages :: [String] -> IO ()
 dumpPages args = do
     (config, filenames) <- processArgs args
-    matchPages <- mPages config filenames
+    let filename = head filenames
+    matchPages <- mPages config filename
     outputC config $ C.concat $ map (C.pack . show) matchPages
+
+mergePages :: [String] -> IO ()
+mergePages args = do
+    (config, filenames) <- processArgs args
+    matchPages <- mapM (mPages config) filenames
+    outputL config $ L.concat $ map pageWrite $ listMerge matchPages
 
 dumpRawPages :: [String] -> IO ()
 dumpRawPages args = do
@@ -234,7 +244,7 @@ helpCommand command desc = do
 
 helpCommands :: IO ()
 helpCommands = do
-    putStrLn "Usage: hogg <subcommand> [options] filename\n"
+    putStrLn "Usage: hogg <subcommand> [options] filename ...\n"
     putStrLn "Available subcommands:"
     helpCommand "info" "Display information about the file and its bitstreams"
     helpCommand "dump" "Hexdump packets of an Ogg file"
@@ -242,6 +252,7 @@ helpCommands = do
     helpCommand "dumpraw" "Dump raw (unparsed) page data"
     helpCommand "pagecount" "Count pages of an Ogg file" 
     helpCommand "rip" "Rip selected logical bistreams from an Ogg file (default: all)"
+    helpCommand "merge" "Merge, interleaving pages in order of presentation time"
     helpCommand "reconstruct" "Reconstruct an Ogg file by doing a full packet demux"
     helpCommand "countrw" "Rewrite an Ogg file via packets and display a count"
     -- helpCommand "help" "Display this help and exit"
@@ -264,4 +275,5 @@ main = do
           "reconstruct" -> rewritePackets args
           "countrw" -> countrwPages args
           "dumpraw" -> dumpRawPages args
+          "merge" -> mergePages args
           _ -> helpCommands

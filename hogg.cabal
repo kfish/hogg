@@ -18,6 +18,7 @@ Other-modules:       Ogg.Utils
                      Ogg.ByteFields
                      Ogg.CRC
                      Ogg.Dump
+                     Ogg.ListMerge
 ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields 
 -- ghc-options:         -prof -auto-all
 

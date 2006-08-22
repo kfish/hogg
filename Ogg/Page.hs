@@ -199,6 +199,23 @@ splitSegments accum segments body
         (l:ls) = segments
 
 ------------------------------------------------------------
+-- Ordering
+--
+
+instance Eq OggPage where
+  (==) g1 g2 = (==) t1 t2
+    where t1 = pageTimestamp g1
+          t2 = pageTimestamp g2
+
+instance Ord OggPage where
+  compare g1 g2
+    | pageBOS g1 = LT
+    | pageBOS g2 = GT
+    | otherwise = compare t1 t2
+    where t1 = pageTimestamp g1
+          t2 = pageTimestamp g2
+
+------------------------------------------------------------
 -- Show
 --
 
