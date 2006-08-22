@@ -118,4 +118,4 @@ instance Show OggRawPage where
     "Seqno: " ++ show (rawPageSeqno r) ++ "\n" ++
     "CRC: " ++ show (rawPageCRC r) ++ "\n" ++
     "Numseg: " ++ show (rawPageNumseg r) ++ "\n" ++
-    "Segtab: " ++ show (rawPageSegtab r) ++ "\n"
+    "Segtab: " ++ show (rawPageSegtab r) ++ "\n" ++ "\n"
