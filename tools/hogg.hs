@@ -211,8 +211,8 @@ helpCommands = do
   helpCommand "pagedump" "Display page structure of an Ogg file"
   helpCommand "dumpraw" "Dump raw (unparsed) page data"
   helpCommand "pagecount" "Count pages of an Ogg file" 
-  helpCommand "rewrite" "Rewrite an Ogg file via pages"
-  helpCommand "repacket" "Rewrite an Ogg file via packets"
+  helpCommand "rip" "Rip selected logical bistreams from an Ogg file (default: all)"
+  helpCommand "reconstruct" "Reconstruct an Ogg file by doing a full packet demux"
   helpCommand "countrw" "Rewrite an Ogg file via packets and display a count"
   -- helpCommand "help" "Display this help and exit"
   putStrLn "\nPlease report bugs to <ogg-dev@xiph.org>"
@@ -231,8 +231,8 @@ main = do
           "packetcount" -> countPackets args
           "pagecount" -> countPages args
           "pagedump" -> dumpPages args
-          "rewrite" -> rewritePages args
-          "repacket" -> rewritePackets args
+          "rip" -> rewritePages args
+          "reconstruct" -> rewritePackets args
           "countrw" -> countrwPages args
           "dumpraw" -> dumpRawPages args
           _ -> helpCommands
