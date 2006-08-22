@@ -181,9 +181,6 @@ dumpPackets :: [String] -> IO ()
 dumpPackets args = do
     (config, filenames) <- processArgs args
     matchPackets <- {-# SCC "matchPackets" #-}mPackets config filenames
-    -- mapM_ putStrLn (map show matchPackets)
-    -- C.putStrLn $ C.concat $ map ({-# SCC "Cpack" #-}C.pack . show) matchPackets
-    -- C.putStrLn $ C.concat $ map packetToBS matchPackets
     outputC config $ C.concat $ map packetToBS matchPackets
 
 countPackets :: [String] -> IO ()
@@ -196,14 +193,12 @@ rewritePages :: [String] -> IO ()
 rewritePages args = do
     (config, filenames) <- processArgs args
     matchPages <- mPages config filenames
-    -- mapM_ L.putStr (map pageWrite matchPages)
     outputL config $ L.concat (map pageWrite matchPages)
 
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
     (config, filenames) <- processArgs args
     matchPackets <- mPackets config filenames
-    -- mapM_ L.putStr (map pageWrite (packetsToPages matchPackets))
     outputL config $ L.concat (map pageWrite (packetsToPages matchPackets))
 
 countrwPages :: [String] -> IO ()
@@ -228,7 +223,6 @@ dumpRawPages :: [String] -> IO ()
 dumpRawPages args = do
     (config, filenames) <- processArgs args
     matchPages <- mRawPages config filenames
-    -- mapM_ putStrLn (map show matchPages)
     outputC config $ C.concat $ map (C.pack . show) matchPages
 
 getFilename :: [String] -> IO String
