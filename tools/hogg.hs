@@ -1,6 +1,7 @@
 module Main where
 
 import Control.Monad
+import Control.Exception
 
 import System.Environment (getArgs, getProgName)
 import System.IO
@@ -25,12 +26,14 @@ import Ogg.Track
 data Config =
   Config {
     contentTypeCfg :: Maybe String,
+    outputCfg :: Maybe String,
     files :: [FilePath]
   }
 
 dftConfig =
   Config {
     contentTypeCfg = Nothing,
+    outputCfg = Nothing,
     files = ["-"]
   }
 
@@ -38,13 +41,16 @@ dftConfig =
 --
 data Option = Help
             | ContentTypeOpt String
+            | OutputOpt String
             deriving Eq
 
 options :: [OptDescr Option]
 options = [ Option ['h', '?'] ["help"] (NoArg Help)
               "Display this help and exit"
           , Option ['c']      ["content-type"] (ReqArg ContentTypeOpt "Content-Type")
-              "Dump only the logical bitstreams for a specified content type."
+              "Select the logical bitstreams for a specified content type"
+          , Option ['o']      ["output"] (ReqArg OutputOpt "filename")
+              "Specify output filename"
           ]
 
 processArgs :: [String] -> IO (Config, [String])
@@ -73,6 +79,8 @@ processConfig = foldM processOneOption
   where
     processOneOption config (ContentTypeOpt ctype) =
       return $ config {contentTypeCfg = Just ctype}
+    processOneOption config (OutputOpt output) =
+      return $ config {outputCfg = Just output}
 
 getChain :: FilePath -> IO [OggChain]
 getChain filename = do
@@ -141,11 +149,33 @@ mPackets config filenames = do
     allPackets <- {-# SCC "getPackets" #-}getPackets filename
     return $ packetMatch ctype allPackets
 
+outputHandle :: Config -> IO Handle
+outputHandle config =
+    maybe (evaluate stdout) (\f -> openBinaryFile f WriteMode) (outputCfg config)
+
+outputS :: Config -> String -> IO ()
+outputS config s = do
+    h <- outputHandle config
+    hPutStr h s
+    hClose h
+
+outputC :: Config -> C.ByteString -> IO ()
+outputC config bs = do
+    h <- outputHandle config
+    C.hPut h bs
+    hClose h
+
+outputL :: Config -> L.ByteString -> IO ()
+outputL config bs = do
+    h <- outputHandle config
+    L.hPut h bs
+    hClose h
+
 info :: [String] -> IO ()
 info args = do
     (config, filenames) <- processArgs args
     matchTracks <- mTracks config filenames
-    C.putStr $ C.concat $ map (C.pack . show) matchTracks
+    outputC config $ C.concat $ map (C.pack . show) matchTracks
 
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
@@ -153,52 +183,53 @@ dumpPackets args = do
     matchPackets <- {-# SCC "matchPackets" #-}mPackets config filenames
     -- mapM_ putStrLn (map show matchPackets)
     -- C.putStrLn $ C.concat $ map ({-# SCC "Cpack" #-}C.pack . show) matchPackets
-    C.putStrLn $ C.concat $ map packetToBS matchPackets
+    -- C.putStrLn $ C.concat $ map packetToBS matchPackets
+    outputC config $ C.concat $ map packetToBS matchPackets
 
 countPackets :: [String] -> IO ()
 countPackets args = do
     (config, filenames) <- processArgs args
     matchPackets <- mPackets config filenames
-    putStrLn $ show (length matchPackets) ++ " packets"
+    outputS config $ show (length matchPackets) ++ " packets"
 
 rewritePages :: [String] -> IO ()
 rewritePages args = do
     (config, filenames) <- processArgs args
     matchPages <- mPages config filenames
     -- mapM_ L.putStr (map pageWrite matchPages)
-    L.putStr $ L.concat (map pageWrite matchPages)
+    outputL config $ L.concat (map pageWrite matchPages)
 
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
     (config, filenames) <- processArgs args
     matchPackets <- mPackets config filenames
     -- mapM_ L.putStr (map pageWrite (packetsToPages matchPackets))
-    L.putStr $ L.concat (map pageWrite (packetsToPages matchPackets))
+    outputL config $ L.concat (map pageWrite (packetsToPages matchPackets))
 
 countrwPages :: [String] -> IO ()
 countrwPages args = do
     (config, filenames) <- processArgs args
     matchPages <- mPages config filenames
-    putStrLn $ show $ length (packetsToPages (pagesToPackets matchPages))
+    outputS config $ show $ length (packetsToPages (pagesToPackets matchPages))
 
 countPages :: [String] -> IO ()
 countPages args = do
     (config, filenames) <- processArgs args
     matchPages <- mPages config filenames
-    putStrLn $ (show $ length matchPages) ++ " pages"
+    outputS config $ (show $ length matchPages) ++ " pages"
 
 dumpPages :: [String] -> IO ()
 dumpPages args = do
     (config, filenames) <- processArgs args
     matchPages <- mPages config filenames
-    C.putStrLn $ C.concat $ map (C.pack . show) matchPages
+    outputC config $ C.concat $ map (C.pack . show) matchPages
 
 dumpRawPages :: [String] -> IO ()
 dumpRawPages args = do
     (config, filenames) <- processArgs args
     matchPages <- mRawPages config filenames
     -- mapM_ putStrLn (map show matchPages)
-    C.putStrLn $ C.concat $ map (C.pack . show) matchPages
+    outputC config $ C.concat $ map (C.pack . show) matchPages
 
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
