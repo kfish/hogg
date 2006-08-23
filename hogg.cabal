@@ -5,7 +5,7 @@ License:             BSD3
 License-file:        LICENSE
 Author:              Conrad Parker
 Maintainer:          conradp@cse.unsw.edu.au
-Build-Depends:       base, fps
+Build-Depends:       base, fps, HUnit
 Exposed-modules:     Ogg.Chain
                      Ogg.RawPage
                      Ogg.Page
@@ -25,3 +25,7 @@ ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields
 Executable:          hogg
 Main-Is:             hogg.hs
 Hs-Source-Dirs:      ., tools
+
+Executable:          ListMergeTest
+Main-Is:             ListMergeTest.hs
+Hs-Source-Dirs:      ., tests
