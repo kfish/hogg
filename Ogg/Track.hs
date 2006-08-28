@@ -47,16 +47,18 @@ data OggTrack =
 --
 --
 
+-- | Predicate
 trackIsType :: OggType -> OggTrack -> Bool
 trackIsType t0 track
   | (Just t0) == t1  = True
   | otherwise        = False
   where t1 = trackType track
 
+-- | The null track
 nullTrack :: OggTrack
 nullTrack = OggTrack 0 Nothing Nothing Nothing
 
--- bosToTrack
+-- Instantiate an OggTrack given a serialno and a bos page
 bosToTrack :: Word32 -> L.ByteString -> OggTrack
 bosToTrack s d = OggTrack s ctype gr gs
   where
@@ -64,6 +66,7 @@ bosToTrack s d = OggTrack s ctype gr gs
     gr = readGR ctype d
     gs = readGS ctype d
 
+-- | Convert a granulepos to a timestamp
 gpToTimestamp :: Granulepos -> OggTrack -> Timestamp
 gpToTimestamp mgp track
   | g == Nothing = Timestamp Nothing
@@ -77,6 +80,7 @@ gpToTimestamp mgp track
         Just granules = g
         Just (Granulerate gr) = r
 
+-- | Convert a granluepos to a count of granules
 gpToGranules :: Granulepos -> OggTrack -> Maybe Integer
 gpToGranules mgp track
   | s == Nothing = Nothing
@@ -84,6 +88,7 @@ gpToGranules mgp track
   where s = gpSplit mgp track
         Just (keyframe, delta) = s
 
+-- | Split a granulepos by it's track's granuleshift
 gpSplit :: Granulepos -> OggTrack -> Maybe (Integer, Integer)
 gpSplit mgp track
   | mgp == Granulepos Nothing          = Nothing
@@ -103,15 +108,19 @@ skeletonIdent = L.pack [0x66, 0x69, 0x73, 0x68, 0x65, 0x61, 0x64, 0x00]
 cmmlIdent :: L.ByteString
 cmmlIdent = L.pack [0x43, 0x4d, 0x4d, 0x4c, 0x00, 0x00, 0x00, 0x00]
 
+-- vorbisIdent = '\x01vorbis'
 vorbisIdent :: L.ByteString
 vorbisIdent = L.pack [0x01, 0x76, 0x6f, 0x72, 0x62, 0x69, 0x73]
 
+-- theoraIdent = '\x80theora'
 theoraIdent :: L.ByteString
 theoraIdent = L.pack [0x80, 0x74, 0x68, 0x65, 0x6f, 0x72, 0x61]
 
+-- speexIdent = 'Speex   '
 speexIdent :: L.ByteString
 speexIdent = L.pack [0x53, 0x70, 0x65, 0x65, 0x78, 0x20, 0x20, 0x20]
 
+-- | Determine the content type of a bos page
 readCType :: L.ByteString -> Maybe OggType
 readCType d
   | L.isPrefixOf skeletonIdent d = Just Skeleton
@@ -121,13 +130,7 @@ readCType d
   | L.isPrefixOf theoraIdent d = Just Theora
   | otherwise = Nothing
 
--- readCType (r1:r2:r3:r4:r5:r6:r7:r8:_)
---   | [r1,r2,r3,r4,r5,r6,r7] == vorbisIdent = Just Vorbis
---   | [r1,r2,r3,r4,r5,r6,r7,r8] == speexIdent = Just Speex
---   | [r1,r2,r3,r4,r5,r6,r7] == theoraIdent = Just Theora
---   | otherwise = Nothing
--- readCType _ = Nothing
-
+-- | Read the granulerate from the data of a bos page
 readGR :: Maybe OggType -> L.ByteString -> Maybe Granulerate
 readGR Nothing _ = Nothing
 readGR (Just Skeleton) _ = Nothing
@@ -135,8 +138,8 @@ readGR (Just CMML) d = Just (fracRate (le64At 12 d) (le64At 20 d))
 readGR (Just Vorbis) d = Just (intRate (le32At 12 d))
 readGR (Just Speex) d = Just (intRate (le32At 36 d))
 readGR (Just Theora) d = Just (fracRate (be32At 22 d) (be32At 26 d))
-readGR _ _ = Nothing
 
+-- | Read the granuleshift from the data of a bos page
 readGS :: Maybe OggType -> L.ByteString -> Maybe Int
 readGS Nothing _ = Nothing
 readGS (Just CMML) d = Just (u8At 28 d)
@@ -145,6 +148,7 @@ readGS (Just Theora) d = Just (h40 .|. h41)
         h41 = (u8At 41 d .&. 0xe0) `shiftR` 5
 readGS _ _ = Nothing
 
+-- | Parse the specification of a content-type
 parseType :: Maybe String -> Maybe OggType
 parseType (Just "skeleton") = Just Skeleton
 parseType (Just "cmml") = Just CMML
