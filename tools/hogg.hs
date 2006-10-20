@@ -347,14 +347,18 @@ dumpRawPages args = do
 
 shortHelp :: [String] -> IO ()
 shortHelp args = do
-    (config, filenames) <- processArgs args
-    outputC config $ C.concat $ map C.pack $
-        ["Usage: hogg <subcommand> [options] filename ...\n\n",
-         "Available subcommands:\n"] ++
-        map itemHelp subCommands ++
-        ["\nPlease report bugs to <ogg-dev@xiph.org>\n"]
+    (config, commands) <- processArgs args
+    outputC config $ C.concat $ map C.pack $ longHelp commands
+
+longHelp :: [String] -> [String]
+longHelp [] =
+    ["Usage: hogg <subcommand> [options] filename ...\n\n",
+     "Available subcommands:\n"] ++
+    map itemHelp subCommands ++
+    ["\nPlease report bugs to <ogg-dev@xiph.org>\n"]
     where
         itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
+longHelp (command:_) = ["Usage: hogg " ++ command ++ " [options] filename\n"]
 
 ------------------------------------------------------------
 -- main
