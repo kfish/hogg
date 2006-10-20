@@ -33,7 +33,18 @@ data SubCommand =
   }
 
 subCommands :: [SubCommand]
-subCommands = [dumpRawPagesSub, mergePagesSub]
+subCommands = [
+               infoSub,
+               dumpPacketsSub,
+               dumpPagesSub,
+               dumpRawPagesSub,
+               countPagesSub,
+               rewritePagesSub,
+               mergePagesSub,
+               rewritePacketsSub,
+               countrwPagesSub,
+               countPacketsSub
+              ]
 
 ------------------------------------------------------------
 -- Options processing
@@ -186,11 +197,27 @@ outputL config bs = do
     L.hPut h bs
     hClose h
 
+------------------------------------------------------------
+-- info
+--
+
+infoSub :: SubCommand
+infoSub = SubCommand "info" info
+    "Display information about the file and its bitstreams"
+
 info :: [String] -> IO ()
 info args = do
     (config, filenames) <- processArgs args
     matchTracks <- mTracks config filenames
     outputC config $ C.concat $ map (C.pack . show) matchTracks
+
+------------------------------------------------------------
+-- dumpPackets (dump)
+--
+
+dumpPacketsSub :: SubCommand
+dumpPacketsSub = SubCommand "dump" dumpPackets
+    "Hexdump packets of an Ogg file"
 
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
@@ -198,11 +225,27 @@ dumpPackets args = do
     matchPackets <- {-# SCC "matchPackets" #-}mPackets config filenames
     outputC config $ C.concat $ map packetToBS matchPackets
 
+------------------------------------------------------------
+-- countPackets (packetcount)
+--
+
+countPacketsSub :: SubCommand
+countPacketsSub = SubCommand "packetcount" countPackets
+    "Count packets of an Ogg file" 
+
 countPackets :: [String] -> IO ()
 countPackets args = do
     (config, filenames) <- processArgs args
     matchPackets <- mPackets config filenames
     outputS config $ show (length matchPackets) ++ " packets"
+
+------------------------------------------------------------
+-- rewritePages (rip)
+--
+
+rewritePagesSub :: SubCommand
+rewritePagesSub = SubCommand "rip" rewritePages
+    "Rip selected logical bistreams from an Ogg file (default: all)"
 
 rewritePages :: [String] -> IO ()
 rewritePages args = do
@@ -211,11 +254,27 @@ rewritePages args = do
     matchPages <- mPages config filename
     outputL config $ L.concat (map pageWrite matchPages)
 
+------------------------------------------------------------
+-- rewritePackets (reconstruct)
+--
+
+rewritePacketsSub :: SubCommand
+rewritePacketsSub = SubCommand "reconstruct" rewritePackets
+    "Reconstruct an Ogg file by doing a full packet demux"
+
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
     (config, filenames) <- processArgs args
     matchPackets <- mPackets config filenames
     outputL config $ L.concat (map pageWrite (packetsToPages matchPackets))
+
+------------------------------------------------------------
+-- countrwPages (countrw)
+--
+
+countrwPagesSub :: SubCommand
+countrwPagesSub = SubCommand "countrw" countrwPages
+    "Rewrite an Ogg file via packets and display a count"
 
 countrwPages :: [String] -> IO ()
 countrwPages args = do
@@ -224,12 +283,28 @@ countrwPages args = do
     matchPages <- mPages config filename
     outputS config $ show $ length (packetsToPages (pagesToPackets matchPages))
 
+------------------------------------------------------------
+-- countPages (pagecount)
+--
+
+countPagesSub :: SubCommand
+countPagesSub = SubCommand "pagecount" countPages
+    "Count pages of an Ogg file" 
+
 countPages :: [String] -> IO ()
 countPages args = do
     (config, filenames) <- processArgs args
     let filename = head filenames
     matchPages <- mPages config filename
     outputS config $ (show $ length matchPages) ++ " pages"
+
+------------------------------------------------------------
+-- dumpPages (pagedump)
+--
+
+dumpPagesSub :: SubCommand
+dumpPagesSub = SubCommand "pagedump" dumpPages
+    "Display page structure of an Ogg file"
 
 dumpPages :: [String] -> IO ()
 dumpPages args = do
@@ -239,7 +314,7 @@ dumpPages args = do
     outputC config $ C.concat $ map (C.pack . show) matchPages
 
 ------------------------------------------------------------
--- mergePages
+-- mergePages (merge)
 --
 
 mergePagesSub :: SubCommand
@@ -253,7 +328,7 @@ mergePages args = do
     outputL config $ L.concat $ map pageWrite $ listMerge matchPages
 
 ------------------------------------------------------------
--- dumpRawPages
+-- dumpRawPages (dumpraw)
 --
 
 dumpRawPagesSub :: SubCommand
@@ -267,6 +342,8 @@ dumpRawPages args = do
     outputC config $ C.concat $ map (C.pack . show) matchPages
 
 ------------------------------------------------------------
+-- shortHelp
+--
 
 shortHelp :: [String] -> IO ()
 shortHelp args = do
@@ -279,6 +356,7 @@ shortHelp args = do
     where
         itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
 
+------------------------------------------------------------
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
 
