@@ -88,6 +88,7 @@ gpToGranules mgp track
   where s = gpSplit mgp track
         Just (keyframe, delta) = s
 
+-- | Split a granulepos by it's track's granuleshift
 gpSplit :: Granulepos -> OggTrack -> Maybe (Integer, Integer)
 gpSplit mgp track
   | mgp == Granulepos Nothing          = Nothing
