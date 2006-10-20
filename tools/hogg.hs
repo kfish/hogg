@@ -357,38 +357,17 @@ shortHelp args = do
         itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
 
 ------------------------------------------------------------
-getFilename :: [String] -> IO String
-getFilename args = return $ last args
-
-helpCommand :: String -> String -> IO ()
-helpCommand command desc = do
-    putStrLn $ printf "  %-14s%s" command desc
-
-helpCommands :: IO ()
-helpCommands = do
-    putStrLn "Usage: hogg <subcommand> [options] filename ...\n"
-    putStrLn "Available subcommands:"
-    helpCommand "info" "Display information about the file and its bitstreams"
-    helpCommand "dump" "Hexdump packets of an Ogg file"
-    helpCommand "pagedump" "Display page structure of an Ogg file"
-    helpCommand "dumpraw" "Dump raw (unparsed) page data"
-    helpCommand "pagecount" "Count pages of an Ogg file" 
-    helpCommand "rip" "Rip selected logical bistreams from an Ogg file (default: all)"
-    helpCommand "merge" "Merge, interleaving pages in order of presentation time"
-    helpCommand "reconstruct" "Reconstruct an Ogg file by doing a full packet demux"
-    helpCommand "countrw" "Rewrite an Ogg file via packets and display a count"
-    -- helpCommand "help" "Display this help and exit"
-    putStrLn "\nPlease report bugs to <ogg-dev@xiph.org>"
+-- main
+--
 
 main :: IO ()
 main = do
     allArgs <- getArgs
     case allArgs of
-      []             -> helpCommands
+      []             -> shortHelp []
       (command:args) -> do
         case command of
-          "newhelp" -> shortHelp args
-          "help" -> helpCommands
+          "help" -> shortHelp args
           "info" -> info args
           "dump" -> dumpPackets args
           "packetcount" -> countPackets args
@@ -399,4 +378,4 @@ main = do
           "countrw" -> countrwPages args
           "dumpraw" -> dumpRawPages args
           "merge" -> mergePages args
-          _ -> helpCommands
+          _ -> shortHelp args
