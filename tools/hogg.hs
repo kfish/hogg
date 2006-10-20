@@ -20,6 +20,21 @@ import Ogg.Packet
 import Ogg.Track
 import Ogg.ListMerge
 
+
+------------------------------------------------------------
+-- Subcommands
+--
+
+data SubCommand =
+  SubCommand {
+    subName :: String,
+    subMethod :: [String] -> IO (),
+    subSynopsis :: String
+  }
+
+subCommands :: [SubCommand]
+subCommands = [dumpRawPagesSub, mergePagesSub]
+
 ------------------------------------------------------------
 -- Options processing
 --
@@ -223,17 +238,42 @@ dumpPages args = do
     matchPages <- mPages config filename
     outputC config $ C.concat $ map (C.pack . show) matchPages
 
+------------------------------------------------------------
+-- mergePages
+--
+
+mergePagesSub :: SubCommand
+mergePagesSub = SubCommand "merge" mergePages
+    "Merge, interleaving pages in order of presentation time"
+  
 mergePages :: [String] -> IO ()
 mergePages args = do
     (config, filenames) <- processArgs args
     matchPages <- mapM (mPages config) filenames
     outputL config $ L.concat $ map pageWrite $ listMerge matchPages
 
+------------------------------------------------------------
+-- dumpRawPages
+--
+
+dumpRawPagesSub :: SubCommand
+dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
+    "Dump raw (unparsed) page data"
+
 dumpRawPages :: [String] -> IO ()
 dumpRawPages args = do
     (config, filenames) <- processArgs args
     matchPages <- mRawPages config filenames
     outputC config $ C.concat $ map (C.pack . show) matchPages
+
+------------------------------------------------------------
+
+shortHelp :: [String] -> IO ()
+shortHelp args = do
+    (config, filenames) <- processArgs args
+    outputC config $ C.concat $ map (C.pack . itemHelp) subCommands
+    where
+        itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
 
 getFilename :: [String] -> IO String
 getFilename args = return $ last args
@@ -265,6 +305,7 @@ main = do
       []             -> helpCommands
       (command:args) -> do
         case command of
+          "newhelp" -> shortHelp args
           "help" -> helpCommands
           "info" -> info args
           "dump" -> dumpPackets args
