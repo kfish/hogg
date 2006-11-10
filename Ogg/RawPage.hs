@@ -8,6 +8,8 @@
 
 module Ogg.RawPage (
   OggRawPage (..),
+  pageMarker,
+  pageVersion,
   rawPageScan,
   rawPageBuild
 ) where
@@ -17,8 +19,6 @@ import Ogg.ByteFields
 import qualified Data.ByteString.Lazy as L
 import Data.Int (Int64)
 import Data.Word (Word8, Word32, Word64)
-
-import Text.Printf
 
 ------------------------------------------------------------
 -- The Ogg page format

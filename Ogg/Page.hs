@@ -50,13 +50,6 @@ data OggPage =
 -- OggPage functions
 --
 
-pageMarker :: L.ByteString
-pageMarker = L.pack [0x4f, 0x67, 0x67, 0x53] -- "OggS"
-
--- | Ogg version supported by this library
-pageVersion :: Word8
-pageVersion = 0x00
-
 -- | Determine the length of a page that would be written
 pageLength :: OggPage -> Int
 pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
@@ -220,7 +213,7 @@ instance Ord OggPage where
 --
 
 instance Show OggPage where
-  show g@(OggPage o track cont incplt bos eos gp seqno segment_table) =
+  show g@(OggPage o track cont incplt bos eos gp _ segment_table) =
     off ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength g) ++ " bytes\n" ++ "\t" ++ show (map L.length segment_table) ++ " " ++ show ts ++ "\n" ++ "\n"
     where flags = ifc ++ ift ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
