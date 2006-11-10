@@ -351,6 +351,7 @@ shortHelp args = do
     outputC config $ C.concat $ map C.pack $ longHelp commands
 
 longHelp :: [String] -> [String]
+-- | "hogg help" with no arguments: Give a list of all subcommands
 longHelp [] =
     ["Usage: hogg <subcommand> [options] filename ...\n\n",
      "Available subcommands:\n"] ++
@@ -358,7 +359,16 @@ longHelp [] =
     ["\nPlease report bugs to <ogg-dev@xiph.org>\n"]
     where
         itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
-longHelp (command:_) = ["Usage: hogg " ++ command ++ " [options] filename\n"]
+
+-- | "hogg help <command>": Give command-specific help
+longHelp (command:_) = contextHelp command m
+  where m = filter (\x -> subName x == command) subCommands
+
+contextHelp command [] = longHelp [] ++ contextError
+  where contextError = ["\n*** \"" ++ command ++ "\": Unknown command.\n"]
+contextHelp command (item:_) = synopsis ++ usage
+  where usage = ["Usage: hogg " ++ command ++ " [options] filename\n"]
+        synopsis = [command ++ ": " ++ subSynopsis item ++ "\n"]
 
 ------------------------------------------------------------
 -- main
