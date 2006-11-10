@@ -366,9 +366,11 @@ longHelp (command:_) = contextHelp command m
 
 contextHelp command [] = longHelp [] ++ contextError
   where contextError = ["\n*** \"" ++ command ++ "\": Unknown command.\n"]
-contextHelp command (item:_) = synopsis ++ usage
+contextHelp command (item:_) = synopsis ++ usage ++ ["\n" ++ optionsHelp command]
   where usage = ["Usage: hogg " ++ command ++ " [options] filename\n"]
         synopsis = [command ++ ": " ++ subSynopsis item ++ "\n"]
+
+optionsHelp command = usageInfo "Options:" options
 
 ------------------------------------------------------------
 -- main
