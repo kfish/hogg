@@ -376,9 +376,17 @@ optionsHelp command = usageInfo "Options:" options
 -- main
 --
 
+helpStrings = ["--help", "-h", "-?"]
+
+isHelp :: String -> Bool
+isHelp x = elem x helpStrings
+
 main :: IO ()
 main = do
     allArgs <- getArgs
+    when (any isHelp allArgs) $ do
+      shortHelp $ filter (not . isHelp) allArgs
+      exitWith ExitSuccess
     case allArgs of
       []             -> shortHelp []
       (command:args) -> do
