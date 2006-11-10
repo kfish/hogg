@@ -27,5 +27,5 @@ listSort xs = sortBy listOrd xs
 listOrd :: Ord a => [a] -> [a] -> Ordering
 listOrd [] _ = LT
 listOrd _ [] = GT
-listOrd (x:xs) (y:ys) = compare x y
+listOrd (x:_) (y:_) = compare x y
 
