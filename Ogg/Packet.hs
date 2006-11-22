@@ -54,11 +54,26 @@ data OggSegment =
 packetIsType :: OggType -> OggPacket -> Bool
 packetIsType t p = trackIsType t (packetTrack p)
 
+------------------------------------------------------------
+-- Helpers
+--
+
 packetTimestamp :: OggPacket -> Timestamp
 packetTimestamp p = timestamp
   where gp = packetGranulepos p
         track = packetTrack p
         timestamp =  gpToTimestamp gp track
+
+------------------------------------------------------------
+-- create a packet which spans a single page, ie. consists of only
+-- one segment
+--
+
+uncutPacket :: L.ByteString -> OggTrack -> Granulepos -> OggPacket
+uncutPacket d t gp = OggPacket d t gp False False segs
+  where segs = Just [s]
+        s = OggSegment (fromIntegral l) 0 True
+        l = L.length d
 
 ------------------------------------------------------------
 -- packetsToPages
