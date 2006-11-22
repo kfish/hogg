@@ -65,7 +65,7 @@ data OggRawPage =
   }
 
 ------------------------------------------------------------
--- OggPage functions
+-- OggRawPage constants
 --
 
 pageMarker :: L.ByteString
