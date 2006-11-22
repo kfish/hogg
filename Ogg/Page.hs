@@ -14,6 +14,7 @@ module Ogg.Page (
   pageIsType
 ) where
 
+import Ogg.ByteFields
 import Ogg.RawPage
 import Ogg.CRC
 import Ogg.Utils
@@ -83,12 +84,12 @@ pageWrite (OggPage _ track cont incplt bos eos gp seqno s) = newPageData
     hData = L.concat [pageMarker, version, htype, gp_, ser_, seqno_]
     sData = segs
 
-    version = fillField pageVersion 1
+    version = u8Fill pageVersion
     htype = L.pack [headerType]
-    gp_ = fillField (gpUnpack gp) 8
-    ser_ = fillField serialno 4
-    seqno_ = fillField seqno 4
-    crc = fillField (genCRC crcPageData) 4
+    gp_ = le64Fill (gpUnpack gp)
+    ser_ = le32Fill serialno
+    seqno_ = le32Fill seqno
+    crc = le32Fill (genCRC crcPageData)
 
     headerType :: Word8
     headerType = c .|. b .|. e
@@ -104,14 +105,6 @@ pageWrite (OggPage _ track cont incplt bos eos gp seqno s) = newPageData
 
     -- Body data
     body = L.concat s
-
-fillField :: Integral a => a -> Int -> L.ByteString
-fillField x n
-  | l < n	= L.pack $ reverse ((take (n-l) $ repeat 0x00) ++ i)
-  | l > n	= L.pack $ reverse (drop (l-n) i)
-  | otherwise	= L.pack $ reverse i
-                  where l = length i
-                        i = toTwosComp x
 
 buildSegtab :: Int -> [Word8] -> Bool -> [L.ByteString] -> (Int, [Word8])
 buildSegtab numsegs accum _ [] = (numsegs, accum)
