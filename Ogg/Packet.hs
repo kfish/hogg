@@ -8,6 +8,7 @@
 
 module Ogg.Packet (
   OggPacket (..),
+  uncutPacket,
   packetsToPages,
   pagesToPackets,
   packetIsType,

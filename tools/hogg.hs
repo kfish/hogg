@@ -14,11 +14,12 @@ import Text.Printf
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
 import Ogg.Chain
-import Ogg.RawPage
+import Ogg.ListMerge
 import Ogg.Page
 import Ogg.Packet
+import Ogg.RawPage
+import Ogg.Skeleton
 import Ogg.Track
-import Ogg.ListMerge
 
 
 ------------------------------------------------------------
@@ -39,6 +40,7 @@ subCommands = [
                dumpPagesSub,
                dumpRawPagesSub,
                countPagesSub,
+               addSkelSub,
                rewritePagesSub,
                mergePagesSub,
                rewritePacketsSub,
@@ -109,16 +111,16 @@ processConfig = foldM processOneOption
     processOneOption config (OutputOpt output) =
       return $ config {outputCfg = Just output}
 
-getChain :: FilePath -> IO [OggChain]
-getChain filename = do
+getChains :: FilePath -> IO [OggChain]
+getChains filename = do
   handle <- openFile filename ReadMode
   input <- L.hGetContents handle
   return $ chainScan input
 
 getTracks :: FilePath -> IO [OggTrack]
 getTracks filename = do
-    chain <- getChain filename
-    return $ chainTracks $ head chain
+    chains <- getChains filename
+    return $ chainTracks $ head chains
 
 getRawPages :: FilePath -> IO [OggRawPage]
 getRawPages filename = do
@@ -128,13 +130,13 @@ getRawPages filename = do
 
 getPages :: FilePath -> IO [OggPage]
 getPages filename = do
-    chain <- getChain filename
-    return $ chainPages $ head chain
+    chains <- getChains filename
+    return $ chainPages $ head chains
 
 getPackets :: FilePath -> IO [OggPacket]
 getPackets filename = do
-    chain <- {-# SCC "getChain" #-}getChain filename
-    return $ chainPackets $ head chain
+    chains <- {-# SCC "getChains" #-}getChains filename
+    return $ chainPackets $ head chains
 
 trackMatch :: Maybe OggType -> [OggTrack] -> [OggTrack]
 trackMatch Nothing ts = ts
@@ -269,6 +271,23 @@ rewritePackets args = do
     outputL config $ L.concat (map pageWrite (packetsToPages matchPackets))
 
 ------------------------------------------------------------
+-- addSkel (addskel)
+--
+
+addSkelSub :: SubCommand
+addSkelSub = SubCommand "addskel" addSkel
+  "Write a Skeleton logical bitstream"
+
+addSkel :: [String] -> IO ()
+addSkel args = do
+    (config, filenames) <- processArgs args
+    let filename = head filenames
+    chains <- getChains filename
+    let skelChain = chainAddSkeleton $ head chains
+    let allPackets = chainPackets skelChain
+    outputL config $ L.concat (map pageWrite (packetsToPages allPackets))
+  
+------------------------------------------------------------
 -- countrwPages (countrw)
 --
 
@@ -394,6 +413,7 @@ main = do
           "help" -> shortHelp args
           "info" -> info args
           "dump" -> dumpPackets args
+          "addskel" -> addSkel args
           "packetcount" -> countPackets args
           "pagecount" -> countPages args
           "pagedump" -> dumpPages args

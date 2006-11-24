@@ -8,11 +8,17 @@
 
 module Ogg.Skeleton (
   OggFishead (..),
-  OggFisbone (..)
+  OggFisbone (..),
+  emptyFishead,
+  fisheadToPacket,
+  fisboneToPacket,
+  trackToFisbone,
+  tracksToFisbones
 ) where
 
 import qualified Data.ByteString.Lazy as L
 import Data.Bits
+import Data.Maybe
 import Data.Word (Word32,Word64)
 import Data.Ratio
 
@@ -21,7 +27,9 @@ import Text.Printf
 import Ogg.ByteFields
 import Ogg.Granulepos
 import Ogg.Granulerate
+import Ogg.Packet
 import Ogg.Timestamp
+import Ogg.Track
 
 ------------------------------------------------------------
 -- Data
@@ -68,12 +76,25 @@ vMinor = 0
 fisboneMHOffset :: Int
 fisboneMHOffset = 44
 
+-- Helpers
 z :: Int
 z = 0
 
+zTimestamp :: Timestamp
+zTimestamp = Timestamp (Just (0, 0))
+
+emptyFishead :: OggFishead
+emptyFishead = OggFishead zTimestamp zTimestamp
+
 ------------------------------------------------------------
--- fisheadWrite
+-- fisheadToPacket
 --
+
+fisheadToPacket :: OggTrack -> OggFishead -> OggPacket
+fisheadToPacket t f = uncutPacket d t gp
+  where
+    d = fisheadWrite f
+    gp = Granulepos (Just 0)
 
 fisheadWrite :: OggFishead -> L.ByteString
 fisheadWrite (OggFishead p b) = newFisheadData
@@ -88,10 +109,15 @@ timestampFill :: Timestamp -> L.ByteString
 timestampFill (Timestamp Nothing) = L.concat $ map le64Fill [z, z]
 timestampFill (Timestamp (Just (n, d))) = L.concat $ map le64Fill [n, d]
 
-
 ------------------------------------------------------------
--- fisboneWrite
+-- fisboneToPacket
 --
+
+fisboneToPacket :: OggTrack -> OggFisbone -> OggPacket
+fisboneToPacket t f = uncutPacket d t gp
+  where
+    d = fisboneWrite f
+    gp = Granulepos (Just 0)
 
 fisboneWrite :: OggFisbone -> L.ByteString
 fisboneWrite (OggFisbone s n (Granulerate gr) sg preroll gs) = newFisboneData
@@ -110,3 +136,27 @@ fisboneWrite (OggFisbone s n (Granulerate gr) sg preroll gs) = newFisboneData
     gsD = u8Fill gs
 
     padding = L.concat $ map u8Fill [z, z, z]
+
+------------------------------------------------------------
+-- trackToFisbone
+--
+
+-- | Create a list of OggFisbones from a list of OggTracks, not including
+-- | any OggTracks with unknown ContentType or Granulerate
+tracksToFisbones :: [OggTrack] -> [OggFisbone]
+tracksToFisbones ts = mapMaybe trackToFisbone ts
+
+-- | Create an OggFisbone from a given OggTrack
+trackToFisbone :: OggTrack -> Maybe OggFisbone
+trackToFisbone (OggTrack serialno (Just ctype) (Just gr) gs) =
+  Just (OggFisbone serialno nheaders gr startgranule preroll gsi)
+  where
+    nheaders = nheadersOf ctype
+    preroll = fromIntegral $ prerollOf ctype
+    startgranule = 0
+    gsi = maybe 0 id gs -- A Granuleshift of None is represented by 0
+    -- TODO: transform ctype into Content-Type message header field
+
+-- If the pattern match failed, ie. any of the Maybe values were Nothing,
+-- then we can't produce a valid Fisbone for this
+trackToFisbone _ = Nothing

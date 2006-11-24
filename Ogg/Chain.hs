@@ -8,7 +8,8 @@
 
 module Ogg.Chain (
   OggChain (..),
-  chainScan
+  chainScan,
+  chainAddSkeleton
 ) where
 
 import qualified Data.ByteString.Lazy as L
@@ -16,6 +17,7 @@ import qualified Data.ByteString.Lazy as L
 import Ogg.Track
 import Ogg.Page
 import Ogg.Packet
+import Ogg.Skeleton
 
 data OggChain =
   OggChain {
@@ -32,3 +34,15 @@ chainScan d
         (tracks, pages) = pageScan d
         packets = pagesToPackets pages
         rest = L.empty
+
+chainAddSkeleton :: OggChain -> OggChain
+chainAddSkeleton (OggChain tracks pages packets) = OggChain nt ng np
+  where
+    nt = [skelTrack]
+    np = skelPackets
+    ng = packetsToPages skelPackets
+
+    skelTrack = newTrack
+    skelPackets = [fh] ++ fbs
+    fh = fisheadToPacket skelTrack emptyFishead
+    fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks

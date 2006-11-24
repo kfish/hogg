@@ -10,8 +10,11 @@ module Ogg.Track (
   OggTrack (..),
   OggType (..),
   trackIsType,
+  newTrack,
   nullTrack,
   bosToTrack,
+  nheadersOf,
+  prerollOf,
   parseType,
   gpToTimestamp
 ) where
@@ -57,6 +60,11 @@ trackIsType t0 track
 -- | The null track
 nullTrack :: OggTrack
 nullTrack = OggTrack 0 Nothing Nothing Nothing
+
+-- | A new track, with a DEFAULT serialno
+-- | XXX: This should be a random serialno instead
+newTrack :: OggTrack
+newTrack = OggTrack 777 Nothing Nothing Nothing
 
 -- Instantiate an OggTrack given a serialno and a bos page
 bosToTrack :: Word32 -> L.ByteString -> OggTrack
@@ -167,6 +175,23 @@ instance Ord OggTrack where
   compare track1 track2 = compare s1 s2
           where s1 = trackSerialno track1
                 s2 = trackSerialno track2
+
+------------------------------------------------------------
+-- Content-Type specific behaviours
+--
+
+nheadersOf :: OggType -> Int
+nheadersOf CMML = 3
+nheadersOf Speex = 3
+nheadersOf Theora = 3
+nheadersOf Vorbis = 3
+nheadersOf _ = 1
+
+prerollOf :: OggType -> Int
+prerollOf Vorbis = 2
+prerollOf Speex = 3
+prerollOf _ = 0
+
 
 ------------------------------------------------------------
 -- Show
