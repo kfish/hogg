@@ -43,11 +43,22 @@ chainAddSkeleton (OggChain tracks _ packets) = OggChain nt ng np
     np = skelMerge skelPackets packets
 
     skelTrack = newTrack{trackType = Just Skeleton}
-    skelPackets = [fh] ++ fbs
+    skelPackets = [fh] ++ indexedFisbones
     fh = fisheadToPacket skelTrack emptyFishead
     fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks
+    indexedFisbones = zipWith setPageIx [1..] fbs
 
 skelMerge :: [OggPacket] -> [OggPacket] -> [OggPacket]
 skelMerge [] ops = ops
 skelMerge (fh:fbs) ops = [fh] ++ boss ++ fbs ++ rest
   where (boss, rest) = span packetBOS ops
+
+-- An internal function for setting the pageIx of the segment of a packet.
+-- This is only designed for working with packets which are known to only
+-- and entirely span one page, such as Skeleton fisbones.
+setPageIx :: Int -> OggPacket -> OggPacket
+setPageIx ix p@(OggPacket _ _ _ _ _ (Just [oldSegment])) =
+  p{packetSegments = Just [newSegment]}
+  where
+    newSegment = oldSegment{segmentPageIx = ix}
+setPageIx _ _ = error "setPageIx used on non-uncut page"
