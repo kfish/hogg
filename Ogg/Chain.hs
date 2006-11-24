@@ -46,7 +46,7 @@ chainAddSkeleton (OggChain tracks _ packets) = OggChain nt ng np
     skelPackets = [fh] ++ indexedFisbones
     fh = fisheadToPacket skelTrack emptyFishead
     fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks
-    indexedFisbones = zipWith setPageIx [1..] fbs
+    indexedFisbones = zipWith setPageIx [(length tracks)..] fbs
 
 skelMerge :: [OggPacket] -> [OggPacket] -> [OggPacket]
 skelMerge [] ops = ops
