@@ -239,7 +239,7 @@ countPackets :: [String] -> IO ()
 countPackets args = do
     (config, filenames) <- processArgs args
     matchPackets <- mPackets config filenames
-    outputS config $ show (length matchPackets) ++ " packets"
+    outputS config $ show (length matchPackets) ++ " packets\n"
 
 ------------------------------------------------------------
 -- rewritePages (rip)
@@ -284,8 +284,9 @@ addSkel args = do
     let filename = head filenames
     chains <- getChains filename
     let skelChain = chainAddSkeleton $ head chains
-    let allPackets = chainPackets skelChain
-    outputL config $ L.concat (map pageWrite (packetsToPages allPackets))
+    -- outputL config $ L.concat (map pageWrite (chainPages skelChain))
+    let matchPackets = chainPackets skelChain
+    outputC config $ C.concat $ map packetToBS matchPackets
   
 ------------------------------------------------------------
 -- countrwPages (countrw)
@@ -315,7 +316,7 @@ countPages args = do
     (config, filenames) <- processArgs args
     let filename = head filenames
     matchPages <- mPages config filename
-    outputS config $ (show $ length matchPages) ++ " pages"
+    outputS config $ (show $ length matchPages) ++ " pages\n"
 
 ------------------------------------------------------------
 -- dumpPages (pagedump)

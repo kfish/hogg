@@ -36,13 +36,18 @@ chainScan d
         rest = L.empty
 
 chainAddSkeleton :: OggChain -> OggChain
-chainAddSkeleton (OggChain tracks pages packets) = OggChain nt ng np
+chainAddSkeleton (OggChain tracks _ packets) = OggChain nt ng np
   where
-    nt = [skelTrack]
-    np = skelPackets
-    ng = packetsToPages skelPackets
+    nt = [skelTrack] ++ tracks
+    ng = packetsToPages np
+    np = skelMerge skelPackets packets
 
-    skelTrack = newTrack
+    skelTrack = newTrack{trackType = Just Skeleton}
     skelPackets = [fh] ++ fbs
     fh = fisheadToPacket skelTrack emptyFishead
     fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks
+
+skelMerge :: [OggPacket] -> [OggPacket] -> [OggPacket]
+skelMerge [] ops = ops
+skelMerge (fh:fbs) ops = [fh] ++ boss ++ fbs ++ rest
+  where (boss, rest) = span packetBOS ops

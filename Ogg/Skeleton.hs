@@ -91,8 +91,9 @@ emptyFishead = OggFishead zTimestamp zTimestamp
 --
 
 fisheadToPacket :: OggTrack -> OggFishead -> OggPacket
-fisheadToPacket t f = uncutPacket d t gp
+fisheadToPacket t f = up{packetBOS = True}
   where
+    up = uncutPacket d t gp
     d = fisheadWrite f
     gp = Granulepos (Just 0)
 
