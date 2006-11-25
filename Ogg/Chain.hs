@@ -13,7 +13,9 @@ module Ogg.Chain (
 ) where
 
 import qualified Data.ByteString.Lazy as L
+import Data.Maybe
 
+import Ogg.Granulepos
 import Ogg.Track
 import Ogg.Page
 import Ogg.Packet
@@ -45,29 +47,36 @@ chainAddSkeleton (OggChain tracks _ packets) = OggChain nt ng np
   where
     nt = [skelTrack] ++ tracks
     ng = packetsToPages np
-    np = skelMerge skelPackets packets
+    -- np = skelMerge skelPackets packets
+    np = [fh] ++ ixBoss ++ ixFisbones ++ ixHdrs ++ [sEOS] ++ ixD
 
     skelTrack = newTrack{trackType = Just Skeleton}
-    skelPackets = [fh] ++ indexedFisbones
+    -- skelPackets = [fh] ++ indexedFisbones
     fh = fisheadToPacket skelTrack emptyFishead
     fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks
     -- set the pageIx of the fisbones in turn, beginning after the last
     -- BOS page
-    indexedFisbones = zipWith setPageIx [1+(length tracks)..] fbs
+    ixFisbones = zipWith setPageIx [1+(length tracks)..] fbs
 
+    -- skelMerge :: [OggPacket] -> [OggPacket] -> [OggPacket]
+    -- skelMerge [] ops = ops
+    -- skelMerge (fh:fbs) ops =
 
-skelMerge :: [OggPacket] -> [OggPacket] -> [OggPacket]
-skelMerge [] ops = ops
-skelMerge (fh:fbs) ops = [fh] ++ indexedBoss ++ fbs ++ indexedRest
-  where
-    (boss, rest) = span packetBOS ops
+    (boss, rest) = span packetBOS packets
+    (hdrs, d) = splitAt totHeaders rest
+    totHeaders = foldl (+) 0 tracksNHeaders
+    tracksNHeaders = map nheadersOf $ mapMaybe trackType tracks
+
+    sEOS = (uncutPacket L.empty skelTrack sEOSgp){packetEOS = True}
+    sEOSgp = Granulepos (Just 0)
 
     -- increment the pageIx of the original BOS pages by 1
-    indexedBoss = map (incPageIx 1) boss
+    ixBoss = map (incPageIx 1) boss
 
     -- increment the pageIx of the original data packets by the number of
     -- Skeleton pages
-    indexedRest = map (incPageIx (1 + length fbs)) rest
+    ixHdrs = map (incPageIx (1 + length fbs)) hdrs
+    ixD = map (incPageIx (2 + length fbs)) d
 
 -- An internal function for setting the pageIx of the segment of a packet.
 -- This is only designed for working with packets which are known to only
