@@ -19,6 +19,9 @@ import Ogg.Page
 import Ogg.Packet
 import Ogg.Skeleton
 
+-- | A section of a chained Ogg physical bitstream. This corresponds to
+-- an entire song or video, and most Ogg files in the wild contain only
+-- a single chain.
 data OggChain =
   OggChain {
     chainTracks :: [OggTrack],
@@ -26,6 +29,7 @@ data OggChain =
     chainPackets :: [OggPacket]
   }
   
+-- | Parse a ByteString into a list of OggChains
 chainScan :: L.ByteString -> [OggChain]
 chainScan d
   | L.null d  = []
@@ -35,6 +39,7 @@ chainScan d
         packets = pagesToPackets pages
         rest = L.empty
 
+-- | Add a Skeleton logical bitstream to an OggChain
 chainAddSkeleton :: OggChain -> OggChain
 chainAddSkeleton (OggChain tracks _ packets) = OggChain nt ng np
   where
