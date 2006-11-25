@@ -51,12 +51,23 @@ chainAddSkeleton (OggChain tracks _ packets) = OggChain nt ng np
     skelPackets = [fh] ++ indexedFisbones
     fh = fisheadToPacket skelTrack emptyFishead
     fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks
-    indexedFisbones = zipWith setPageIx [(length tracks)..] fbs
+    -- set the pageIx of the fisbones in turn, beginning after the last
+    -- BOS page
+    indexedFisbones = zipWith setPageIx [1+(length tracks)..] fbs
+
 
 skelMerge :: [OggPacket] -> [OggPacket] -> [OggPacket]
 skelMerge [] ops = ops
-skelMerge (fh:fbs) ops = [fh] ++ boss ++ fbs ++ rest
-  where (boss, rest) = span packetBOS ops
+skelMerge (fh:fbs) ops = [fh] ++ indexedBoss ++ fbs ++ indexedRest
+  where
+    (boss, rest) = span packetBOS ops
+
+    -- increment the pageIx of the original BOS pages by 1
+    indexedBoss = map (incPageIx 1) boss
+
+    -- increment the pageIx of the original data packets by the number of
+    -- Skeleton pages
+    indexedRest = map (incPageIx (1 + length fbs)) rest
 
 -- An internal function for setting the pageIx of the segment of a packet.
 -- This is only designed for working with packets which are known to only
@@ -67,3 +78,15 @@ setPageIx ix p@(OggPacket _ _ _ _ _ (Just [oldSegment])) =
   where
     newSegment = oldSegment{segmentPageIx = ix}
 setPageIx _ _ = error "setPageIx used on non-uncut page"
+
+-- An internal function for incrementing the pageIx of all the segments of
+-- data packets. All are shifted up by the number of pages in the fisbone
+incPageIx :: Int -> OggPacket -> OggPacket
+incPageIx ixd p@(OggPacket _ _ _ _ _ (Just segments)) =
+  p{packetSegments = Just (map incSegIx segments)}
+  where
+    incSegIx :: OggSegment -> OggSegment
+    incSegIx s@(OggSegment _ oix _) = s{segmentPageIx = oix + ixd}
+
+-- Otherwise, the packet has no segmentation info so leave it untouched
+incPageIx _ p = p
