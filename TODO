@@ -1,16 +1,16 @@
 TODO for HOgg.
 
-Ogg (library)
--------------
-
 multichain
 
-hogg (cmdline tool)
--------------------
+verify skeleton
 
-specific help on subcommands
+anxmux (time offset gen)
+anx byte offset reporting
+cmml insert
+cmml extract
+cmml -> anx
 
-insert skeleton 
-
-random
-------
+web server frontend
+ - implement a mod_annodex workalike
+   with byte-range handling
+ - use for research into per-track selection
