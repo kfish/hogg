@@ -47,36 +47,41 @@ chainAddSkeleton (OggChain tracks _ packets) = OggChain nt ng np
   where
     nt = [skelTrack] ++ tracks
     ng = packetsToPages np
-    -- np = skelMerge skelPackets packets
     np = [fh] ++ ixBoss ++ ixFisbones ++ ixHdrs ++ [sEOS] ++ ixD
 
+    -- Construct a new track for the Skeleton
     skelTrack = newTrack{trackType = Just Skeleton}
-    -- skelPackets = [fh] ++ indexedFisbones
+
+    -- Create the fishead and fisbone packets (all with pageIx 0)
     fh = fisheadToPacket skelTrack emptyFishead
     fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks
-    -- set the pageIx of the fisbones in turn, beginning after the last
-    -- BOS page
-    ixFisbones = zipWith setPageIx [1+(length tracks)..] fbs
 
-    -- skelMerge :: [OggPacket] -> [OggPacket] -> [OggPacket]
-    -- skelMerge [] ops = ops
-    -- skelMerge (fh:fbs) ops =
-
+    -- Separate out the BOS pages of the input
     (boss, rest) = span packetBOS packets
+
+    -- Increment the pageIx of these original BOS pages by 1, as the
+    -- Skeleton fishead packet is being prepended
+    ixBoss = map (incPageIx 1) boss
+
+    -- Split the remainder of the input into headers and data
     (hdrs, d) = splitAt totHeaders rest
+
+    -- ... for which we determine the total number of header pages
     totHeaders = foldl (+) 0 tracksNHeaders
     tracksNHeaders = map nheadersOf $ mapMaybe trackType tracks
 
-    sEOS = (uncutPacket L.empty skelTrack sEOSgp){packetEOS = True}
-    sEOSgp = Granulepos (Just 0)
-
-    -- increment the pageIx of the original BOS pages by 1
-    ixBoss = map (incPageIx 1) boss
-
-    -- increment the pageIx of the original data packets by the number of
+    -- Increment the pageIx of the original data packets by the number of
     -- Skeleton pages
     ixHdrs = map (incPageIx (1 + length fbs)) hdrs
     ixD = map (incPageIx (2 + length fbs)) d
+
+    -- Set the pageIx of the fisbones in turn, beginning after the last
+    -- BOS page
+    ixFisbones = zipWith setPageIx [1+(length tracks)..] fbs
+
+    -- Generate an EOS packet for the Skeleton track
+    sEOS = (uncutPacket L.empty skelTrack sEOSgp){packetEOS = True}
+    sEOSgp = Granulepos (Just 0)
 
 -- An internal function for setting the pageIx of the segment of a packet.
 -- This is only designed for working with packets which are known to only
@@ -89,13 +94,12 @@ setPageIx ix p@(OggPacket _ _ _ _ _ (Just [oldSegment])) =
 setPageIx _ _ = error "setPageIx used on non-uncut page"
 
 -- An internal function for incrementing the pageIx of all the segments of
--- data packets. All are shifted up by the number of pages in the fisbone
+-- a packet.
 incPageIx :: Int -> OggPacket -> OggPacket
 incPageIx ixd p@(OggPacket _ _ _ _ _ (Just segments)) =
   p{packetSegments = Just (map incSegIx segments)}
   where
     incSegIx :: OggSegment -> OggSegment
     incSegIx s@(OggSegment _ oix _) = s{segmentPageIx = oix + ixd}
-
 -- Otherwise, the packet has no segmentation info so leave it untouched
 incPageIx _ p = p
