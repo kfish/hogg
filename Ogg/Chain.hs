@@ -14,6 +14,7 @@ module Ogg.Chain (
 
 import qualified Data.ByteString.Lazy as L
 import Data.Maybe
+import Data.Word (Word32)
 
 import Ogg.Granulepos
 import Ogg.Track
@@ -42,15 +43,15 @@ chainScan d
         rest = L.empty
 
 -- | Add a Skeleton logical bitstream to an OggChain
-chainAddSkeleton :: OggChain -> OggChain
-chainAddSkeleton (OggChain tracks _ packets) = OggChain nt ng np
+chainAddSkeleton :: Word32 -> OggChain -> OggChain
+chainAddSkeleton serialno (OggChain tracks _ packets) = OggChain nt ng np
   where
     nt = [skelTrack] ++ tracks
     ng = packetsToPages np
     np = [fh] ++ ixBoss ++ ixFisbones ++ ixHdrs ++ [sEOS] ++ ixD
 
     -- Construct a new track for the Skeleton
-    skelTrack = newTrack{trackType = Just Skeleton}
+    skelTrack = (newTrack serialno){trackType = Just Skeleton}
 
     -- Create the fishead and fisbone packets (all with pageIx 0)
     fh = fisheadToPacket skelTrack emptyFishead

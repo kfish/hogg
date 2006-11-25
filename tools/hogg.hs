@@ -283,7 +283,7 @@ addSkel args = do
     (config, filenames) <- processArgs args
     let filename = head filenames
     chains <- getChains filename
-    let skelChain = chainAddSkeleton $ head chains
+    let skelChain = chainAddSkeleton 777 $ head chains
     outputL config $ L.concat (map pageWrite (chainPages skelChain))
     -- let matchPackets = chainPackets skelChain
     -- outputC config $ C.concat $ map packetToBS matchPackets

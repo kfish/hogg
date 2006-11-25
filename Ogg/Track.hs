@@ -62,10 +62,9 @@ trackIsType t0 track
 nullTrack :: OggTrack
 nullTrack = OggTrack 0 Nothing Nothing Nothing
 
--- | A new track, with a DEFAULT serialno
--- | XXX: This should be a random serialno instead
-newTrack :: OggTrack
-newTrack = OggTrack 777 Nothing Nothing Nothing
+-- | A new track, with a given serialno
+newTrack :: Word32 -> OggTrack
+newTrack serialno = OggTrack serialno Nothing Nothing Nothing
 
 -- Instantiate an OggTrack given a serialno and a bos page
 bosToTrack :: Word32 -> L.ByteString -> OggTrack
