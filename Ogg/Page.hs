@@ -176,7 +176,7 @@ splitSegments :: Int -> [Int] -> L.ByteString -> [L.ByteString]
 splitSegments 0 [0] _ = [L.empty]
 splitSegments accum segments body
   | L.null body          = []
-  -- | accum == 0 &&  L.null segments = []
+  -- accum == 0 &&  L.null segments = []
   | null segments        = [L.take (fromIntegral accum) body]
   | accum == 0 && l == 0 = L.empty : splitSegments 0 ls body
   | l == 255             = splitSegments (accum+255) ls body
