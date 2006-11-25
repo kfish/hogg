@@ -15,6 +15,7 @@ module Ogg.Track (
   bosToTrack,
   nheadersOf,
   prerollOf,
+  ctypeOf,
   parseType,
   gpToTimestamp
 ) where
@@ -192,6 +193,11 @@ prerollOf Vorbis = 2
 prerollOf Speex = 3
 prerollOf _ = 0
 
+ctypeOf :: OggType -> String
+ctypeOf CMML = "text/x-cmml"
+ctypeOf Speex = "audio/x-speex"
+ctypeOf Theora = "video/x-theora"
+ctypeOf Vorbis = "audio/x-vorbis"
 
 ------------------------------------------------------------
 -- Show
