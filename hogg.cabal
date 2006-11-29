@@ -5,7 +5,7 @@ License:             BSD3
 License-file:        LICENSE
 Author:              Conrad Parker
 Maintainer:          conradp@cse.unsw.edu.au
-Build-Depends:       base, fps, HUnit
+Build-Depends:       base, fps, mtl, HUnit
 Exposed-modules:     Ogg.Chain
                      Ogg.RawPage
                      Ogg.Page

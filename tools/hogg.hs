@@ -1,13 +1,14 @@
 module Main where
 
+import System.Exit
+import System.IO
+
+import Control.Monad.Reader
 import Control.Monad
 import Control.Exception
 
 import System.Environment (getArgs, getProgName)
-import System.IO
-
 import System.Console.GetOpt
-import System.Exit
 
 import Text.Printf
 
@@ -22,9 +23,16 @@ import Ogg.Skeleton
 import Ogg.Track
 
 ------------------------------------------------------------
--- HoggTool
+--  HOggTool datatype
 --
 
+data HOggTool =
+  HOggTool {
+    hotConfig :: Config,
+    hotFilenames :: [String]
+  }
+
+type Hot = ReaderT HOggTool IO
 
 ------------------------------------------------------------
 -- Subcommands
@@ -33,7 +41,7 @@ import Ogg.Track
 data SubCommand =
   SubCommand {
     subName :: String,
-    subMethod :: [String] -> IO (),
+    subMethod :: Hot (),
     subSynopsis :: String
   }
 
@@ -43,13 +51,14 @@ subCommands = [
                dumpPacketsSub,
                dumpPagesSub,
                dumpRawPagesSub,
-               countPagesSub,
-               addSkelSub,
                rewritePagesSub,
-               mergePagesSub,
                rewritePacketsSub,
+               mergePagesSub,
+               addSkelSub,
+               countPacketsSub,
                countrwPagesSub,
-               countPacketsSub
+               countPagesSub,
+               helpSub
               ]
 
 ------------------------------------------------------------
@@ -115,29 +124,29 @@ processConfig = foldM processOneOption
     processOneOption config (OutputOpt output) =
       return $ config {outputCfg = Just output}
 
-getChains :: FilePath -> IO [OggChain]
+getChains :: FilePath -> Hot [OggChain]
 getChains filename = do
-  handle <- openFile filename ReadMode
-  input <- L.hGetContents handle
+  handle <- liftIO $ openFile filename ReadMode
+  input <- liftIO $ L.hGetContents handle
   return $ chainScan input
 
-getTracks :: FilePath -> IO [OggTrack]
+getTracks :: FilePath -> Hot [OggTrack]
 getTracks filename = do
     chains <- getChains filename
     return $ chainTracks $ head chains
 
-getRawPages :: FilePath -> IO [OggRawPage]
+getRawPages :: FilePath -> Hot [OggRawPage]
 getRawPages filename = do
-    handle <- openFile filename ReadMode
-    input <- L.hGetContents handle
+    handle <- liftIO $ openFile filename ReadMode
+    input <- liftIO $ L.hGetContents handle
     return $ rawPageScan input
 
-getPages :: FilePath -> IO [OggPage]
+getPages :: FilePath -> Hot [OggPage]
 getPages filename = do
     chains <- getChains filename
     return $ chainPages $ head chains
 
-getPackets :: FilePath -> IO [OggPacket]
+getPackets :: FilePath -> Hot [OggPacket]
 getPackets filename = do
     chains <- {-# SCC "getChains" #-}getChains filename
     return $ chainPackets $ head chains
@@ -154,26 +163,30 @@ packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
 packetMatch Nothing ps = ps
 packetMatch (Just t) ps = filter (packetIsType t) ps
 
-mTracks :: Config -> String -> IO [OggTrack]
-mTracks config filename = do
+mTracks :: String -> Hot [OggTrack]
+mTracks filename = do
+    config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
     allTracks <- getTracks filename
     return $ trackMatch ctype allTracks
 
-mRawPages :: Config -> String -> IO [OggRawPage]
-mRawPages config filename = do
+mRawPages :: String -> Hot [OggRawPage]
+mRawPages filename = do
+    -- config <- asks hotConfig
     -- let ctype = parseType $ contentTypeCfg config
     allRawPages <- getRawPages filename
     return allRawPages
 
-mPages :: Config -> String -> IO [OggPage]
-mPages config filename = do
+mPages :: String -> Hot [OggPage]
+mPages filename = do
+    config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
     allPages <- getPages filename
     return $ pageMatch ctype allPages
 
-mPackets :: Config -> String -> IO [OggPacket]
-mPackets config filename = do
+mPackets :: String -> Hot [OggPacket]
+mPackets filename = do
+    config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
     allPackets <- {-# SCC "getPackets" #-}getPackets filename
     return $ packetMatch ctype allPackets
@@ -182,23 +195,26 @@ outputHandle :: Config -> IO Handle
 outputHandle config =
     maybe (evaluate stdout) (\f -> openBinaryFile f WriteMode) (outputCfg config)
 
-outputS :: Config -> String -> IO ()
-outputS config s = do
-    h <- outputHandle config
-    hPutStr h s
-    hClose h
+outputS :: String -> Hot ()
+outputS s = do
+    config <- asks hotConfig
+    h <- liftIO $ outputHandle config
+    liftIO $ hPutStr h s
+    liftIO $ hClose h
 
-outputC :: Config -> C.ByteString -> IO ()
-outputC config bs = do
-    h <- outputHandle config
-    C.hPut h bs
-    hClose h
+outputC :: C.ByteString -> Hot ()
+outputC bs = do
+    config <- asks hotConfig
+    h <- liftIO $ outputHandle config
+    liftIO $ C.hPut h bs
+    liftIO $ hClose h
 
-outputL :: Config -> L.ByteString -> IO ()
-outputL config bs = do
-    h <- outputHandle config
-    L.hPut h bs
-    hClose h
+outputL ::  L.ByteString -> Hot ()
+outputL bs = do
+    config <- asks hotConfig
+    h <- liftIO $ outputHandle config
+    liftIO $ L.hPut h bs
+    liftIO $ hClose h
 
 ------------------------------------------------------------
 -- info
@@ -208,12 +224,12 @@ infoSub :: SubCommand
 infoSub = SubCommand "info" info
     "Display information about the file and its bitstreams"
 
-info :: [String] -> IO ()
-info args = do
-    (config, filenames) <- processArgs args
+info :: Hot ()
+info = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchTracks <- mTracks config filename
-    outputC config $ C.concat $ map (C.pack . show) matchTracks
+    matchTracks <- mTracks filename
+    outputC $ C.concat $ map (C.pack . show) matchTracks
 
 ------------------------------------------------------------
 -- dumpPackets (dump)
@@ -223,12 +239,12 @@ dumpPacketsSub :: SubCommand
 dumpPacketsSub = SubCommand "dump" dumpPackets
     "Hexdump packets of an Ogg file"
 
-dumpPackets :: [String] -> IO ()
-dumpPackets args = do
-    (config, filenames) <- processArgs args
+dumpPackets :: Hot ()
+dumpPackets = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchPackets <- {-# SCC "matchPackets" #-}mPackets config filename
-    outputC config $ C.concat $ map packetToBS matchPackets
+    matchPackets <- {-# SCC "matchPackets" #-}mPackets filename
+    outputC $ C.concat $ map packetToBS matchPackets
 
 ------------------------------------------------------------
 -- countPackets (packetcount)
@@ -238,12 +254,12 @@ countPacketsSub :: SubCommand
 countPacketsSub = SubCommand "packetcount" countPackets
     "Count packets of an Ogg file" 
 
-countPackets :: [String] -> IO ()
-countPackets args = do
-    (config, filenames) <- processArgs args
+countPackets :: Hot ()
+countPackets = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchPackets <- mPackets config filename
-    outputS config $ show (length matchPackets) ++ " packets\n"
+    matchPackets <- mPackets filename
+    outputS $ show (length matchPackets) ++ " packets\n"
 
 ------------------------------------------------------------
 -- rewritePages (rip)
@@ -253,12 +269,12 @@ rewritePagesSub :: SubCommand
 rewritePagesSub = SubCommand "rip" rewritePages
     "Rip selected logical bistreams from an Ogg file (default: all)"
 
-rewritePages :: [String] -> IO ()
-rewritePages args = do
-    (config, filenames) <- processArgs args
+rewritePages :: Hot ()
+rewritePages = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchPages <- mPages config filename
-    outputL config $ L.concat (map pageWrite matchPages)
+    matchPages <- mPages filename
+    outputL $ L.concat (map pageWrite matchPages)
 
 ------------------------------------------------------------
 -- rewritePackets (reconstruct)
@@ -268,12 +284,12 @@ rewritePacketsSub :: SubCommand
 rewritePacketsSub = SubCommand "reconstruct" rewritePackets
     "Reconstruct an Ogg file by doing a full packet demux"
 
-rewritePackets :: [String] -> IO ()
-rewritePackets args = do
-    (config, filenames) <- processArgs args
+rewritePackets :: Hot ()
+rewritePackets = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchPackets <- mPackets config filename
-    outputL config $ L.concat (map pageWrite (packetsToPages matchPackets))
+    matchPackets <- mPackets filename
+    outputL $ L.concat (map pageWrite (packetsToPages matchPackets))
 
 ------------------------------------------------------------
 -- addSkel (addskel)
@@ -283,13 +299,13 @@ addSkelSub :: SubCommand
 addSkelSub = SubCommand "addskel" addSkel
   "Write a Skeleton logical bitstream"
 
-addSkel :: [String] -> IO ()
-addSkel args = do
-    (config, filenames) <- processArgs args
+addSkel :: Hot ()
+addSkel = do
+    filenames <- asks hotFilenames
     let filename = head filenames
     chains <- getChains filename
-    skelChain <- chainAddSkeleton $ head chains
-    outputL config $ L.concat (map pageWrite (chainPages skelChain))
+    skelChain <- liftIO $ chainAddSkeleton $ head chains
+    outputL $ L.concat (map pageWrite (chainPages skelChain))
     -- let matchPackets = chainPackets skelChain
     -- outputC config $ C.concat $ map packetToBS matchPackets
   
@@ -301,12 +317,12 @@ countrwPagesSub :: SubCommand
 countrwPagesSub = SubCommand "countrw" countrwPages
     "Rewrite an Ogg file via packets and display a count"
 
-countrwPages :: [String] -> IO ()
-countrwPages args = do
-    (config, filenames) <- processArgs args
+countrwPages :: Hot ()
+countrwPages = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchPages <- mPages config filename
-    outputS config $ show $ length (packetsToPages (pagesToPackets matchPages))
+    matchPages <- mPages filename
+    outputS $ show $ length (packetsToPages (pagesToPackets matchPages))
 
 ------------------------------------------------------------
 -- countPages (pagecount)
@@ -316,12 +332,12 @@ countPagesSub :: SubCommand
 countPagesSub = SubCommand "pagecount" countPages
     "Count pages of an Ogg file" 
 
-countPages :: [String] -> IO ()
-countPages args = do
-    (config, filenames) <- processArgs args
+countPages :: Hot ()
+countPages = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchPages <- mPages config filename
-    outputS config $ (show $ length matchPages) ++ " pages\n"
+    matchPages <- mPages filename
+    outputS $ (show $ length matchPages) ++ " pages\n"
 
 ------------------------------------------------------------
 -- dumpPages (pagedump)
@@ -331,12 +347,12 @@ dumpPagesSub :: SubCommand
 dumpPagesSub = SubCommand "pagedump" dumpPages
     "Display page structure of an Ogg file"
 
-dumpPages :: [String] -> IO ()
-dumpPages args = do
-    (config, filenames) <- processArgs args
+dumpPages :: Hot ()
+dumpPages = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchPages <- mPages config filename
-    outputC config $ C.concat $ map (C.pack . show) matchPages
+    matchPages <- mPages filename
+    outputC $ C.concat $ map (C.pack . show) matchPages
 
 ------------------------------------------------------------
 -- mergePages (merge)
@@ -346,11 +362,11 @@ mergePagesSub :: SubCommand
 mergePagesSub = SubCommand "merge" mergePages
     "Merge, interleaving pages in order of presentation time"
   
-mergePages :: [String] -> IO ()
-mergePages args = do
-    (config, filenames) <- processArgs args
-    matchPages <- mapM (mPages config) filenames
-    outputL config $ L.concat $ map pageWrite $ listMerge matchPages
+mergePages :: Hot ()
+mergePages = do
+    filenames <- asks hotFilenames
+    matchPages <- mapM mPages filenames
+    outputL $ L.concat $ map pageWrite $ listMerge matchPages
 
 ------------------------------------------------------------
 -- dumpRawPages (dumpraw)
@@ -360,21 +376,25 @@ dumpRawPagesSub :: SubCommand
 dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
     "Dump raw (unparsed) page data"
 
-dumpRawPages :: [String] -> IO ()
-dumpRawPages args = do
-    (config, filenames) <- processArgs args
+dumpRawPages :: Hot ()
+dumpRawPages = do
+    filenames <- asks hotFilenames
     let filename = head filenames
-    matchPages <- mRawPages config filename
-    outputC config $ C.concat $ map (C.pack . show) matchPages
+    matchPages <- mRawPages filename
+    outputC $ C.concat $ map (C.pack . show) matchPages
 
 ------------------------------------------------------------
--- shortHelp
+-- help
 --
 
-shortHelp :: [String] -> IO ()
-shortHelp args = do
-    (config, commands) <- processArgs args
-    outputC config $ C.concat $ map C.pack $ longHelp commands
+helpSub :: SubCommand
+helpSub = SubCommand "help" help
+  "Display help information"
+
+help :: Hot ()
+help = do
+    args <- asks hotFilenames
+    outputC $ C.concat $ map C.pack $ longHelp args
 
 longHelp :: [String] -> [String]
 -- | "hogg help" with no arguments: Give a list of all subcommands
@@ -407,16 +427,38 @@ helpStrings = ["--help", "-h", "-?"]
 isHelp :: String -> Bool
 isHelp x = elem x helpStrings
 
+initTool :: [String] -> IO HOggTool
+initTool args = do
+    (config, filenames) <- processArgs args
+    return $ HOggTool config filenames
+
 main :: IO ()
 main = do
     allArgs <- getArgs
-    when (any isHelp allArgs) $ do
-      shortHelp $ filter (not . isHelp) allArgs
-      exitWith ExitSuccess
-    case allArgs of
-      []             -> shortHelp []
-      (command:args) -> do
-        act args $ filter (\x -> subName x == command) subCommands
-    where
-      act a [] = shortHelp a
-      act a (s:_) = (subMethod s) a
+    when (any isHelp allArgs) $ showHelp allArgs
+    handleSubCommand allArgs
+
+showHelp :: [String] -> IO ()
+showHelp allArgs = -- bracket init1 finish1 loop1
+  init1 >>= loop1
+  where
+    init1 = initTool $ filter (not . isHelp) allArgs
+    loop1 st = runReaderT run1 st
+    run1 = help
+    finish1 = exitWith ExitSuccess
+
+handleSubCommand :: [String] -> IO ()
+handleSubCommand [] = -- bracket (initTool []) finish loop0
+  (initTool []) >>= loop0
+  where
+    finish = exitWith ExitSuccess
+    loop0 st = runReaderT help st
+    
+handleSubCommand (command:args) = -- bracket (initTool args) finish loop1
+  (initTool args) >>= loop1
+  where
+    finish = exitWith ExitSuccess
+    loop1 st = runReaderT run st
+    run = act $ filter (\x -> subName x == command) subCommands
+    act [] = help
+    act (s:_) = (subMethod s)
