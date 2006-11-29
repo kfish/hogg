@@ -410,17 +410,7 @@ main = do
     case allArgs of
       []             -> shortHelp []
       (command:args) -> do
-        case command of
-          "help" -> shortHelp args
-          "info" -> info args
-          "dump" -> dumpPackets args
-          "addskel" -> addSkel args
-          "packetcount" -> countPackets args
-          "pagecount" -> countPages args
-          "pagedump" -> dumpPages args
-          "rip" -> rewritePages args
-          "reconstruct" -> rewritePackets args
-          "countrw" -> countrwPages args
-          "dumpraw" -> dumpRawPages args
-          "merge" -> mergePages args
-          _ -> shortHelp args
+        act args $ filter (\x -> subName x == command) subCommands
+    where
+      act a [] = shortHelp a
+      act a (s:_) = (subMethod s) a
