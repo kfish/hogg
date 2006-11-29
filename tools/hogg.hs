@@ -150,17 +150,15 @@ packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
 packetMatch Nothing ps = ps
 packetMatch (Just t) ps = filter (packetIsType t) ps
 
-mTracks :: Config -> [String] -> IO [OggTrack]
-mTracks config filenames = do
+mTracks :: Config -> String -> IO [OggTrack]
+mTracks config filename = do
     let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
     allTracks <- getTracks filename
     return $ trackMatch ctype allTracks
 
-mRawPages :: Config -> [String] -> IO [OggRawPage]
-mRawPages config filenames = do
+mRawPages :: Config -> String -> IO [OggRawPage]
+mRawPages config filename = do
     -- let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
     allRawPages <- getRawPages filename
     return allRawPages
 
@@ -170,10 +168,9 @@ mPages config filename = do
     allPages <- getPages filename
     return $ pageMatch ctype allPages
 
-mPackets :: Config -> [String] -> IO [OggPacket]
-mPackets config filenames = do
+mPackets :: Config -> String -> IO [OggPacket]
+mPackets config filename = do
     let ctype = parseType $ contentTypeCfg config
-    let filename = head filenames
     allPackets <- {-# SCC "getPackets" #-}getPackets filename
     return $ packetMatch ctype allPackets
 
@@ -210,7 +207,8 @@ infoSub = SubCommand "info" info
 info :: [String] -> IO ()
 info args = do
     (config, filenames) <- processArgs args
-    matchTracks <- mTracks config filenames
+    let filename = head filenames
+    matchTracks <- mTracks config filename
     outputC config $ C.concat $ map (C.pack . show) matchTracks
 
 ------------------------------------------------------------
@@ -224,7 +222,8 @@ dumpPacketsSub = SubCommand "dump" dumpPackets
 dumpPackets :: [String] -> IO ()
 dumpPackets args = do
     (config, filenames) <- processArgs args
-    matchPackets <- {-# SCC "matchPackets" #-}mPackets config filenames
+    let filename = head filenames
+    matchPackets <- {-# SCC "matchPackets" #-}mPackets config filename
     outputC config $ C.concat $ map packetToBS matchPackets
 
 ------------------------------------------------------------
@@ -238,7 +237,8 @@ countPacketsSub = SubCommand "packetcount" countPackets
 countPackets :: [String] -> IO ()
 countPackets args = do
     (config, filenames) <- processArgs args
-    matchPackets <- mPackets config filenames
+    let filename = head filenames
+    matchPackets <- mPackets config filename
     outputS config $ show (length matchPackets) ++ " packets\n"
 
 ------------------------------------------------------------
@@ -267,7 +267,8 @@ rewritePacketsSub = SubCommand "reconstruct" rewritePackets
 rewritePackets :: [String] -> IO ()
 rewritePackets args = do
     (config, filenames) <- processArgs args
-    matchPackets <- mPackets config filenames
+    let filename = head filenames
+    matchPackets <- mPackets config filename
     outputL config $ L.concat (map pageWrite (packetsToPages matchPackets))
 
 ------------------------------------------------------------
@@ -358,7 +359,8 @@ dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
 dumpRawPages :: [String] -> IO ()
 dumpRawPages args = do
     (config, filenames) <- processArgs args
-    matchPages <- mRawPages config filenames
+    let filename = head filenames
+    matchPages <- mRawPages config filename
     outputC config $ C.concat $ map (C.pack . show) matchPages
 
 ------------------------------------------------------------
