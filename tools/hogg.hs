@@ -53,7 +53,7 @@ subCommands = [
                dumpRawPagesSub,
                rewritePagesSub,
                rewritePacketsSub,
-               mergePagesSub,
+               -- mergePagesSub,
                addSkelSub,
                countPacketsSub,
                countrwPagesSub,
@@ -124,31 +124,38 @@ processConfig = foldM processOneOption
     processOneOption config (OutputOpt output) =
       return $ config {outputCfg = Just output}
 
-getChains :: FilePath -> Hot [OggChain]
-getChains filename = do
-  handle <- liftIO $ openFile filename ReadMode
-  input <- liftIO $ L.hGetContents handle
-  return $ chainScan input
+currentFilename :: Hot FilePath
+currentFilename = do
+    filenames <- asks hotFilenames
+    return $ head filenames
 
-getTracks :: FilePath -> Hot [OggTrack]
-getTracks filename = do
-    chains <- getChains filename
+getChains :: Hot [OggChain]
+getChains = do
+    filename <- currentFilename
+    handle <- liftIO $ openFile filename ReadMode
+    input <- liftIO $ L.hGetContents handle
+    return $ chainScan input
+
+getTracks :: Hot [OggTrack]
+getTracks = do
+    chains <- getChains
     return $ chainTracks $ head chains
 
-getRawPages :: FilePath -> Hot [OggRawPage]
-getRawPages filename = do
+getRawPages :: Hot [OggRawPage]
+getRawPages = do
+    filename <- currentFilename
     handle <- liftIO $ openFile filename ReadMode
     input <- liftIO $ L.hGetContents handle
     return $ rawPageScan input
 
-getPages :: FilePath -> Hot [OggPage]
-getPages filename = do
-    chains <- getChains filename
+getPages :: Hot [OggPage]
+getPages = do
+    chains <- getChains
     return $ chainPages $ head chains
 
-getPackets :: FilePath -> Hot [OggPacket]
-getPackets filename = do
-    chains <- {-# SCC "getChains" #-}getChains filename
+getPackets :: Hot [OggPacket]
+getPackets = do
+    chains <- {-# SCC "getChains" #-}getChains
     return $ chainPackets $ head chains
 
 trackMatch :: Maybe OggType -> [OggTrack] -> [OggTrack]
@@ -163,32 +170,32 @@ packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
 packetMatch Nothing ps = ps
 packetMatch (Just t) ps = filter (packetIsType t) ps
 
-mTracks :: String -> Hot [OggTrack]
-mTracks filename = do
+mTracks :: Hot [OggTrack]
+mTracks = do
     config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
-    allTracks <- getTracks filename
+    allTracks <- getTracks
     return $ trackMatch ctype allTracks
 
-mRawPages :: String -> Hot [OggRawPage]
-mRawPages filename = do
+mRawPages :: Hot [OggRawPage]
+mRawPages = do
     -- config <- asks hotConfig
     -- let ctype = parseType $ contentTypeCfg config
-    allRawPages <- getRawPages filename
+    allRawPages <- getRawPages
     return allRawPages
 
-mPages :: String -> Hot [OggPage]
-mPages filename = do
+mPages :: Hot [OggPage]
+mPages = do
     config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
-    allPages <- getPages filename
+    allPages <- getPages
     return $ pageMatch ctype allPages
 
-mPackets :: String -> Hot [OggPacket]
-mPackets filename = do
+mPackets :: Hot [OggPacket]
+mPackets = do
     config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
-    allPackets <- {-# SCC "getPackets" #-}getPackets filename
+    allPackets <- {-# SCC "getPackets" #-}getPackets
     return $ packetMatch ctype allPackets
 
 outputHandle :: Config -> IO Handle
@@ -226,9 +233,7 @@ infoSub = SubCommand "info" info
 
 info :: Hot ()
 info = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchTracks <- mTracks filename
+    matchTracks <- mTracks
     outputC $ C.concat $ map (C.pack . show) matchTracks
 
 ------------------------------------------------------------
@@ -241,9 +246,7 @@ dumpPacketsSub = SubCommand "dump" dumpPackets
 
 dumpPackets :: Hot ()
 dumpPackets = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchPackets <- {-# SCC "matchPackets" #-}mPackets filename
+    matchPackets <- {-# SCC "matchPackets" #-}mPackets
     outputC $ C.concat $ map packetToBS matchPackets
 
 ------------------------------------------------------------
@@ -256,9 +259,7 @@ countPacketsSub = SubCommand "packetcount" countPackets
 
 countPackets :: Hot ()
 countPackets = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchPackets <- mPackets filename
+    matchPackets <- mPackets
     outputS $ show (length matchPackets) ++ " packets\n"
 
 ------------------------------------------------------------
@@ -271,9 +272,7 @@ rewritePagesSub = SubCommand "rip" rewritePages
 
 rewritePages :: Hot ()
 rewritePages = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchPages <- mPages filename
+    matchPages <- mPages
     outputL $ L.concat (map pageWrite matchPages)
 
 ------------------------------------------------------------
@@ -286,9 +285,7 @@ rewritePacketsSub = SubCommand "reconstruct" rewritePackets
 
 rewritePackets :: Hot ()
 rewritePackets = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchPackets <- mPackets filename
+    matchPackets <- mPackets
     outputL $ L.concat (map pageWrite (packetsToPages matchPackets))
 
 ------------------------------------------------------------
@@ -301,13 +298,9 @@ addSkelSub = SubCommand "addskel" addSkel
 
 addSkel :: Hot ()
 addSkel = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    chains <- getChains filename
+    chains <- getChains
     skelChain <- liftIO $ chainAddSkeleton $ head chains
     outputL $ L.concat (map pageWrite (chainPages skelChain))
-    -- let matchPackets = chainPackets skelChain
-    -- outputC config $ C.concat $ map packetToBS matchPackets
   
 ------------------------------------------------------------
 -- countrwPages (countrw)
@@ -319,9 +312,7 @@ countrwPagesSub = SubCommand "countrw" countrwPages
 
 countrwPages :: Hot ()
 countrwPages = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchPages <- mPages filename
+    matchPages <- mPages
     outputS $ show $ length (packetsToPages (pagesToPackets matchPages))
 
 ------------------------------------------------------------
@@ -334,9 +325,7 @@ countPagesSub = SubCommand "pagecount" countPages
 
 countPages :: Hot ()
 countPages = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchPages <- mPages filename
+    matchPages <- mPages
     outputS $ (show $ length matchPages) ++ " pages\n"
 
 ------------------------------------------------------------
@@ -349,11 +338,10 @@ dumpPagesSub = SubCommand "pagedump" dumpPages
 
 dumpPages :: Hot ()
 dumpPages = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchPages <- mPages filename
+    matchPages <- mPages
     outputC $ C.concat $ map (C.pack . show) matchPages
 
+{-
 ------------------------------------------------------------
 -- mergePages (merge)
 --
@@ -367,6 +355,7 @@ mergePages = do
     filenames <- asks hotFilenames
     matchPages <- mapM mPages filenames
     outputL $ L.concat $ map pageWrite $ listMerge matchPages
+-}
 
 ------------------------------------------------------------
 -- dumpRawPages (dumpraw)
@@ -378,9 +367,7 @@ dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
 
 dumpRawPages :: Hot ()
 dumpRawPages = do
-    filenames <- asks hotFilenames
-    let filename = head filenames
-    matchPages <- mRawPages filename
+    matchPages <- mRawPages
     outputC $ C.concat $ map (C.pack . show) matchPages
 
 ------------------------------------------------------------
