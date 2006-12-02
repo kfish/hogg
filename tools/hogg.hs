@@ -14,6 +14,8 @@ import Text.Printf
 
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
+import Data.List
+
 import Ogg.Chain
 import Ogg.ListMerge
 import Ogg.Page
@@ -151,14 +153,13 @@ chains = do
     ioGetContents = liftIO . L.hGetContents
 
 -- All tracks, from all files, matching the given criteria
-tracks :: Hot [[OggTrack]]
+tracks :: Hot [[[OggTrack]]]
 tracks = do
     c <- chains
-    let headChains = map head c
-    let allTracks = map chainTracks headChains
+    let allTracks = map (map chainTracks) c
     config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
-    return $ map (trackMatch ctype) allTracks
+    return $ map (map (trackMatch ctype)) allTracks
   where
     trackMatch :: Maybe OggType -> [OggTrack] -> [OggTrack]
     trackMatch Nothing ts = ts
@@ -233,6 +234,9 @@ reportPerFile l = do
 outputPerFile :: [L.ByteString] -> Hot ()
 outputPerFile l = outputL $ L.concat l
 
+reportPerChain :: [C.ByteString] -> C.ByteString
+reportPerChain l = C.concat $ intersperse (C.pack ">>> New Chain:\n") l
+
 ------------------------------------------------------------
 -- info
 --
@@ -244,7 +248,7 @@ infoSub = SubCommand "info" info
 info :: Hot ()
 info = do
     matchTracks <- tracks
-    let i = \x -> C.concat $ map (C.pack . show) x
+    let i = \x -> reportPerChain $ map (C.concat . map (C.pack . show)) x
     reportPerFile $ map i matchTracks
 
 ------------------------------------------------------------
