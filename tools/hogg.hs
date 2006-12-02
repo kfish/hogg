@@ -390,8 +390,9 @@ dumpPagesSub = SubCommand "pagedump" dumpPages
 
 dumpPages :: Hot ()
 dumpPages = do
-    matchPages <- mPages
-    outputC $ C.concat $ map (C.pack . show) matchPages
+    matchPages <- pages
+    let d = \x -> C.concat $ map (C.pack . show) x
+    reportPerFile $ map d matchPages
 
 ------------------------------------------------------------
 -- mergePages (merge)
