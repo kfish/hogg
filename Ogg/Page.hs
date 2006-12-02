@@ -132,16 +132,26 @@ pageScan' :: Int64 -> [OggTrack] -> L.ByteString
           -> ([OggTrack], [OggPage], L.ByteString)
 pageScan' offset tracks input
   | L.null input                  = ([], [], L.empty)
-  | L.isPrefixOf pageMarker input = (newTrack ++ nextTracks, newPage : nextPages, L.empty)
+  | L.isPrefixOf pageMarker input = pageResult
   | otherwise                     = pageScan' (offset+1) tracks (L.tail input)
-  where (newPage, pageLen, rest, mNewTrack) = pageBuild offset tracks input
-        (nextTracks, nextPages, _) = pageScan' (offset+pageLen) newTracks rest
-        newTrack = maybeToList mNewTrack
-        newTracks = newTrack ++ tracks
+  where
+        pageResult = pageProcess offset tracks $ pageBuild offset tracks input
+
+pageProcess :: Int64 -> [OggTrack]
+            -> Either L.ByteString (OggPage, Int64, L.ByteString, Maybe OggTrack)
+            -> ([OggTrack], [OggPage], L.ByteString)
+pageProcess _ _ (Left rest) = ([], [], rest)
+pageProcess offset tracks (Right (newPage, pageLen, rest, mNewTrack)) =
+  (newTrack ++ nextTracks, newPage : nextPages, L.empty)
+  where
+    (nextTracks, nextPages, _) = pageScan' (offset+pageLen) newTracks rest
+    newTrack = maybeToList mNewTrack
+    newTracks = newTrack ++ tracks
 
 -- Build an OggPage data structure
-pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, Maybe OggTrack)
-pageBuild o t d = (newPage, pageLen, rest, mNewTrack) where
+pageBuild :: Int64 -> [OggTrack] -> L.ByteString ->
+  Either L.ByteString (OggPage, Int64, L.ByteString, Maybe OggTrack)
+pageBuild o t d = Right (newPage, pageLen, rest, mNewTrack) where
   newPage = OggPage o track cont incplt bos eos gp seqno segments
   (r, pageLen) = rawPageBuild d
   htype = rawPageHType r
