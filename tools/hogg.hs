@@ -53,7 +53,7 @@ subCommands = [
                dumpRawPagesSub,
                rewritePagesSub,
                rewritePacketsSub,
-               -- mergePagesSub,
+               mergePagesSub,
                addSkelSub,
                countPacketsSub,
                countrwPagesSub,
@@ -123,6 +123,41 @@ processConfig = foldM processOneOption
       return $ config {contentTypeCfg = Just ctype}
     processOneOption config (OutputOpt output) =
       return $ config {outputCfg = Just output}
+
+------------------------------------------------------------
+-- Hot stuff
+--
+
+chains :: Hot [[OggChain]]
+chains = do
+    filenames <- asks hotFilenames
+    handles <- mapM ioOpenReadFile filenames
+    inputs <- mapM ioGetContents handles
+    return $ map chainScan inputs
+  where
+    ioOpenReadFile f = liftIO $ openFile f ReadMode
+    ioGetContents = liftIO . L.hGetContents
+
+tracks :: Hot [[OggTrack]]
+tracks = do
+    c <- chains
+    liftIO $ putStrLn ("Got " ++ (show (length c)) ++ " chains (in 'tracks')")
+    return $ mapM (chainTracks . head) c
+
+-- Get all pages
+pages :: Hot [[OggPage]]
+pages = do
+    config <- asks hotConfig
+    let ctype = parseType $ contentTypeCfg config
+    c <- chains
+    let headChains = map head c
+    let allPages = map chainPages headChains
+    return allPages
+
+packets :: Hot [[OggPacket]]
+packets = do
+    c <- chains
+    return $ mapM (chainPackets . head) c
 
 currentFilename :: Hot FilePath
 currentFilename = do
@@ -341,7 +376,6 @@ dumpPages = do
     matchPages <- mPages
     outputC $ C.concat $ map (C.pack . show) matchPages
 
-{-
 ------------------------------------------------------------
 -- mergePages (merge)
 --
@@ -349,13 +383,11 @@ dumpPages = do
 mergePagesSub :: SubCommand
 mergePagesSub = SubCommand "merge" mergePages
     "Merge, interleaving pages in order of presentation time"
-  
+
 mergePages :: Hot ()
 mergePages = do
-    filenames <- asks hotFilenames
-    matchPages <- mapM mPages filenames
+    matchPages <- pages
     outputL $ L.concat $ map pageWrite $ listMerge matchPages
--}
 
 ------------------------------------------------------------
 -- dumpRawPages (dumpraw)
