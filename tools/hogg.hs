@@ -309,8 +309,9 @@ countPacketsSub = SubCommand "packetcount" countPackets
 
 countPackets :: Hot ()
 countPackets = do
-    matchPackets <- mPackets
-    outputS $ show (length matchPackets) ++ " packets\n"
+    matchPackets <- packets
+    let c = \x -> C.pack $ show (length x) ++ " packets\n"
+    reportPerFile $ map c matchPackets
 
 ------------------------------------------------------------
 -- rewritePages (rip)
@@ -360,12 +361,13 @@ addSkel = do
 
 countrwPagesSub :: SubCommand
 countrwPagesSub = SubCommand "countrw" countrwPages
-    "Rewrite an Ogg file via packets and display a count"
+    "Rewrite via packets and display a count of pages produced"
 
 countrwPages :: Hot ()
 countrwPages = do
-    matchPages <- mPages
-    outputS $ show $ length (packetsToPages (pagesToPackets matchPages))
+    matchPages <- pages
+    let c = \x -> C.pack $ show $ length (packetsToPages (pagesToPackets x))
+    reportPerFile $ map c matchPages
 
 ------------------------------------------------------------
 -- countPages (pagecount)
