@@ -125,7 +125,7 @@ processConfig = foldM processOneOption
       return $ config {outputCfg = Just output}
 
 ------------------------------------------------------------
--- Hot stuff
+-- Hot: actions for getting Ogg data from the input files
 --
 
 -- rawpages is used only by "hogg dumpraw"
@@ -194,74 +194,16 @@ packets = do
     packetMatch Nothing ps = ps
     packetMatch (Just t) ps = filter (packetIsType t) ps
 
-{-
-currentFilename :: Hot FilePath
-currentFilename = do
-    filenames <- asks hotFilenames
-    return $ head filenames
+------------------------------------------------------------
+-- Output helpers
+--
 
-getChains :: Hot [OggChain]
-getChains = do
-    filename <- currentFilename
-    handle <- liftIO $ openFile filename ReadMode
-    input <- liftIO $ L.hGetContents handle
-    return $ chainScan input
-
-getTracks :: Hot [OggTrack]
-getTracks = do
-    chains <- getChains
-    return $ chainTracks $ head chains
-
-getRawPages :: Hot [OggRawPage]
-getRawPages = do
-    filename <- currentFilename
-    handle <- liftIO $ openFile filename ReadMode
-    input <- liftIO $ L.hGetContents handle
-    return $ rawPageScan input
-
-getPages :: Hot [OggPage]
-getPages = do
-    chains <- getChains
-    return $ chainPages $ head chains
-
-getPackets :: Hot [OggPacket]
-getPackets = do
-    chains <- {-# SCC "getChains" #-}getChains
-    return $ chainPackets $ head chains
-
-mTracks :: Hot [OggTrack]
-mTracks = do
-    config <- asks hotConfig
-    let ctype = parseType $ contentTypeCfg config
-    allTracks <- getTracks
-    return $ trackMatch ctype allTracks
-
-mRawPages :: Hot [OggRawPage]
-mRawPages = do
-    -- config <- asks hotConfig
-    -- let ctype = parseType $ contentTypeCfg config
-    allRawPages <- getRawPages
-    return allRawPages
-
-mPages :: Hot [OggPage]
-mPages = do
-    config <- asks hotConfig
-    let ctype = parseType $ contentTypeCfg config
-    allPages <- getPages
-    return $ pageMatch ctype allPages
-
-mPackets :: Hot [OggPacket]
-mPackets = do
-    config <- asks hotConfig
-    let ctype = parseType $ contentTypeCfg config
-    allPackets <- {-# SCC "getPackets" #-}getPackets
-    return $ packetMatch ctype allPackets
--}
-
+-- The output handle; stdout unless otherwise specified
 outputHandle :: Config -> IO Handle
 outputHandle config =
     maybe (evaluate stdout) (\f -> openBinaryFile f WriteMode) (outputCfg config)
 
+-- Output a Data.ByteString.Lazy.Char8
 outputC :: C.ByteString -> Hot ()
 outputC bs = do
     config <- asks hotConfig
@@ -269,6 +211,7 @@ outputC bs = do
     liftIO $ C.hPut h bs
     liftIO $ hClose h
 
+-- Output a Data.ByteString.Lazy
 outputL ::  L.ByteString -> Hot ()
 outputL bs = do
     config <- asks hotConfig
@@ -276,6 +219,7 @@ outputL bs = do
     liftIO $ L.hPut h bs
     liftIO $ hClose h
 
+-- Output with a text banner per input file
 reportPerFile :: [C.ByteString] -> Hot ()
 reportPerFile l = do
     filenames <- asks hotFilenames
@@ -285,6 +229,7 @@ reportPerFile l = do
     let banner (f,t) = C.concat [sep,f,t]
     outputC $ C.concat $ map banner fText
 
+-- Output binary data
 outputPerFile :: [L.ByteString] -> Hot ()
 outputPerFile l = outputL $ L.concat l
 
