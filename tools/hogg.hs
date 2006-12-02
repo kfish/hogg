@@ -154,7 +154,14 @@ tracks :: Hot [[OggTrack]]
 tracks = do
     c <- chains
     let headChains = map head c
-    return $ map chainTracks headChains
+    let allTracks = map chainTracks headChains
+    config <- asks hotConfig
+    let ctype = parseType $ contentTypeCfg config
+    return $ map (trackMatch ctype) allTracks
+  where
+    trackMatch :: Maybe OggType -> [OggTrack] -> [OggTrack]
+    trackMatch Nothing ts = ts
+    trackMatch (Just t) ts = filter (trackIsType t) ts
 
 -- Get all pages
 pages :: Hot [[OggPage]]
@@ -206,10 +213,6 @@ getPackets :: Hot [OggPacket]
 getPackets = do
     chains <- {-# SCC "getChains" #-}getChains
     return $ chainPackets $ head chains
-
-trackMatch :: Maybe OggType -> [OggTrack] -> [OggTrack]
-trackMatch Nothing ts = ts
-trackMatch (Just t) ts = filter (trackIsType t) ts
 
 pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
 pageMatch Nothing gs = gs
