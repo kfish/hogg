@@ -40,9 +40,8 @@ chainScan d
   | L.null d  = []
   | otherwise = chain : chainScan rest
   where chain = OggChain tracks pages packets
-        (tracks, pages) = pageScan d
+        (tracks, pages, rest) = pageScan d
         packets = pagesToPackets pages
-        rest = L.empty -- XXX: should actually get ByteString remainder!!
 
 ------------------------------------------------------------
 -- chainAddSkeleton

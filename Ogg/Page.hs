@@ -124,16 +124,17 @@ buildTab q r _ _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 --
 
 -- | Read a list of data bytes into Ogg pages
-pageScan :: L.ByteString -> ([OggTrack], [OggPage])
+pageScan :: L.ByteString -> ([OggTrack], [OggPage], L.ByteString)
 pageScan = pageScan' 0 []
 
-pageScan' :: Int64 -> [OggTrack] -> L.ByteString -> ([OggTrack], [OggPage])
+pageScan' :: Int64 -> [OggTrack] -> L.ByteString
+          -> ([OggTrack], [OggPage], L.ByteString)
 pageScan' offset tracks input
-  | L.null input                  = ([], [])
-  | L.isPrefixOf pageMarker input = (newTrack ++ nextTracks, newPage : nextPages)
+  | L.null input                  = ([], [], L.empty)
+  | L.isPrefixOf pageMarker input = (newTrack ++ nextTracks, newPage : nextPages, L.empty)
   | otherwise                     = pageScan' (offset+1) tracks (L.tail input)
   where (newPage, pageLen, rest, mNewTrack) = pageBuild offset tracks input
-        (nextTracks, nextPages) = pageScan' (offset+pageLen) newTracks rest
+        (nextTracks, nextPages, _) = pageScan' (offset+pageLen) newTracks rest
         newTrack = listIf mNewTrack
         newTracks = consIf mNewTrack tracks
 
