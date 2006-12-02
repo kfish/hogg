@@ -60,17 +60,15 @@ packetIsType t p = trackIsType t (packetTrack p)
 -- Helpers
 --
 
+-- | Calculate the timestamp of a packet
 packetTimestamp :: OggPacket -> Timestamp
 packetTimestamp p = timestamp
   where gp = packetGranulepos p
         track = packetTrack p
         timestamp =  gpToTimestamp gp track
 
-------------------------------------------------------------
--- create a packet which spans a single page, ie. consists of only
+-- | Create a packet which spans a single page, ie. consists of only
 -- one segment
---
-
 uncutPacket :: L.ByteString -> OggTrack -> Granulepos -> OggPacket
 uncutPacket d t gp = OggPacket d t gp False False segs
   where segs = Just [s]
@@ -97,6 +95,7 @@ instance Ord CarryPage where
 
 type CarryPages = Map.Map OggTrack CarryPage
 
+-- | Pack packets into pages
 packetsToPages :: [OggPacket] -> [OggPage]
 packetsToPages = packetsToPages_ Map.empty Map.empty 0 []
 
@@ -184,6 +183,7 @@ appendToCarry _ _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 
 type CarryPackets = Map.Map OggTrack OggPacket
 
+-- | Pull the packets out of pages
 pagesToPackets :: [OggPage] -> [OggPacket]
 pagesToPackets = {-#SCC "pagesToPackets" #-}_pagesToPackets Map.empty 0
 
@@ -268,6 +268,7 @@ prependCarry oldCarry segs@(s:ss) = newPackets
         appendTo Nothing = segs
         appendTo (Just c) = (packetConcat c s):ss
 
+-- | Create a dump of a packet, as used by "hogg dump"
 packetToBS :: OggPacket -> C.ByteString
 packetToBS p@(OggPacket d track gp bos eos _) = {-# SCC "packetToBS" #-}
   C.concat [C.pack pHdr, pDump, C.singleton '\n']

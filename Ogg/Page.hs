@@ -58,6 +58,7 @@ pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
           incplt = pageIncomplete g
           s = pageSegments g
 
+-- | Calculate the timestamp of a page
 pageTimestamp :: OggPage -> Timestamp
 pageTimestamp g = timestamp
   where gp = pageGranulepos g
@@ -144,6 +145,7 @@ consIf :: Maybe a -> [a] -> [a]
 consIf Nothing xs = xs
 consIf (Just x) xs = x:xs
 
+-- Build an OggPage data structure
 pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, Maybe OggTrack)
 pageBuild o t d = (newPage, pageLen, rest, mNewTrack) where
   newPage = OggPage o track cont incplt bos eos gp seqno segments
