@@ -157,7 +157,8 @@ pages = do
 packets :: Hot [[OggPacket]]
 packets = do
     c <- chains
-    return $ mapM (chainPackets . head) c
+    let headChains = map head c
+    return $ map chainPackets headChains
 
 currentFilename :: Hot FilePath
 currentFilename = do
@@ -291,8 +292,9 @@ dumpPacketsSub = SubCommand "dump" dumpPackets
 
 dumpPackets :: Hot ()
 dumpPackets = do
-    matchPackets <- {-# SCC "matchPackets" #-}mPackets
-    outputC $ C.concat $ map packetToBS matchPackets
+    matchPackets <- packets
+    let d = \x -> C.concat $ map packetToBS x
+    reportPerFile $ map d matchPackets
 
 ------------------------------------------------------------
 -- countPackets (packetcount)
