@@ -336,8 +336,9 @@ rewritePacketsSub = SubCommand "reconstruct" rewritePackets
 
 rewritePackets :: Hot ()
 rewritePackets = do
-    matchPackets <- mPackets
-    outputL $ L.concat (map pageWrite (packetsToPages matchPackets))
+    matchPackets <- packets
+    let r = \x -> L.concat $ map pageWrite (packetsToPages x)
+    outputPerFile $ map r matchPackets
 
 ------------------------------------------------------------
 -- addSkel (addskel)
