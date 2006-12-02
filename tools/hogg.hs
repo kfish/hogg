@@ -128,6 +128,18 @@ processConfig = foldM processOneOption
 -- Hot stuff
 --
 
+-- rawpages is used only by "hogg dumpraw"
+rawpages :: Hot [[OggRawPage]]
+rawpages = do
+    filenames <- asks hotFilenames
+    handles <- mapM ioOpenReadFile filenames
+    inputs <- mapM ioGetContents handles
+    return $ map rawPageScan inputs
+  where
+    ioOpenReadFile f = liftIO $ openFile f ReadMode
+    ioGetContents = liftIO . L.hGetContents
+
+-- chains, tracks, pages, packets
 chains :: Hot [[OggChain]]
 chains = do
     filenames <- asks hotFilenames
@@ -413,8 +425,9 @@ dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
 
 dumpRawPages :: Hot ()
 dumpRawPages = do
-    matchPages <- mRawPages
-    outputC $ C.concat $ map (C.pack . show) matchPages
+    matchPages <- rawpages
+    let d = \x -> C.concat $ map (C.pack . show) matchPages
+    reportPerFile $ map d matchPages
 
 ------------------------------------------------------------
 -- help
