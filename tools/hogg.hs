@@ -150,6 +150,7 @@ chains = do
     ioOpenReadFile f = liftIO $ openFile f ReadMode
     ioGetContents = liftIO . L.hGetContents
 
+-- All tracks, from all files, matching the given criteria
 tracks :: Hot [[OggTrack]]
 tracks = do
     c <- chains
@@ -163,7 +164,7 @@ tracks = do
     trackMatch Nothing ts = ts
     trackMatch (Just t) ts = filter (trackIsType t) ts
 
--- Get all pages
+-- All pages, from all files, matching the given criteria
 pages :: Hot [[OggPage]]
 pages = do
     config <- asks hotConfig
@@ -171,13 +172,27 @@ pages = do
     c <- chains
     let headChains = map head c
     let allPages = map chainPages headChains
-    return allPages
+    config <- asks hotConfig
+    let ctype = parseType $ contentTypeCfg config
+    return $ map (pageMatch ctype) allPages
+  where
+    pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
+    pageMatch Nothing gs = gs
+    pageMatch (Just t) gs = filter (pageIsType t) gs
 
+-- All packets, from all files, matching the given criteria
 packets :: Hot [[OggPacket]]
 packets = do
     c <- chains
     let headChains = map head c
-    return $ map chainPackets headChains
+    let allPackets = map chainPackets headChains
+    config <- asks hotConfig
+    let ctype = parseType $ contentTypeCfg config
+    return $ map (packetMatch ctype) allPackets
+  where
+    packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
+    packetMatch Nothing ps = ps
+    packetMatch (Just t) ps = filter (packetIsType t) ps
 
 {-
 currentFilename :: Hot FilePath
@@ -213,14 +228,6 @@ getPackets :: Hot [OggPacket]
 getPackets = do
     chains <- {-# SCC "getChains" #-}getChains
     return $ chainPackets $ head chains
-
-pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
-pageMatch Nothing gs = gs
-pageMatch (Just t) gs = filter (pageIsType t) gs
-
-packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
-packetMatch Nothing ps = ps
-packetMatch (Just t) ps = filter (packetIsType t) ps
 
 mTracks :: Hot [OggTrack]
 mTracks = do
