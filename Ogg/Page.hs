@@ -24,6 +24,7 @@ import Ogg.Timestamp
 
 import Data.List (find)
 import Data.Int (Int64)
+import Data.Maybe (maybeToList)
 import Data.Word (Word8, Word32)
 import Data.Bits
 import qualified Data.ByteString.Lazy as L
@@ -135,16 +136,8 @@ pageScan' offset tracks input
   | otherwise                     = pageScan' (offset+1) tracks (L.tail input)
   where (newPage, pageLen, rest, mNewTrack) = pageBuild offset tracks input
         (nextTracks, nextPages, _) = pageScan' (offset+pageLen) newTracks rest
-        newTrack = listIf mNewTrack
-        newTracks = consIf mNewTrack tracks
-
-listIf :: Maybe a -> [a]
-listIf Nothing = []
-listIf (Just x) = [x]
-
-consIf :: Maybe a -> [a] -> [a]
-consIf Nothing xs = xs
-consIf (Just x) xs = x:xs
+        newTrack = maybeToList mNewTrack
+        newTracks = newTrack ++ tracks
 
 -- Build an OggPage data structure
 pageBuild :: Int64 -> [OggTrack] -> L.ByteString -> (OggPage, Int64, L.ByteString, Maybe OggTrack)
