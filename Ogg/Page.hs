@@ -70,6 +70,7 @@ pageTimestamp g = timestamp
 -- Predicates
 --
 
+-- | Determine whether a page is of a given content type
 pageIsType :: OggType -> OggPage -> Bool
 pageIsType t g = trackIsType t (pageTrack g)
 
@@ -137,9 +138,11 @@ pageScan' offset tracks input
   where
         pageResult = pageProcess offset tracks $ pageBuild offset tracks input
 
+-- | Process the output of pageBuild, interpret as either the end of a chain
+-- or the construction of a new page in the current chain
 pageProcess :: Int64 -> [OggTrack]
-            -> Either L.ByteString (OggPage, Int64, L.ByteString, Maybe OggTrack)
-            -> ([OggTrack], [OggPage], L.ByteString)
+            -> Either L.ByteString (OggPage, Int64, L.ByteString, Maybe OggTrack) -- as returned by pageBuild
+            -> ([OggTrack], [OggPage], L.ByteString) -- to return from pageScan'
 pageProcess _ _ (Left rest) = ([], [], rest)
 pageProcess offset tracks (Right (newPage, pageLen, rest, mNewTrack)) =
   (newTrack ++ nextTracks, newPage : nextPages, L.empty)
@@ -148,9 +151,16 @@ pageProcess offset tracks (Right (newPage, pageLen, rest, mNewTrack)) =
     newTrack = maybeToList mNewTrack
     newTracks = newTrack ++ tracks
 
--- Build an OggPage data structure
+-- | Parse the given ByteString, and either detect the end of the chain, or
+-- build one OggPage data structure
 pageBuild :: Int64 -> [OggTrack] -> L.ByteString ->
-  Either L.ByteString (OggPage, Int64, L.ByteString, Maybe OggTrack)
+  Either
+    L.ByteString -- The ByteString corresponding to the start of the next chain
+    (OggPage, -- The constructed OggPage data structure
+     Int64, -- The length of the page in bytes
+     L.ByteString, -- The data following the page
+     Maybe OggTrack -- Maybe a new track, if this page started a new track
+    )
 pageBuild o t d = Right (newPage, pageLen, rest, mNewTrack) where
   newPage = OggPage o track cont incplt bos eos gp seqno segments
   (r, pageLen) = rawPageBuild d
