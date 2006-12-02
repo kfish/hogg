@@ -268,6 +268,9 @@ reportPerFile l = do
     let banner (f,t) = C.concat [sep,f,t]
     outputC $ C.concat $ map banner fText
 
+outputPerFile :: [L.ByteString] -> Hot ()
+outputPerFile l = outputL $ L.concat l
+
 ------------------------------------------------------------
 -- info
 --
@@ -319,8 +322,9 @@ rewritePagesSub = SubCommand "rip" rewritePages
 
 rewritePages :: Hot ()
 rewritePages = do
-    matchPages <- mPages
-    outputL $ L.concat (map pageWrite matchPages)
+    matchPages <- pages
+    let r = \x -> L.concat $ map pageWrite x
+    outputPerFile $ map r matchPages
 
 ------------------------------------------------------------
 -- rewritePackets (reconstruct)
