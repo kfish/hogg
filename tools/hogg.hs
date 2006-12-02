@@ -238,13 +238,6 @@ outputHandle :: Config -> IO Handle
 outputHandle config =
     maybe (evaluate stdout) (\f -> openBinaryFile f WriteMode) (outputCfg config)
 
-outputS :: String -> Hot ()
-outputS s = do
-    config <- asks hotConfig
-    h <- liftIO $ outputHandle config
-    liftIO $ hPutStr h s
-    liftIO $ hClose h
-
 outputC :: C.ByteString -> Hot ()
 outputC bs = do
     config <- asks hotConfig
@@ -366,7 +359,7 @@ countrwPagesSub = SubCommand "countrw" countrwPages
 countrwPages :: Hot ()
 countrwPages = do
     matchPages <- pages
-    let c = \x -> C.pack $ show $ length (packetsToPages (pagesToPackets x))
+    let c = \x -> C.pack $ printf "%d pages\n" (length (packetsToPages (pagesToPackets x)))
     reportPerFile $ map c matchPages
 
 ------------------------------------------------------------
@@ -379,8 +372,9 @@ countPagesSub = SubCommand "pagecount" countPages
 
 countPages :: Hot ()
 countPages = do
-    matchPages <- mPages
-    outputS $ (show $ length matchPages) ++ " pages\n"
+    matchPages <- pages
+    let c = \x -> C.pack $ printf "%d pages\n" (length x)
+    reportPerFile $ map c matchPages
 
 ------------------------------------------------------------
 -- dumpPages (pagedump)
