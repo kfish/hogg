@@ -141,8 +141,8 @@ chains = do
 tracks :: Hot [[OggTrack]]
 tracks = do
     c <- chains
-    liftIO $ putStrLn ("Got " ++ (show (length c)) ++ " chains (in 'tracks')")
-    return $ mapM (chainTracks . head) c
+    let headChains = map head c
+    return $ map chainTracks headChains
 
 -- Get all pages
 pages :: Hot [[OggPage]]
@@ -258,6 +258,15 @@ outputL bs = do
     liftIO $ L.hPut h bs
     liftIO $ hClose h
 
+reportPerFile :: [C.ByteString] -> Hot ()
+reportPerFile l = do
+    filenames <- asks hotFilenames
+    let fHeader f = C.pack $ printf "Filename: %s\n" f
+    let fText = zip (map fHeader filenames) l
+    let sep = C.pack $ replicate 60 '-' ++ "\n"
+    let banner (f,t) = C.concat [sep,f,t]
+    outputC $ C.concat $ map banner fText
+
 ------------------------------------------------------------
 -- info
 --
@@ -268,8 +277,9 @@ infoSub = SubCommand "info" info
 
 info :: Hot ()
 info = do
-    matchTracks <- mTracks
-    outputC $ C.concat $ map (C.pack . show) matchTracks
+    matchTracks <- tracks
+    let i = \x -> C.concat $ map (C.pack . show) x
+    reportPerFile $ map i matchTracks
 
 ------------------------------------------------------------
 -- dumpPackets (dump)
