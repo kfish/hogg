@@ -172,6 +172,7 @@ packets = do
     let headChains = map head c
     return $ map chainPackets headChains
 
+{-
 currentFilename :: Hot FilePath
 currentFilename = do
     filenames <- asks hotFilenames
@@ -245,6 +246,7 @@ mPackets = do
     let ctype = parseType $ contentTypeCfg config
     allPackets <- {-# SCC "getPackets" #-}getPackets
     return $ packetMatch ctype allPackets
+-}
 
 outputHandle :: Config -> IO Handle
 outputHandle config =
