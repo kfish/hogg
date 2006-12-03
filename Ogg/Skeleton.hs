@@ -156,7 +156,7 @@ fisboneWrite (OggFisbone s n (Granulerate gr) sg preroll gs mhdrs) = newFisboneD
 -- | Create a list of OggFisbones from a list of OggTracks, not including
 -- | any OggTracks with unknown ContentType or Granulerate
 tracksToFisbones :: [OggTrack] -> [OggFisbone]
-tracksToFisbones ts = mapMaybe trackToFisbone ts
+tracksToFisbones ts = Data.Maybe.mapMaybe trackToFisbone ts
 
 -- | Create an OggFisbone from a given OggTrack
 trackToFisbone :: OggTrack -> Maybe OggFisbone
