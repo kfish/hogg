@@ -182,14 +182,13 @@ pages = do
     pageMatch (Just t) gs = filter (pageIsType t) gs
 
 -- All packets, from all files, matching the given criteria
-packets :: Hot [[OggPacket]]
+packets :: Hot [[[OggPacket]]]
 packets = do
     c <- chains
-    let headChains = map head c
-    let allPackets = map chainPackets headChains
+    let allPackets = map (map chainPackets) c
     config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
-    return $ map (packetMatch ctype) allPackets
+    return $ map (map (packetMatch ctype)) allPackets
   where
     packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
     packetMatch Nothing ps = ps
@@ -234,8 +233,13 @@ reportPerFile l = do
 outputPerFile :: [L.ByteString] -> Hot ()
 outputPerFile l = outputL $ L.concat l
 
+-- Place a marker betwen the reports for each chain
 reportPerChain :: [C.ByteString] -> C.ByteString
 reportPerChain l = C.concat $ intersperse (C.pack ">>> New Chain:\n") l
+
+-- Concat the output for each chain
+outputPerChain :: [L.ByteString] -> L.ByteString
+outputPerChain = L.concat
 
 ------------------------------------------------------------
 -- info
@@ -262,7 +266,7 @@ dumpPacketsSub = SubCommand "dump" dumpPackets
 dumpPackets :: Hot ()
 dumpPackets = do
     matchPackets <- packets
-    let d = \x -> C.concat $ map packetToBS x
+    let d = \x -> reportPerChain $ map (C.concat . map packetToBS) x
     reportPerFile $ map d matchPackets
 
 ------------------------------------------------------------
@@ -277,7 +281,8 @@ countPackets :: Hot ()
 countPackets = do
     matchPackets <- packets
     let c = \x -> C.pack $ show (length x) ++ " packets\n"
-    reportPerFile $ map c matchPackets
+    let r = \x -> reportPerChain $ map c x
+    reportPerFile $ map r matchPackets
 
 ------------------------------------------------------------
 -- rewritePages (rip)
@@ -305,7 +310,8 @@ rewritePackets :: Hot ()
 rewritePackets = do
     matchPackets <- packets
     let r = \x -> L.concat $ map pageWrite (packetsToPages x)
-    outputPerFile $ map r matchPackets
+    let r2 = \x -> outputPerChain $ map r x
+    outputPerFile $ map r2 matchPackets
 
 ------------------------------------------------------------
 -- addSkel (addskel)
