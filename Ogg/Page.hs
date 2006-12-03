@@ -127,41 +127,47 @@ buildTab q r _ _ = ((take q $ repeat (255 :: Word8)) ++ [fromIntegral r])
 
 -- | Read a list of data bytes into Ogg pages
 pageScan :: L.ByteString -> ([OggTrack], [OggPage], L.ByteString)
-pageScan = pageScan' 0 []
+pageScan = pageScan' True 0 []
 
-pageScan' :: Int64 -> [OggTrack] -> L.ByteString
+pageScan' :: Bool -> Int64 -> [OggTrack] -> L.ByteString
           -> ([OggTrack], [OggPage], L.ByteString)
-pageScan' offset tracks input
+pageScan' allowBOS offset tracks input
   | L.null input                  = ([], [], L.empty)
   | L.isPrefixOf pageMarker input = pageResult
-  | otherwise                     = pageScan' (offset+1) tracks (L.tail input)
+  | otherwise                     = pageScan' allowBOS (offset+1) tracks (L.tail input)
   where
-        pageResult = pageProcess offset tracks $ pageBuild offset tracks input
+        pageResult = pageProcess offset tracks $ pageBuild allowBOS offset tracks input
 
 -- | Process the output of pageBuild, interpret as either the end of a chain
 -- or the construction of a new page in the current chain
 pageProcess :: Int64 -> [OggTrack]
-            -> Either L.ByteString (OggPage, Int64, L.ByteString, Maybe OggTrack) -- as returned by pageBuild
+            -> Either L.ByteString (OggPage, Int64, L.ByteString, Maybe OggTrack, Bool) -- as returned by pageBuild
             -> ([OggTrack], [OggPage], L.ByteString) -- to return from pageScan'
 pageProcess _ _ (Left rest) = ([], [], rest)
-pageProcess offset tracks (Right (newPage, pageLen, rest, mNewTrack)) =
+pageProcess offset tracks (Right (newPage, pageLen, rest, mNewTrack, aBOS)) =
   (newTrack ++ nextTracks, newPage : nextPages, L.empty)
   where
-    (nextTracks, nextPages, _) = pageScan' (offset+pageLen) newTracks rest
+    (nextTracks, nextPages, _) = pageScan' aBOS (offset+pageLen) newTracks rest
     newTrack = maybeToList mNewTrack
     newTracks = newTrack ++ tracks
 
 -- | Parse the given ByteString, and either detect the end of the chain, or
 -- build one OggPage data structure
-pageBuild :: Int64 -> [OggTrack] -> L.ByteString ->
+pageBuild :: Bool -> Int64 -> [OggTrack] -> L.ByteString ->
   Either
     L.ByteString -- The ByteString corresponding to the start of the next chain
     (OggPage, -- The constructed OggPage data structure
      Int64, -- The length of the page in bytes
      L.ByteString, -- The data following the page
-     Maybe OggTrack -- Maybe a new track, if this page started a new track
+     Maybe OggTrack, -- Maybe a new track, if this page started a new track
+     Bool -- Whether or not to allow BOS after this (ie. not-seen-non-BOS?)
     )
-pageBuild o t d = Right (newPage, pageLen, rest, mNewTrack) where
+pageBuild allowBOS o t d = buildResult allowBOS bos where
+
+  buildResult True _ = Right (newPage, pageLen, rest, mNewTrack, bos)
+  buildResult False False = Right (newPage, pageLen, rest, mNewTrack, False)
+  buildResult False True = Left d
+
   newPage = OggPage o track cont incplt bos eos gp seqno segments
   (r, pageLen) = rawPageBuild d
   htype = rawPageHType r
