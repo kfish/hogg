@@ -430,7 +430,7 @@ longHelp [] =
     where
         itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
 
--- | "hogg help <command>": Give command-specific help
+-- | "hogg help command": Give command-specific help
 longHelp (command:_) = contextHelp command m
   where m = filter (\x -> subName x == command) subCommands
 
