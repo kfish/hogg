@@ -324,10 +324,10 @@ addSkelSub = SubCommand "addskel" addSkel
 addSkel :: Hot ()
 addSkel = do
     c <- chains
-    let headChains = map head c
-    skels <- mapM ioAddSkeleton headChains
+    skels <- mapM (mapM ioAddSkeleton) c
     let s = \x -> L.concat $ map pageWrite (chainPages x)
-    outputPerFile $ map s skels
+    let s2 = \x -> outputPerChain $ map s x
+    outputPerFile $ map s2 skels
   where
     ioAddSkeleton x = liftIO $ chainAddSkeleton x
   
