@@ -166,16 +166,15 @@ tracks = do
     trackMatch (Just t) ts = filter (trackIsType t) ts
 
 -- All pages, from all files, matching the given criteria
-pages :: Hot [[OggPage]]
+pages :: Hot [[[OggPage]]]
 pages = do
     config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
     c <- chains
-    let headChains = map head c
-    let allPages = map chainPages headChains
+    let allPages = map (map chainPages) c
     config <- asks hotConfig
     let ctype = parseType $ contentTypeCfg config
-    return $ map (pageMatch ctype) allPages
+    return $ map (map (pageMatch ctype)) allPages
   where
     pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
     pageMatch Nothing gs = gs
@@ -296,7 +295,8 @@ rewritePages :: Hot ()
 rewritePages = do
     matchPages <- pages
     let r = \x -> L.concat $ map pageWrite x
-    outputPerFile $ map r matchPages
+    let r2 = \x -> outputPerChain $ map r x
+    outputPerFile $ map r2 matchPages
 
 ------------------------------------------------------------
 -- rewritePackets (reconstruct)
@@ -343,7 +343,8 @@ countrwPages :: Hot ()
 countrwPages = do
     matchPages <- pages
     let c = \x -> C.pack $ printf "%d pages\n" (length (packetsToPages (pagesToPackets x)))
-    reportPerFile $ map c matchPages
+    let r = \x -> reportPerChain $ map c x
+    reportPerFile $ map r matchPages
 
 ------------------------------------------------------------
 -- countPages (pagecount)
@@ -357,7 +358,8 @@ countPages :: Hot ()
 countPages = do
     matchPages <- pages
     let c = \x -> C.pack $ printf "%d pages\n" (length x)
-    reportPerFile $ map c matchPages
+    let r = \x -> reportPerChain $ map c x
+    reportPerFile $ map r matchPages
 
 ------------------------------------------------------------
 -- dumpPages (pagedump)
@@ -371,7 +373,8 @@ dumpPages :: Hot ()
 dumpPages = do
     matchPages <- pages
     let d = \x -> C.concat $ map (C.pack . show) x
-    reportPerFile $ map d matchPages
+    let r = \x -> reportPerChain $ map d x
+    reportPerFile $ map r matchPages
 
 ------------------------------------------------------------
 -- mergePages (merge)
@@ -384,7 +387,11 @@ mergePagesSub = SubCommand "merge" mergePages
 mergePages :: Hot ()
 mergePages = do
     matchPages <- pages
-    outputL $ L.concat $ map pageWrite $ listMerge matchPages
+    -- XXX: only use the first chain of each input file. Using subsequent
+    -- chains won't work anyway unless corresponding chains in each file are
+    -- of identical duration.
+    let firstChainPages = map (map head) matchPages
+    outputL $ L.concat $ map pageWrite $ listMerge firstChainPages
 
 ------------------------------------------------------------
 -- dumpRawPages (dumpraw)
