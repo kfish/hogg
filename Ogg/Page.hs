@@ -145,9 +145,9 @@ pageProcess :: Int64 -> [OggTrack]
             -> ([OggTrack], [OggPage], L.ByteString) -- to return from pageScan'
 pageProcess _ _ (Left rest) = ([], [], rest)
 pageProcess offset tracks (Right (newPage, pageLen, rest, mNewTrack, aBOS)) =
-  (newTrack ++ nextTracks, newPage : nextPages, L.empty)
+  (newTrack ++ nextTracks, newPage : nextPages, nextRest)
   where
-    (nextTracks, nextPages, _) = pageScan' aBOS (offset+pageLen) newTracks rest
+    (nextTracks, nextPages, nextRest) = pageScan' aBOS (offset+pageLen) newTracks rest
     newTrack = maybeToList mNewTrack
     newTracks = newTrack ++ tracks
 
