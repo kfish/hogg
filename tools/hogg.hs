@@ -16,13 +16,13 @@ import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.List
 
-import Ogg.Chain
-import Ogg.ListMerge
-import Ogg.Page
-import Ogg.Packet
-import Ogg.RawPage
-import Ogg.Skeleton
-import Ogg.Track
+import Codec.Container.Ogg.Chain
+import Codec.Container.Ogg.ListMerge
+import Codec.Container.Ogg.Page
+import Codec.Container.Ogg.Packet
+import Codec.Container.Ogg.RawPage
+import Codec.Container.Ogg.Skeleton
+import Codec.Container.Ogg.Track
 
 ------------------------------------------------------------
 --  HOggTool datatype

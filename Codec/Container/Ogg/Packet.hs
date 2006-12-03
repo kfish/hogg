@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Packet (
+module Codec.Container.Ogg.Packet (
   OggPacket (..),
   OggSegment (..),
   uncutPacket,
@@ -16,11 +16,11 @@ module Ogg.Packet (
   packetToBS
 ) where
 
-import Ogg.Dump
-import Ogg.Granulepos
-import Ogg.Page
-import Ogg.Track
-import Ogg.Timestamp
+import Codec.Container.Ogg.Dump
+import Codec.Container.Ogg.Granulepos
+import Codec.Container.Ogg.Page
+import Codec.Container.Ogg.Track
+import Codec.Container.Ogg.Timestamp
 
 import Data.List as List
 import Data.Map as Map

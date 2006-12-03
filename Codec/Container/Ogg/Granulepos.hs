@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Granulepos (
+module Codec.Container.Ogg.Granulepos (
   Granulepos (..),
   gpPack,
   gpUnpack

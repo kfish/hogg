@@ -1,12 +1,12 @@
 --
--- Module      : Ogg.Chain
+-- Module      : Codec.Container.Ogg.Chain
 -- Copyright   : (c) Conrad Parker 2006
 -- License     : BSD-style
 -- Maintainer  : conradp@cse.unsw.edu.au
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Chain (
+module Codec.Container.Ogg.Chain (
   OggChain (..),
   chainScan,
   chainAddSkeleton
@@ -18,11 +18,11 @@ import Data.Word (Word32)
 
 import System.Random
 
-import Ogg.Granulepos
-import Ogg.Track
-import Ogg.Page
-import Ogg.Packet
-import Ogg.Skeleton
+import Codec.Container.Ogg.Granulepos
+import Codec.Container.Ogg.Track
+import Codec.Container.Ogg.Page
+import Codec.Container.Ogg.Packet
+import Codec.Container.Ogg.Skeleton
 
 -- | A section of a chained Ogg physical bitstream. This corresponds to
 -- an entire song or video, and most Ogg files in the wild contain only

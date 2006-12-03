@@ -12,7 +12,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Ogg.Utils (
+module Codec.Container.Ogg.Utils (
    -- * Types and Constants
    Octet,
    msb,

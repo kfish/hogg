@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Timestamp (
+module Codec.Container.Ogg.Timestamp (
   Timestamp (..)
 ) where
 

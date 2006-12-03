@@ -1,5 +1,5 @@
 
-module Ogg.CRC (
+module Codec.Container.Ogg.CRC (
   zeroCRC,
   genCRC
 ) where

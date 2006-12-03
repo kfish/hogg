@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Skeleton (
+module Codec.Container.Ogg.Skeleton (
   OggFishead (..),
   OggFisbone (..),
   emptyFishead,
@@ -27,12 +27,12 @@ import Data.Ratio
 
 import Text.Printf
 
-import Ogg.ByteFields
-import Ogg.Granulepos
-import Ogg.Granulerate
-import Ogg.Packet
-import Ogg.Timestamp
-import Ogg.Track
+import Codec.Container.Ogg.ByteFields
+import Codec.Container.Ogg.Granulepos
+import Codec.Container.Ogg.Granulerate
+import Codec.Container.Ogg.Packet
+import Codec.Container.Ogg.Timestamp
+import Codec.Container.Ogg.Track
 
 ------------------------------------------------------------
 -- Data

@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.RawPage (
+module Codec.Container.Ogg.RawPage (
   OggRawPage (..),
   pageMarker,
   pageVersion,
@@ -14,7 +14,7 @@ module Ogg.RawPage (
   rawPageBuild
 ) where
 
-import Ogg.ByteFields
+import Codec.Container.Ogg.ByteFields
 
 import qualified Data.ByteString.Lazy as L
 import Data.Int (Int64)

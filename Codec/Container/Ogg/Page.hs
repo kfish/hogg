@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Page (
+module Codec.Container.Ogg.Page (
   OggPage (..),
   pageScan,
   pageWrite,
@@ -14,13 +14,13 @@ module Ogg.Page (
   pageIsType
 ) where
 
-import Ogg.ByteFields
-import Ogg.RawPage
-import Ogg.CRC
-import Ogg.Utils
-import Ogg.Granulepos
-import Ogg.Track
-import Ogg.Timestamp
+import Codec.Container.Ogg.ByteFields
+import Codec.Container.Ogg.RawPage
+import Codec.Container.Ogg.CRC
+import Codec.Container.Ogg.Utils
+import Codec.Container.Ogg.Granulepos
+import Codec.Container.Ogg.Track
+import Codec.Container.Ogg.Timestamp
 
 import Data.List (find)
 import Data.Int (Int64)

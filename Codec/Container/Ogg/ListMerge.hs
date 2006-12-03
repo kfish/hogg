@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.ListMerge (
+module Codec.Container.Ogg.ListMerge (
   listMerge
 ) where
 

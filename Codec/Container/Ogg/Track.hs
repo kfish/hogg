@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Track (
+module Codec.Container.Ogg.Track (
   OggTrack (..),
   OggType (..),
   trackIsType,
@@ -27,10 +27,10 @@ import Data.Ratio
 
 import Text.Printf
 
-import Ogg.ByteFields
-import Ogg.Granulepos
-import Ogg.Granulerate
-import Ogg.Timestamp
+import Codec.Container.Ogg.ByteFields
+import Codec.Container.Ogg.Granulepos
+import Codec.Container.Ogg.Granulerate
+import Codec.Container.Ogg.Timestamp
 
 ------------------------------------------------------------
 -- Data

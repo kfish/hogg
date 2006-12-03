@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Dump (
+module Codec.Container.Ogg.Dump (
   hexDump
 ) where
 

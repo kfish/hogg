@@ -6,7 +6,7 @@
 -- Stability   : experimental
 -- Portability : portable
 
-module Ogg.Granulerate (
+module Codec.Container.Ogg.Granulerate (
   Granulerate (..),
   intRate,
   fracRate

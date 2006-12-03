@@ -12,7 +12,7 @@
 --
 -----------------------------------------------------------------------------
 
-module Ogg.ByteFields (
+module Codec.Container.Ogg.ByteFields (
   be64At,
   be32At,
   be16At,
@@ -29,7 +29,7 @@ module Ogg.ByteFields (
 import Data.Int (Int64)
 import qualified Data.ByteString.Lazy as L
 
-import Ogg.Utils (fromTwosComp, toTwosComp)
+import Codec.Container.Ogg.Utils (fromTwosComp, toTwosComp)
 
 beNAt :: Integral a => Int64 -> Int64 -> L.ByteString -> a
 beNAt len off s = fromTwosComp $ L.unpack (L.take len (L.drop off s))
