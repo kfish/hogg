@@ -119,14 +119,11 @@ instance Ord OggTrack where
 --
 
 instance Show OggTrack where
-  -- show (OggTrack serialno (Just t) (Just gr)) =
-  show (OggTrack serialno ctype gr gs mhdrs) =
-    t ++ ": serialno " ++ s ++ " Rate: " ++ g ++ " Shift: " ++ sgs ++ "\n"
-    ++ m
-    where s = printf "%010d" ((fromIntegral serialno) :: Int)
+  -- show (OggTrack serialno ctype gr gs mhdrs) =
+  show (OggTrack serialno ctype _ _ mhdrs) =
+    t ++ ": serialno " ++ s ++ "\n" ++ m
+    where s = printf "%010u" ((fromIntegral serialno) :: Int)
           t = maybe "(Unknown)" show ctype
-          g = maybe "--" show gr
-          sgs = maybe "None" show gs
           m = unlines $ zipWith (++) (repeat "\t") (lines $ show mhdrs)
 
   -- show (OggTrack serialno _ _) =
