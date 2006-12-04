@@ -19,7 +19,6 @@ module Codec.Container.Ogg.Skeleton (
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.List as List
-import Data.Map as Map
 import Data.Maybe
 import Data.Word (Word32,Word64)
 import Data.Ratio
@@ -28,6 +27,7 @@ import Codec.Container.Ogg.ByteFields
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Granulerate
+import Codec.Container.Ogg.MessageHeaders
 import Codec.Container.Ogg.Packet
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
@@ -42,8 +42,6 @@ data OggFishead =
     fisheadBasetime :: Timestamp
   }
 
-type OggMsgHeaders = Map.Map String String
-    
 data OggFisbone =
   OggFisbone {
     fisboneSerialno :: Word32,
@@ -52,7 +50,7 @@ data OggFisbone =
     fisboneStartgranule :: Word64,
     fisbonePreroll :: Word32,
     fisboneGranuleshift :: Int,
-    fisboneMsgHeaders :: OggMsgHeaders
+    fisboneMsgHeaders :: MessageHeaders
   }
 
 ------------------------------------------------------------
@@ -142,10 +140,7 @@ fisboneWrite (OggFisbone s n (Granulerate gr) sg pr gs mhdrs) = newFisboneData
     prD = le32Fill pr
     gsD = u8Fill gs
 
-    mhdrsD = C.pack $ concat $ List.map serializeMH (assocs mhdrs)
-
-    serializeMH :: (String, String) -> String
-    serializeMH (k, v) = k ++ ": " ++ v ++ "\r\n"
+    mhdrsD = C.pack $ show mhdrs
 
 ------------------------------------------------------------
 -- trackToFisbone
@@ -166,7 +161,7 @@ trackToFisbone (OggTrack serialno (Just ctype) (Just gr) gs) =
     startgranule = 0
     gsi = maybe 0 id gs -- A Granuleshift of None is represented by 0
     -- The first given content-type is the default to use in skeleton
-    mhdrs = Map.singleton "Content-Type" (head $ mime ctype)
+    mhdrs = mhSingleton "Content-Type" (head $ mime ctype)
 
 -- If the pattern match failed, ie. any of the Maybe values were Nothing,
 -- then we can't produce a valid Fisbone for this
