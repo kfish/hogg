@@ -24,8 +24,7 @@ Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Skeleton
                      Codec.Container.Ogg.Track
                      Codec.Container.Ogg.Timestamp
-Other-modules:       Codec.Container.Ogg.Utils
-                     Codec.Container.Ogg.ByteFields
+Other-modules:       Codec.Container.Ogg.ByteFields
                      Codec.Container.Ogg.CRC
                      Codec.Container.Ogg.Dump
                      Codec.Container.Ogg.ListMerge
