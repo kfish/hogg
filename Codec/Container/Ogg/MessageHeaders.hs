@@ -7,7 +7,7 @@
 -- Portability : portable
 
 module Codec.Container.Ogg.MessageHeaders (
-  MessageHeaders(),
+  MessageHeaders(..),
   mhEmpty,
   mhSingleton
 ) where
@@ -21,7 +21,7 @@ import Data.Map as Map
 
 data MessageHeaders =
   MessageHeaders {
-    headers :: Map.Map String String
+    mhHeaders :: Map.Map String [String]
   }
     
 ------------------------------------------------------------
@@ -32,7 +32,14 @@ mhEmpty :: MessageHeaders
 mhEmpty = MessageHeaders (Map.empty)
 
 mhSingleton :: String -> String -> MessageHeaders
-mhSingleton f v = MessageHeaders (Map.singleton f v)
+mhSingleton f v = MessageHeaders (Map.singleton f [v])
+
+------------------------------------------------------------
+-- Append
+--
+
+mhAppend :: String -> String -> MessageHeaders -> MessageHeaders
+mhAppend k v (MessageHeaders h) = MessageHeaders (Map.insertWith (++) k [v] h)
 
 ------------------------------------------------------------
 -- Show
@@ -42,5 +49,5 @@ instance Show MessageHeaders where
   show (MessageHeaders h) =
     concat $ List.map serializeMH (assocs h)
     where
-      serializeMH :: (String, String) -> String
-      serializeMH (k, v) = k ++ ": " ++ v ++ "\r\n"
+      serializeMH :: (String, [String]) -> String
+      serializeMH (k, v) = k ++ ": " ++ (concat $ intersperse ", " v) ++ "\r\n"

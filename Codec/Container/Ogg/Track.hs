@@ -25,6 +25,7 @@ import Text.Printf
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Granulerate
+import Codec.Container.Ogg.MessageHeaders
 import Codec.Container.Ogg.Timestamp
 
 ------------------------------------------------------------
@@ -36,7 +37,8 @@ data OggTrack =
     trackSerialno :: Word32,
     trackType :: Maybe ContentType,
     trackGranulerate :: Maybe Granulerate,
-    trackGranuleshift :: Maybe Int
+    trackGranuleshift :: Maybe Int,
+    trackMetadata :: MessageHeaders
   }
 
 ------------------------------------------------------------
@@ -52,19 +54,20 @@ trackIsType t0 track
 
 -- | The null track
 nullTrack :: OggTrack
-nullTrack = OggTrack 0 Nothing Nothing Nothing
+nullTrack = OggTrack 0 Nothing Nothing Nothing mhEmpty
 
 -- | A new track, with a given serialno
 newTrack :: Word32 -> OggTrack
-newTrack serialno = OggTrack serialno Nothing Nothing Nothing
+newTrack serialno = OggTrack serialno Nothing Nothing Nothing mhEmpty
 
 -- Instantiate an OggTrack given a serialno and a bos page
 bosToTrack :: Word32 -> L.ByteString -> OggTrack
-bosToTrack s d = OggTrack s ctype gr gs
+bosToTrack s d = OggTrack s ctype gr gs mh
   where
     ctype = identify d
     gr = maybe Nothing (\x -> granulerate x d) ctype
     gs = maybe Nothing (\x -> granuleshift x d) ctype
+    mh = maybe mhEmpty (\x -> metadata x d) ctype
 
 -- | Convert a granulepos to a timestamp
 gpToTimestamp :: Granulepos -> OggTrack -> Timestamp
@@ -117,12 +120,14 @@ instance Ord OggTrack where
 
 instance Show OggTrack where
   -- show (OggTrack serialno (Just t) (Just gr)) =
-  show (OggTrack serialno ctype gr gs) =
+  show (OggTrack serialno ctype gr gs mhdrs) =
     t ++ ": serialno " ++ s ++ " Rate: " ++ g ++ " Shift: " ++ sgs ++ "\n"
+    ++ m
     where s = printf "%010d" ((fromIntegral serialno) :: Int)
           t = maybe "(Unknown)" show ctype
           g = maybe "--" show gr
           sgs = maybe "None" show gs
+          m = unlines $ zipWith (++) (repeat "\t") (lines $ show mhdrs)
 
   -- show (OggTrack serialno _ _) =
   --   "(Unknown): serialno " ++ s ++ "\n"

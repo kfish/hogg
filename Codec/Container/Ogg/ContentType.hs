@@ -20,10 +20,14 @@ module Codec.Container.Ogg.ContentType (
 import Data.Bits
 import qualified Data.ByteString.Lazy as L
 import Data.Char
+import Data.Map (fromList)
 import Data.Maybe
+
+import Text.Printf
 
 import Codec.Container.Ogg.ByteFields
 import Codec.Container.Ogg.Granulerate
+import Codec.Container.Ogg.MessageHeaders
 
 ------------------------------------------------------------
 -- Data
@@ -37,7 +41,8 @@ data ContentType =
     headers :: Int,
     preroll :: Int,
     granulerateF :: Maybe (L.ByteString -> Granulerate), -- used by granulerate
-    granuleshiftF :: Maybe (L.ByteString -> Int) -- used by granuleshift
+    granuleshiftF :: Maybe (L.ByteString -> Int), -- used by granuleshift
+    metadata :: L.ByteString -> MessageHeaders
   }
 
 known :: [ContentType]
@@ -77,6 +82,7 @@ skeleton = ContentType
              0                              -- preroll
              Nothing                        -- granulerate
              Nothing                        -- granuleshift
+             (const mhEmpty)
 
 -- skeletonIdent = 'fishead\0'
 skeletonIdent :: L.ByteString
@@ -95,6 +101,7 @@ cmml = ContentType
          0                        -- preroll
          (Just (\d -> fracRate (le64At 12 d) (le64At 20 d))) -- granulerate
          (Just (\d -> u8At 28 d)) -- granuleshift
+             (const mhEmpty)
 
 -- cmmlIdent = 'CMML\0\0\0\0\'
 cmmlIdent :: L.ByteString
@@ -113,6 +120,7 @@ vorbis = ContentType
            2                          -- preroll
            (Just (\d -> intRate (le32At 12 d))) -- granulerate
            Nothing                    -- granuleshift
+             (const mhEmpty)
 
 -- vorbisIdent = '\x01vorbis'
 vorbisIdent :: L.ByteString
@@ -131,6 +139,7 @@ theora = ContentType
            0                          -- preroll
            (Just (\d -> fracRate (be32At 22 d) (be32At 26 d))) -- granulerate
            (Just theoraGranuleshift)  -- granuleshift
+           theoraMetadata             -- metadata
 
 -- theoraIdent = '\x80theora'
 theoraIdent :: L.ByteString
@@ -141,6 +150,17 @@ theoraGranuleshift :: L.ByteString -> Int
 theoraGranuleshift d = (h40 .|. h41)
   where h40 = (u8At 40 d .&. 0x03) `shiftL` 3
         h41 = (u8At 41 d .&. 0xe0) `shiftR` 5
+
+theoraMetadata :: L.ByteString -> MessageHeaders
+theoraMetadata d = MessageHeaders (fromList headerVals)
+  where headerVals = [framerate, width, height]
+        framerate = ("Video-Framerate", [printf "%.3f fps" fps])
+        width = ("Video-Width", [show w])
+        height = ("Video-Height", [show h])
+        fps :: Double
+        fps = fromIntegral (be32At 22 d) / fromIntegral (be32At 26 d)
+        w = ((be16At 10 d) * 16) :: Int
+        h = ((be16At 12 d) * 16) :: Int
 
 ------------------------------------------------------------
 -- Speex
@@ -155,6 +175,7 @@ speex = ContentType
           3                         -- preroll
           (Just (\d -> intRate (le32At 36 d))) -- granulerate
           Nothing                   -- granuleshift
+             (const mhEmpty)
           
 -- speexIdent = 'Speex   '
 speexIdent :: L.ByteString
