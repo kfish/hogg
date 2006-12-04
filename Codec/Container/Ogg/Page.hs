@@ -18,7 +18,6 @@ import Codec.Container.Ogg.ByteFields
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.RawPage
 import Codec.Container.Ogg.CRC
-import Codec.Container.Ogg.Utils
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Track
 import Codec.Container.Ogg.Timestamp
@@ -104,7 +103,7 @@ pageWrite (OggPage _ track cont incplt bos eos gp seqno s) = newPageData
     serialno = trackSerialno track
 
     -- Segment table
-    segs = L.pack $ (toTwosComp (numsegs)) ++ segtab
+    segs = L.pack $ (fromIntegral numsegs):segtab
     (numsegs, segtab) = buildSegtab 0 [] incplt s
 
     -- Body data
