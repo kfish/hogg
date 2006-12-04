@@ -91,11 +91,6 @@ toBase x =
    takeWhile (/=0) .
    iterate (flip div x)
 
--- | The most significant bit of a Word8.
-
-msb :: Int
-msb = bitSize (undefined::Word8) - 1
-
 -- | Take a list of octets (a number expressed in base n) and convert it
 --   to a number.
 
@@ -116,8 +111,4 @@ toTwosComp :: Integral a => a -> [Word8]
 toTwosComp x
    | x < 0     = error "toTwosComp defined for unsigned only"
    | x == 0    = [0x00]
-   | otherwise = u
-   where z@(y:ys) = toBase 256 (abs x)
-         u        = if testBit y msb
-                       then 0x00:z
-                       else z
+   | otherwise = toBase 256 x
