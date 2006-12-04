@@ -11,9 +11,24 @@
 
 <p>
 The HOgg package provides a commandline tool for manipulating
-<a href="http://www.xiph.org/">Ogg</a> files. It supports chained and
-multiplexed Ogg bitstreams and
-<a href="http://wiki.xiph.org/OggSkeleton">Ogg Skeleton</a>.
+<a href="http://www.xiph.org/">Ogg</a> files and
+a <a href="http:/www.haskell.org/">Haskell</a> library implementing
+<code><a href="hogg/dist/doc/html/">Codec.Container.Ogg</a></code>.
+</p>
+
+<p>
+HOgg supports chained and
+multiplexed Ogg bitstreams conformant with
+<a href="http://www.ietf.org/rfc/rfc3533.txt">RFC3533</a>.
+HOgg can parse headers for
+<a href="http://wiki.xiph.org/CMML">CMML</a>,
+<a href="http://flac.sourceforge.net/ogg_mapping.html">FLAC</a>,
+<a href="http://wiki.xiph.org/OggPCM">OggPCM</a>,
+<a href="http://www.speex.org/">Speex</a>,
+<a href="http://www.theora.org/">Theora</a> and
+<a href="http://www.vorbis.com/">Vorbis</a>,
+and can read and write
+<a href="http://wiki.xiph.org/OggSkeleton">Ogg Skeleton</a> bitstreams.
 <p>
 <pre>
 Usage: hogg <subcommand> [options] filename ...
@@ -35,9 +50,6 @@ Available subcommands:
 Please report bugs to [ogg-dev at xiph.org]
 </pre>
 <p>
-HOgg also includes a <a href="http:/www.haskell.org/">Haskell</a> library
-implementing <code><a href="hogg/dist/doc/html/">Codec.Container.Ogg</a></code>
-which may be used by other packages for handling the Ogg container format.
 </p>
 
 <h2>Documentation</h2>
