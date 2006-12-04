@@ -15,6 +15,7 @@ module Codec.Container.Ogg.Page (
 ) where
 
 import Codec.Container.Ogg.ByteFields
+import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.RawPage
 import Codec.Container.Ogg.CRC
 import Codec.Container.Ogg.Utils
@@ -71,7 +72,7 @@ pageTimestamp g = timestamp
 --
 
 -- | Determine whether a page is of a given content type
-pageIsType :: OggType -> OggPage -> Bool
+pageIsType :: ContentType -> OggPage -> Bool
 pageIsType t g = trackIsType t (pageTrack g)
 
 ------------------------------------------------------------

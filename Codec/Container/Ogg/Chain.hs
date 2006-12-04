@@ -18,6 +18,7 @@ import Data.Word (Word32)
 
 import System.Random
 
+import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Track
 import Codec.Container.Ogg.Page
@@ -73,7 +74,7 @@ chainAddSkeleton' serialno (OggChain tracks _ packets) = OggChain nt ng np
     np = [fh] ++ ixBoss ++ ixFisbones ++ ixHdrs ++ [sEOS] ++ ixD
 
     -- Construct a new track for the Skeleton
-    skelTrack = (newTrack serialno){trackType = Just Skeleton}
+    skelTrack = (newTrack serialno){trackType = Just skeleton}
 
     -- Create the fishead and fisbone packets (all with pageIx 0)
     fh = fisheadToPacket skelTrack emptyFishead
@@ -91,7 +92,7 @@ chainAddSkeleton' serialno (OggChain tracks _ packets) = OggChain nt ng np
 
     -- ... for which we determine the total number of header pages
     totHeaders = foldl (+) 0 tracksNHeaders
-    tracksNHeaders = map nheadersOf $ mapMaybe trackType tracks
+    tracksNHeaders = map headers $ mapMaybe trackType tracks
 
     -- Increment the pageIx of the original data packets by the number of
     -- Skeleton pages

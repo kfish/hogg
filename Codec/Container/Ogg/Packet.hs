@@ -16,6 +16,7 @@ module Codec.Container.Ogg.Packet (
   packetToBS
 ) where
 
+import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Dump
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Page
@@ -53,7 +54,7 @@ data OggSegment =
 -- Predicates
 --
 
-packetIsType :: OggType -> OggPacket -> Bool
+packetIsType :: ContentType -> OggPacket -> Bool
 packetIsType t p = trackIsType t (packetTrack p)
 
 ------------------------------------------------------------

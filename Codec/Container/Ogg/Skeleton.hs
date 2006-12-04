@@ -18,16 +18,14 @@ module Codec.Container.Ogg.Skeleton (
 
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
-import Data.Bits
 import Data.List as List
 import Data.Map as Map
 import Data.Maybe
 import Data.Word (Word32,Word64)
 import Data.Ratio
 
-import Text.Printf
-
 import Codec.Container.Ogg.ByteFields
+import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Granulerate
 import Codec.Container.Ogg.Packet
@@ -130,18 +128,18 @@ fisboneToPacket t f = uncutPacket d t gp
     gp = Granulepos (Just 0)
 
 fisboneWrite :: OggFisbone -> L.ByteString
-fisboneWrite (OggFisbone s n (Granulerate gr) sg preroll gs mhdrs) = newFisboneData
+fisboneWrite (OggFisbone s n (Granulerate gr) sg pr gs mhdrs) = newFisboneData
   where
     newFisboneData = L.concat [hData, fData, tData]
     hData = L.concat [fisboneIdent, le32Fill fisboneMHOffset]
-    fData = L.concat [sD, nD, grD, sgD, prerollD, gsD]
+    fData = L.concat [sD, nD, grD, sgD, prD, gsD]
     tData = L.concat [fisbonePadding, mhdrsD]
 
     sD = le32Fill s
     nD = le32Fill n
     grD = L.concat $ List.map le64Fill [numerator gr, denominator gr]
     sgD = le64Fill sg
-    prerollD = le32Fill preroll
+    prD = le32Fill pr
     gsD = u8Fill gs
 
     mhdrsD = C.pack $ concat $ List.map serializeMH (assocs mhdrs)
@@ -161,13 +159,14 @@ tracksToFisbones ts = Data.Maybe.mapMaybe trackToFisbone ts
 -- | Create an OggFisbone from a given OggTrack
 trackToFisbone :: OggTrack -> Maybe OggFisbone
 trackToFisbone (OggTrack serialno (Just ctype) (Just gr) gs) =
-  Just (OggFisbone serialno nheaders gr startgranule preroll gsi mhdrs)
+  Just (OggFisbone serialno nheaders gr startgranule pr gsi mhdrs)
   where
-    nheaders = nheadersOf ctype
-    preroll = fromIntegral $ prerollOf ctype
+    nheaders = headers ctype
+    pr = fromIntegral $ preroll ctype
     startgranule = 0
     gsi = maybe 0 id gs -- A Granuleshift of None is represented by 0
-    mhdrs = Map.singleton "Content-Type" (ctypeOf ctype)
+    -- The first given content-type is the default to use in skeleton
+    mhdrs = Map.singleton "Content-Type" (head $ mime ctype)
 
 -- If the pattern match failed, ie. any of the Maybe values were Nothing,
 -- then we can't produce a valid Fisbone for this

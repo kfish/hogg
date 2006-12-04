@@ -17,6 +17,7 @@ import qualified Data.ByteString.Lazy.Char8 as C
 import Data.List
 
 import Codec.Container.Ogg.Chain
+import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.ListMerge
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Packet
@@ -161,7 +162,7 @@ tracks = do
     let ctype = parseType $ contentTypeCfg config
     return $ map (map (trackMatch ctype)) allTracks
   where
-    trackMatch :: Maybe OggType -> [OggTrack] -> [OggTrack]
+    trackMatch :: Maybe ContentType -> [OggTrack] -> [OggTrack]
     trackMatch Nothing ts = ts
     trackMatch (Just t) ts = filter (trackIsType t) ts
 
@@ -176,7 +177,7 @@ pages = do
     let ctype = parseType $ contentTypeCfg config
     return $ map (map (pageMatch ctype)) allPages
   where
-    pageMatch :: Maybe OggType -> [OggPage] -> [OggPage]
+    pageMatch :: Maybe ContentType -> [OggPage] -> [OggPage]
     pageMatch Nothing gs = gs
     pageMatch (Just t) gs = filter (pageIsType t) gs
 
@@ -189,7 +190,7 @@ packets = do
     let ctype = parseType $ contentTypeCfg config
     return $ map (map (packetMatch ctype)) allPackets
   where
-    packetMatch :: Maybe OggType -> [OggPacket] -> [OggPacket]
+    packetMatch :: Maybe ContentType -> [OggPacket] -> [OggPacket]
     packetMatch Nothing ps = ps
     packetMatch (Just t) ps = filter (packetIsType t) ps
 
