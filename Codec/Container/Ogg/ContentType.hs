@@ -233,23 +233,18 @@ flacIdent = L.pack [0x7f, 0x46, 0x4c, 0x41, 0x43, 0x01]
 -- Extract sample rate from OggPCM2 BOS header
 flacMetadata :: L.ByteString -> MessageHeaders
 flacMetadata d = MessageHeaders (fromList headerVals)
-  where headerVals = [samplerate]
+  where headerVals = [samplerate, channels]
         samplerate = ("Audio-Samplerate", [(show srate) ++ " Hz"])
+        channels = ("Audio-Channels", [show c])
         srate = flacGranulerate d
+        c = 1 + (u8At 29 d `shiftR` 1) .&. 0x7 :: Int
 
 flacGranulerate :: L.ByteString -> Granulerate
--- flacGranulerate d = intRate $ (h27 .|. h28) .|. h29
-flacGranulerate d = intRate $ h27 + h28 + h29
+flacGranulerate d = intRate $ h27 .|. h28 .|. h29
   where
-        -- h27 = (u8At 27 d) `shiftL` 12
-        -- h28 = (u8At 28 d) `shiftL` 4
-        -- h29 = ((u8At 29 d) `shiftR` 4) .&. 0x0f
-        h27 = (u8At 27 d) * 4096
-        h28 = (u8At 28 d) * 16
+        h27 = (u8At 27 d) `shiftL` 12
+        h28 = (u8At 28 d) `shiftL` 4
         h29 = (u8At 29 d .&. 0xf0) `shiftR` 4
-        -- h27 = 0
-        -- h28 = 0
-        -- h29 = 0
 
 ------------------------------------------------------------
 -- OggPCM2: http://wiki.xiph.org/index.php/OggPCM2
