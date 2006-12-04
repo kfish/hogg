@@ -1,0 +1,66 @@
+<html>
+<head>
+<title>HOgg</title>
+<link rel="stylesheet" href="http://www.kfish.org/~conrad/include/global.css">
+</head>
+<body>
+
+<h1>HOgg</h1>
+
+<h2>About</h2>
+
+<p>
+The HOgg package provides a commandline tool for manipulating
+<a href="http://www.xiph.org/">Ogg</a> files. It supports chained and
+multiplexed Ogg bitstreams and
+<a href="http://wiki.xiph.org/OggSkeleton">Ogg Skeleton</a>.
+<p>
+<pre>
+Usage: hogg <subcommand> [options] filename ...
+
+Available subcommands:
+  info          Display information about the file and its bitstreams
+  dump          Hexdump packets of an Ogg file
+  pagedump      Display page structure of an Ogg file
+  dumpraw       Dump raw (unparsed) page data
+  rip           Rip selected logical bistreams from an Ogg file (default: all)
+  reconstruct   Reconstruct an Ogg file by doing a full packet demux
+  merge         Merge, interleaving pages in order of presentation time
+  addskel       Write a Skeleton logical bitstream
+  packetcount   Count packets of an Ogg file
+  countrw       Rewrite via packets and display a count of pages produced
+  pagecount     Count pages of an Ogg file
+  help          Display help information
+
+Please report bugs to [ogg-dev at xiph.org]
+</pre>
+<p>
+HOgg also includes a <a href="http:/www.haskell.org/">Haskell</a> library
+implementing <code><a href="hogg/dist/doc/html/">Codec.Container.Ogg</a></code>
+which may be used by other packages for handling the Ogg container format.
+</p>
+
+<h2>Documentation</h2>
+<ul>
+<li><a href="hogg/README">README</a></li>
+<li><a href="hogg/dist/doc/html/">API documentation</a></li>
+</ul>
+
+<h2>Source</h2>
+<p>
+<code>darcs get <a href="http://www.annodex.net/~conrad/software/hogg/">http://www.annodex.net/~conrad/software/hogg/</a></code>
+</p>
+
+<h2>Project Activity</h2>
+
+<img src="http://www.annodex.net/~conrad/software/images/hogg-commits.png" alt="Graph of recent commits per day"/>
+
+<h2>Related work</h2>
+<ul>
+<li><a href="http://svn.xiph.org/trunk/vorbis-tools/">vorbis-tools</a>: includes ogginfo by Michael Smith</li>
+<li><a href="http://illiminable.com/ogg/">oggdsf</a>: C++ libraries by Zen Kavanagh (illiminable), includes OOOgg* tools</li>
+<li><a href="http://www.annodex.net/software/liboggz/index.html">liboggz</a>: C library by Conrad Parker (kfish), includes oggz* tools</li>
+</ul>
+
+</body>
+</html>
