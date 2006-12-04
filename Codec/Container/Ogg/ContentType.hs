@@ -47,7 +47,7 @@ data ContentType =
   }
 
 known :: [ContentType]
-known = [skeleton, cmml, vorbis, theora, speex]
+known = [skeleton, cmml, vorbis, theora, speex, flac, oggpcm2]
 
 identify :: L.ByteString -> Maybe ContentType
 identify d = listToMaybe $ filter (\x -> identifyP x d) known
@@ -210,3 +210,71 @@ speexMetadata d = MessageHeaders (fromList headerVals)
         channels = ("Audio-Channels", [show c])
         srate = (le32At 36 d) :: Int
         c = (le32At 48 d) :: Int
+
+------------------------------------------------------------
+-- FLAC
+--
+
+flac :: ContentType
+flac = ContentType
+            "FLAC"                     -- label
+            ["audio/x-flac"]           -- mime
+            (L.isPrefixOf flacIdent)   -- identify
+            3                          -- headers
+            0                          -- preroll
+            (Just flacGranulerate)     -- granulerate
+            Nothing                    -- granuleshift
+            flacMetadata
+          
+-- flacIdent = 0x7F:"FLAC"
+flacIdent :: L.ByteString
+flacIdent = L.pack [0x7f, 0x46, 0x4c, 0x41, 0x43, 0x01]
+
+-- Extract sample rate from OggPCM2 BOS header
+flacMetadata :: L.ByteString -> MessageHeaders
+flacMetadata d = MessageHeaders (fromList headerVals)
+  where headerVals = [samplerate]
+        samplerate = ("Audio-Samplerate", [(show srate) ++ " Hz"])
+        srate = flacGranulerate d
+
+flacGranulerate :: L.ByteString -> Granulerate
+-- flacGranulerate d = intRate $ (h27 .|. h28) .|. h29
+flacGranulerate d = intRate $ h27 + h28 + h29
+  where
+        -- h27 = (u8At 27 d) `shiftL` 12
+        -- h28 = (u8At 28 d) `shiftL` 4
+        -- h29 = ((u8At 29 d) `shiftR` 4) .&. 0x0f
+        h27 = (u8At 27 d) * 4096
+        h28 = (u8At 28 d) * 16
+        h29 = (u8At 29 d .&. 0xf0) `shiftR` 4
+        -- h27 = 0
+        -- h28 = 0
+        -- h29 = 0
+
+------------------------------------------------------------
+-- OggPCM2: http://wiki.xiph.org/index.php/OggPCM2
+--
+
+oggpcm2 :: ContentType
+oggpcm2 = ContentType
+            "PCM"                       -- label
+            ["audio/x-ogg-pcm"]         -- mime
+            (L.isPrefixOf oggpcm2Ident) -- identify
+            3                           -- headers
+            0                           -- preroll
+            (Just (\d -> intRate (be32At 16 d))) -- granulerate
+            Nothing                     -- granuleshift
+            oggpcm2Metadata
+          
+-- oggpcm2Ident = 'PCM     '
+oggpcm2Ident :: L.ByteString
+oggpcm2Ident = L.pack [0x50, 0x43, 0x4D, 0x20, 0x20, 0x20, 0x20, 0x20]
+
+-- Extract sample rate from OggPCM2 BOS header
+oggpcm2Metadata :: L.ByteString -> MessageHeaders
+oggpcm2Metadata d = MessageHeaders (fromList headerVals)
+  where headerVals = [samplerate, channels]
+        samplerate = ("Audio-Samplerate", [printf "%d Hz" srate])
+        channels = ("Audio-Channels", [show c])
+        srate = (be32At 16 d) :: Int
+        c = (u8At 21 d) :: Int
