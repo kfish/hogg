@@ -11,9 +11,6 @@ cmml -> anx
 splice/edit (concat data from different files if the encoding parms are the
 same, or cut/edit bits from the same file)
 
-reporting of codec-specific info (as string or query mechanism) -- eg. to
-display sample rate and video dimensions in `hogg info`
-
 web server frontend
  - implement a mod_annodex workalike
    with byte-range handling
