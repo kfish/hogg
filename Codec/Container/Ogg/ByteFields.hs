@@ -82,33 +82,31 @@ u8Fill :: Integral a => a -> L.ByteString
 u8Fill = leNFill 1
 
 
-powersOf n = 1 : (map (*n) (powersOf n))
+-- | Convert to twos complement, unsigned, big endian
+toTwosComp :: Integral a => a -> [Word8]
+toTwosComp x
+   | x < 0     = error "toTwosComp defined for unsigned only"
+   | x == 0    = [0x00]
+   | otherwise = toBase 256 x
+  where
+    toBase x = 
+       map fromIntegral .
+       reverse .
+       map (flip mod x) .
+       takeWhile (/=0) .
+       iterate (flip div x)
 
-toBase x = 
-   map fromIntegral .
-   reverse .
-   map (flip mod x) .
-   takeWhile (/=0) .
-   iterate (flip div x)
+-- | Convert from twos complement, unsigned, little endian
+
+fromTwosComp :: Integral a => [Word8] -> a
+fromTwosComp [] = 0
+fromTwosComp x = fromWord8s 256 x
 
 -- | Take a list of octets (a number expressed in base n) and convert it
 --   to a number.
 
 fromWord8s :: (Integral a, Integral b) => a -> [Word8] -> b
 fromWord8s n x = 
-   fromIntegral $ 
-   sum $ 
-   zipWith (*) (powersOf n) (map fromIntegral x)
-
--- | Convert from twos complement, unsigned
-
-fromTwosComp :: Integral a => [Word8] -> a
-fromTwoComp [] = 0
-fromTwosComp x = fromWord8s 256 x
-
--- | Convert to twos complement, unsigned
-toTwosComp :: Integral a => a -> [Word8]
-toTwosComp x
-   | x < 0     = error "toTwosComp defined for unsigned only"
-   | x == 0    = [0x00]
-   | otherwise = toBase 256 x
+    fromIntegral $ sum $ zipWith (*) (powersOf n) (map fromIntegral x)
+  where
+    powersOf n = 1 : (map (*n) (powersOf n))
