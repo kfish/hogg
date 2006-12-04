@@ -9,7 +9,6 @@
 -- Portability :  portable
 --
 -- Utilities for handling byte-aligned fields
--- Twos-Complement handling adapted from Utils by Dominic Steinitz
 --
 -----------------------------------------------------------------------------
 
@@ -27,7 +26,6 @@ module Codec.Container.Ogg.ByteFields (
   u8Fill
 ) where
 
-import Data.Bits
 import Data.Int (Int64)
 import Data.Word
 
@@ -63,10 +61,10 @@ u8At = leNAt 1
 -- Generate a ByteString containing the given number
 leNFill :: Integral a => Int -> a -> L.ByteString
 leNFill n x
-  | l < n	= L.pack $ reverse ((take (n-l) $ repeat 0x00) ++ i)
-  -- | l > n	= L.pack $ reverse (drop (l-n) i)
+  | l < n	= L.pack $ (i ++ (take (n-l) $ repeat 0x00))
+  -- | l > n	= L.pack $ (drop (l-n) i)
   | l > n	= error "leNFill too short"
-  | otherwise	= L.pack $ reverse i
+  | otherwise	= L.pack $ i
                   where l = length i
                         i = toTwosComp x
 
@@ -82,20 +80,13 @@ le16Fill = leNFill 2
 u8Fill :: Integral a => a -> L.ByteString
 u8Fill = leNFill 1
 
-
--- | Convert to twos complement, unsigned, big endian
+-- | Convert to twos complement, unsigned, little endian
 toTwosComp :: Integral a => a -> [Word8]
-toTwosComp x
-   | x < 0     = error "toTwosComp defined for unsigned only"
-   | x == 0    = [0x00]
-   | otherwise = toBase 256 x
+toTwosComp x = g $ f x
   where
-    toBase x = 
-       map fromIntegral .
-       reverse .
-       map (flip mod x) .
-       takeWhile (/=0) .
-       iterate (flip div x)
+    f y = (fromIntegral y) `divMod` 256 :: (Integer, Integer)
+    g (0,b) = [fromIntegral b]
+    g (a,b) = [fromIntegral b] ++ (g $ f a)
 
 -- | Convert from twos complement, unsigned, little endian
 fromTwosComp :: Integral a => [Word8] -> a
