@@ -221,9 +221,10 @@ outputL bs = do
 
 -- Output with a text banner per input file
 reportPerFile :: [C.ByteString] -> Hot ()
+reportPerFile [r] = outputC r -- Don't add banners if only one file to report
 reportPerFile l = do
     filenames <- asks hotFilenames
-    let fHeader f = C.pack $ printf "Filename: %s\n" f
+    let fHeader f = C.pack $ printf "Filename: %s\n\n" f
     let fText = zip (map fHeader filenames) l
     let sep = C.pack $ replicate 60 '-' ++ "\n"
     let banner (f,t) = C.concat [sep,f,t]
@@ -235,7 +236,10 @@ outputPerFile l = outputL $ L.concat l
 
 -- Place a marker betwen the reports for each chain
 reportPerChain :: [C.ByteString] -> C.ByteString
-reportPerChain l = C.concat $ intersperse (C.pack ">>> New Chain:\n") l
+reportPerChain l = C.concat $ intersperse (C.pack (chainMarker++"\n\n")) l
+  where
+    -- chainMarker = "><> New Chain <><><><"
+    chainMarker = "><><><> New Chain ><>"
 
 -- Concat the output for each chain
 outputPerChain :: [L.ByteString] -> L.ByteString
@@ -252,7 +256,8 @@ infoSub = SubCommand "info" info
 info :: Hot ()
 info = do
     matchTracks <- tracks
-    let i = \x -> reportPerChain $ map (C.concat . map (C.pack . show)) x
+    let t = \x -> show x ++ "\n" -- Add a newline after each track's info
+    let i = \x -> reportPerChain $ map (C.concat . map (C.pack . t)) x
     reportPerFile $ map i matchTracks
 
 ------------------------------------------------------------
