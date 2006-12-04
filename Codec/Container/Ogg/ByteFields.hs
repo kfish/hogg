@@ -101,13 +101,5 @@ toTwosComp x
 
 fromTwosComp :: Integral a => [Word8] -> a
 fromTwosComp [] = 0
-fromTwosComp x = fromWord8s 256 x
-
--- | Take a list of octets (a number expressed in base n) and convert it
---   to a number.
-
-fromWord8s :: (Integral a, Integral b) => a -> [Word8] -> b
-fromWord8s n x = 
-    fromIntegral $ sum $ zipWith (*) (powersOf n) (map fromIntegral x)
-  where
-    powersOf n = 1 : (map (*n) (powersOf n))
+fromTwosComp x = fromIntegral $ sum $ zipWith (*) powers (map fromIntegral x)
+  where powers = 1 : (map (*256) powers)
