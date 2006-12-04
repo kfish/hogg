@@ -28,6 +28,7 @@ import Text.Printf
 import Codec.Container.Ogg.ByteFields
 import Codec.Container.Ogg.Granulerate
 import Codec.Container.Ogg.MessageHeaders
+import Codec.Container.Ogg.Timestamp
 
 ------------------------------------------------------------
 -- Data
@@ -82,11 +83,20 @@ skeleton = ContentType
              0                              -- preroll
              Nothing                        -- granulerate
              Nothing                        -- granuleshift
-             (const mhEmpty)
+             skeletonMetadata
 
 -- skeletonIdent = 'fishead\0'
 skeletonIdent :: L.ByteString
 skeletonIdent = L.pack [0x66, 0x69, 0x73, 0x68, 0x65, 0x61, 0x64, 0x00]
+
+-- Extract the Presentation time, Basetime from Fishead (Skeleton BOS)
+skeletonMetadata :: L.ByteString -> MessageHeaders
+skeletonMetadata d = MessageHeaders (fromList headerVals)
+  where headerVals = [prestime, basetime]
+        prestime = ("Presentation-Time", [show p])
+        basetime = ("Basetime", [show b])
+        p = Timestamp (Just (le64At 12 d, le64At 20 d))
+        b = Timestamp (Just (le64At 28 d, le64At 36 d))
 
 ------------------------------------------------------------
 -- CMML
@@ -120,11 +130,20 @@ vorbis = ContentType
            2                          -- preroll
            (Just (\d -> intRate (le32At 12 d))) -- granulerate
            Nothing                    -- granuleshift
-             (const mhEmpty)
+           vorbisMetadata
 
 -- vorbisIdent = '\x01vorbis'
 vorbisIdent :: L.ByteString
 vorbisIdent = L.pack [0x01, 0x76, 0x6f, 0x72, 0x62, 0x69, 0x73]
+
+-- Extract sample rate from Vorbis BOS header
+vorbisMetadata :: L.ByteString -> MessageHeaders
+vorbisMetadata d = MessageHeaders (fromList headerVals)
+  where headerVals = [samplerate, channels]
+        samplerate = ("Audio-Samplerate", [printf "%d Hz" srate])
+        channels = ("Audio-Channels", [show c])
+        srate = (le32At 12 d) :: Int
+        c = (u8At 11 d) :: Int
 
 ------------------------------------------------------------
 -- Theora
@@ -151,14 +170,16 @@ theoraGranuleshift d = (h40 .|. h41)
   where h40 = (u8At 40 d .&. 0x03) `shiftL` 3
         h41 = (u8At 41 d .&. 0xe0) `shiftR` 5
 
+-- Extract video dimensions etc. from the Theora BOS header
 theoraMetadata :: L.ByteString -> MessageHeaders
 theoraMetadata d = MessageHeaders (fromList headerVals)
   where headerVals = [framerate, width, height]
         framerate = ("Video-Framerate", [printf "%.3f fps" fps])
         width = ("Video-Width", [show w])
         height = ("Video-Height", [show h])
-        fps :: Double
-        fps = fromIntegral (be32At 22 d) / fromIntegral (be32At 26 d)
+        toDouble :: Integer -> Double -- monomorphic cast to double
+        toDouble x = (fromIntegral x) :: Double
+        fps = toDouble (be32At 22 d) / toDouble (be32At 26 d)
         w = ((be16At 10 d) * 16) :: Int
         h = ((be16At 12 d) * 16) :: Int
 
@@ -175,9 +196,17 @@ speex = ContentType
           3                         -- preroll
           (Just (\d -> intRate (le32At 36 d))) -- granulerate
           Nothing                   -- granuleshift
-             (const mhEmpty)
+          speexMetadata
           
 -- speexIdent = 'Speex   '
 speexIdent :: L.ByteString
 speexIdent = L.pack [0x53, 0x70, 0x65, 0x65, 0x78, 0x20, 0x20, 0x20]
 
+-- Extract sample rate from Speex BOS header
+speexMetadata :: L.ByteString -> MessageHeaders
+speexMetadata d = MessageHeaders (fromList headerVals)
+  where headerVals = [samplerate, channels]
+        samplerate = ("Audio-Samplerate", [printf "%d Hz" srate])
+        channels = ("Audio-Channels", [show c])
+        srate = (le32At 36 d) :: Int
+        c = (le32At 48 d) :: Int
