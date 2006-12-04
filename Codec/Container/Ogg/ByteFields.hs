@@ -62,7 +62,6 @@ u8At = leNAt 1
 leNFill :: Integral a => Int -> a -> L.ByteString
 leNFill n x
   | l < n	= L.pack $ (i ++ (take (n-l) $ repeat 0x00))
-  -- | l > n	= L.pack $ (drop (l-n) i)
   | l > n	= error "leNFill too short"
   | otherwise	= L.pack $ i
                   where l = length i
