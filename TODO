@@ -15,3 +15,6 @@ web server frontend
  - implement a mod_annodex workalike
    with byte-range handling
  - use for research into per-track selection
+
+Test against all files from:
+  http://www1.mplayerhq.hu/MPlayer/samples/ogg/
