@@ -34,7 +34,7 @@ import Data.Word
 import qualified Data.ByteString.Lazy as L
 
 beNAt :: Integral a => Int64 -> Int64 -> L.ByteString -> a
-beNAt len off s = fromTwosComp $ L.unpack (L.take len (L.drop off s))
+beNAt len off s = fromTwosComp $ reverse $ L.unpack (L.take len (L.drop off s))
 
 be64At :: Integral a => Int64 -> L.ByteString -> a
 be64At = beNAt 8
@@ -46,7 +46,7 @@ be16At :: Integral a => Int64 -> L.ByteString -> a
 be16At = beNAt 2
 
 leNAt :: Integral a => Int64 -> Int64 -> L.ByteString -> a
-leNAt len off s = fromTwosComp $ reverse $ L.unpack (L.take len (L.drop off s))
+leNAt len off s = fromTwosComp $ L.unpack (L.take len (L.drop off s))
 
 le64At :: Integral a => Int64 -> L.ByteString -> a
 le64At = leNAt 8
@@ -98,7 +98,7 @@ fromWord8s :: (Integral a, Integral b) => a -> [Word8] -> b
 fromWord8s n x = 
    fromIntegral $ 
    sum $ 
-   zipWith (*) (powersOf n) (reverse (map fromIntegral x))
+   zipWith (*) (powersOf n) (map fromIntegral x)
 
 -- | Convert from twos complement, unsigned
 
