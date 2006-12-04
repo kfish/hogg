@@ -98,8 +98,6 @@ toTwosComp x
        iterate (flip div x)
 
 -- | Convert from twos complement, unsigned, little endian
-
 fromTwosComp :: Integral a => [Word8] -> a
-fromTwosComp [] = 0
-fromTwosComp x = fromIntegral $ sum $ zipWith (*) powers (map fromIntegral x)
-  where powers = 1 : (map (*256) powers)
+fromTwosComp x = foldr (\a b -> fromIntegral a + b*256) 0 x
+
