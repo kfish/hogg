@@ -29,27 +29,33 @@ HOgg can parse headers for
 <a href="http://www.vorbis.com/">Vorbis</a>,
 and can read and write
 <a href="http://wiki.xiph.org/OggSkeleton">Ogg Skeleton</a> bitstreams.
+</p>
+
+<h2>Usage</h2>
+
 <p>
 <pre>
-Usage: hogg <subcommand> [options] filename ...
+Usage: hogg &lt;subcommand&gt; [options] filename ...
 
-Available subcommands:
+Commands:
+  help          Display help for a specific subcommand
+
+Reporting:
   info          Display information about the file and its bitstreams
   dump          Hexdump packets of an Ogg file
   pagedump      Display page structure of an Ogg file
   dumpraw       Dump raw (unparsed) page data
+
+Extraction:
   rip           Rip selected logical bistreams from an Ogg file (default: all)
   reconstruct   Reconstruct an Ogg file by doing a full packet demux
+
+Editing:
   merge         Merge, interleaving pages in order of presentation time
   addskel       Write a Skeleton logical bitstream
-  packetcount   Count packets of an Ogg file
-  countrw       Rewrite via packets and display a count of pages produced
-  pagecount     Count pages of an Ogg file
-  help          Display help information
 
 Please report bugs to [ogg-dev at xiph.org]
 </pre>
-<p>
 </p>
 
 <h2>Documentation</h2>

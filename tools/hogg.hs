@@ -45,6 +45,7 @@ data SubCommand =
   SubCommand {
     subName :: String,
     subMethod :: Hot (),
+    subCategory :: String,
     subSynopsis :: String
   }
 
@@ -251,7 +252,7 @@ outputPerChain = L.concat
 
 infoSub :: SubCommand
 infoSub = SubCommand "info" info
-    "Display information about the file and its bitstreams"
+    "Reporting" "Display information about the file and its bitstreams"
 
 info :: Hot ()
 info = do
@@ -266,7 +267,7 @@ info = do
 
 dumpPacketsSub :: SubCommand
 dumpPacketsSub = SubCommand "dump" dumpPackets
-    "Hexdump packets of an Ogg file"
+    "Reporting" "Hexdump packets of an Ogg file"
 
 dumpPackets :: Hot ()
 dumpPackets = do
@@ -280,7 +281,7 @@ dumpPackets = do
 
 countPacketsSub :: SubCommand
 countPacketsSub = SubCommand "packetcount" countPackets
-    "Count packets of an Ogg file" 
+    "Testing" "Count packets of an Ogg file" 
 
 countPackets :: Hot ()
 countPackets = do
@@ -295,7 +296,7 @@ countPackets = do
 
 rewritePagesSub :: SubCommand
 rewritePagesSub = SubCommand "rip" rewritePages
-    "Rip selected logical bistreams from an Ogg file (default: all)"
+    "Extraction" "Rip selected logical bistreams from an Ogg file (default: all)"
 
 rewritePages :: Hot ()
 rewritePages = do
@@ -310,7 +311,7 @@ rewritePages = do
 
 rewritePacketsSub :: SubCommand
 rewritePacketsSub = SubCommand "reconstruct" rewritePackets
-    "Reconstruct an Ogg file by doing a full packet demux"
+    "Extraction" "Reconstruct an Ogg file by doing a full packet demux"
 
 rewritePackets :: Hot ()
 rewritePackets = do
@@ -325,7 +326,7 @@ rewritePackets = do
 
 addSkelSub :: SubCommand
 addSkelSub = SubCommand "addskel" addSkel
-  "Write a Skeleton logical bitstream"
+  "Editing" "Write a Skeleton logical bitstream"
 
 addSkel :: Hot ()
 addSkel = do
@@ -343,7 +344,7 @@ addSkel = do
 
 countrwPagesSub :: SubCommand
 countrwPagesSub = SubCommand "countrw" countrwPages
-    "Rewrite via packets and display a count of pages produced"
+    "Testing" "Rewrite via packets and display a count of pages produced"
 
 countrwPages :: Hot ()
 countrwPages = do
@@ -358,7 +359,7 @@ countrwPages = do
 
 countPagesSub :: SubCommand
 countPagesSub = SubCommand "pagecount" countPages
-    "Count pages of an Ogg file" 
+    "Testing" "Count pages of an Ogg file" 
 
 countPages :: Hot ()
 countPages = do
@@ -373,7 +374,7 @@ countPages = do
 
 dumpPagesSub :: SubCommand
 dumpPagesSub = SubCommand "pagedump" dumpPages
-    "Display page structure of an Ogg file"
+    "Reporting" "Display page structure of an Ogg file"
 
 dumpPages :: Hot ()
 dumpPages = do
@@ -388,7 +389,7 @@ dumpPages = do
 
 mergePagesSub :: SubCommand
 mergePagesSub = SubCommand "merge" mergePages
-    "Merge, interleaving pages in order of presentation time"
+    "Editing" "Merge, interleaving pages in order of presentation time"
 
 mergePages :: Hot ()
 mergePages = do
@@ -405,7 +406,7 @@ mergePages = do
 
 dumpRawPagesSub :: SubCommand
 dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
-    "Dump raw (unparsed) page data"
+    "Reporting" "Dump raw (unparsed) page data"
 
 dumpRawPages :: Hot ()
 dumpRawPages = do
@@ -419,7 +420,7 @@ dumpRawPages = do
 
 helpSub :: SubCommand
 helpSub = SubCommand "help" help
-  "Display help information"
+  "Commands" "Display help for a specific subcommand"
 
 help :: Hot ()
 help = do
@@ -429,23 +430,29 @@ help = do
 longHelp :: [String] -> [String]
 -- | "hogg help" with no arguments: Give a list of all subcommands
 longHelp [] =
-    ["Usage: hogg <subcommand> [options] filename ...\n\n",
-     "Available subcommands:\n"] ++
-    map itemHelp subCommands ++
-    ["\nPlease report bugs to <ogg-dev@xiph.org>\n"]
-    where
-        itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
+    ["Usage: hogg <subcommand> [options] filename ...\n\n"] ++
+    map categoryHelp ["Commands", "Reporting", "Extraction", "Editing"] ++
+    -- map categoryHelp ["Testing"] ++
+    ["Please report bugs to <ogg-dev@xiph.org>\n"]
 
 -- | "hogg help command": Give command-specific help
 longHelp (command:_) = contextHelp command m
   where m = filter (\x -> subName x == command) subCommands
 
+-- | Provide synopses for a specific category of commands
+categoryHelp :: String -> String
+categoryHelp c = c ++ ":\n" ++ concat (map itemHelp items) ++ "\n"
+  where items = filter (\x -> subCategory x == c) subCommands
+        itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
+
+-- | Provide detailed help for a specific command
 contextHelp command [] = longHelp [] ++ contextError
   where contextError = ["\n*** \"" ++ command ++ "\": Unknown command.\n"]
 contextHelp command (item:_) = synopsis ++ usage ++ ["\n" ++ optionsHelp command]
   where usage = ["Usage: hogg " ++ command ++ " [options] filename\n"]
         synopsis = [command ++ ": " ++ subSynopsis item ++ "\n"]
 
+-- | Provide usage information [for a specific command]
 optionsHelp command = usageInfo "Options:" options
 
 ------------------------------------------------------------
