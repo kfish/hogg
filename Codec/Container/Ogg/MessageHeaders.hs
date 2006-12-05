@@ -9,7 +9,8 @@
 module Codec.Container.Ogg.MessageHeaders (
   MessageHeaders(..),
   mhEmpty,
-  mhSingleton
+  mhSingleton,
+  mhAppend
 ) where
 
 import Data.List as List

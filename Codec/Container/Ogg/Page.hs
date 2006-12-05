@@ -145,11 +145,11 @@ pageProcess :: Int64 -> [OggTrack]
             -> ([OggTrack], [OggPage], L.ByteString) -- to return from pageScan'
 pageProcess _ _ (Left rest) = ([], [], rest)
 pageProcess offset tracks (Right (newPage, pageLen, rest, mNewTrack, aBOS)) =
-  (newTrack ++ nextTracks, newPage : nextPages, nextRest)
+  (lNewTrack ++ nextTracks, newPage : nextPages, nextRest)
   where
     (nextTracks, nextPages, nextRest) = pageScan' aBOS (offset+pageLen) newTracks rest
-    newTrack = maybeToList mNewTrack
-    newTracks = newTrack ++ tracks
+    lNewTrack = maybeToList mNewTrack
+    newTracks = lNewTrack ++ tracks
 
 -- | Parse the given ByteString, and either detect the end of the chain, or
 -- build one OggPage data structure
@@ -190,8 +190,8 @@ findOrAddTrack s d t = foat fTrack
     fTrack = find (\x -> trackSerialno x == s) t
     foat :: Maybe OggTrack -> (Maybe OggTrack, OggTrack)
     foat (Just track) = (Nothing, track)
-    foat Nothing      = (Just newTrack, newTrack)
-    newTrack = bosToTrack s d
+    foat Nothing      = (Just bTrack, bTrack)
+    bTrack = bosToTrack s d
 
 -- splitSegments accum segtab body
 splitSegments :: Int -> [Int] -> L.ByteString -> [L.ByteString]
