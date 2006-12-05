@@ -8,6 +8,14 @@ cmml insert
 cmml extract
 cmml -> anx
 
+read/write vorbiscomments
+
+filter: subcommand to rewrite serialno, inc/dec granulepos of matching tracks
+
+optimize: remux the pages to avoid packet splitting
+
+chop: extract a section [start, end] of a file
+
 splice/edit (concat data from different files if the encoding parms are the
 same, or cut/edit bits from the same file)
 
