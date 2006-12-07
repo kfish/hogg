@@ -8,6 +8,8 @@ cmml insert
 cmml extract
 cmml -> anx
 
+rewrite flac0 as flac (is this just a matter of changing the BOS?)
+
 read/write vorbiscomments
 
 filter: subcommand to rewrite serialno, inc/dec granulepos of matching tracks
