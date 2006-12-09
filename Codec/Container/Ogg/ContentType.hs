@@ -22,6 +22,7 @@ import qualified Data.ByteString.Lazy as L
 import Data.Char
 import Data.Map (fromList)
 import Data.Maybe
+import Data.Ratio
 
 import Text.Printf
 
@@ -29,6 +30,7 @@ import Codec.Container.Ogg.ByteFields
 import Codec.Container.Ogg.Granulerate
 import Codec.Container.Ogg.MessageHeaders
 import Codec.Container.Ogg.Timestamp
+import Codec.Container.Ogg.TimeScheme
 
 ------------------------------------------------------------
 -- Data
@@ -174,12 +176,16 @@ theoraGranuleshift d = (h40 .|. h41)
 theoraMetadata :: L.ByteString -> MessageHeaders
 theoraMetadata d = MessageHeaders (fromList headerVals)
   where headerVals = [framerate, width, height]
-        framerate = ("Video-Framerate", [printf "%.3f fps" fps])
+        framerate = ("Video-Framerate", [printf "%.3f fps%s" fps tsName])
         width = ("Video-Width", [show w])
         height = ("Video-Height", [show h])
         toDouble :: Integer -> Double -- monomorphic cast to double
         toDouble x = (fromIntegral x) :: Double
-        fps = toDouble (be32At 22 d) / toDouble (be32At 26 d)
+        fps = toDouble fpsN / toDouble fpsD
+        mTS = guessTimeScheme (fpsN % fpsD)
+        tsName = maybe "" (\x -> " (" ++ show x ++ ")") mTS
+        fpsN = be32At 22 d
+        fpsD = be32At 26 d
         w = ((be16At 10 d) * 16) :: Int
         h = ((be16At 12 d) * 16) :: Int
 

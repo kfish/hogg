@@ -26,6 +26,7 @@ Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Granulerate
                      Codec.Container.Ogg.Skeleton
                      Codec.Container.Ogg.Track
+                     Codec.Container.Ogg.TimeScheme
                      Codec.Container.Ogg.Timestamp
 Other-modules:       Codec.Container.Ogg.ByteFields
                      Codec.Container.Ogg.CRC
