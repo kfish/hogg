@@ -30,28 +30,39 @@ Usage:
 
 		hogg help <subcommand>
 
+        Info about the various tracks of one or more files:
+
+                hogg info file1.ogg file2.ogg ...
+
 	Dump packets of an Ogg file:
 
-		hogg dump file.ogg
+		hogg dump file1.ogg file2.ogg ...
 
 	Dump pages of an Ogg file
 
-		hogg pagedump file.ogg
+		hogg pagedump file1.ogg file2.ogg ...
 
 	Dump vorbis (theora, speex) packets
 
-		hogg dump -c vorbis file.ogg
-		hogg pagedump -c vorbis file.ogg
-		hogg dumpraw -c vorbis file.ogg
+		hogg dump -c vorbis file.ogg ...
+		hogg pagedump -c vorbis file.ogg ...
+		hogg dumpraw -c vorbis file.ogg ...
+
+        Merge
+ 
+          merge pages from many input files and produce a single output file:
+
+                hogg merge -o output.ogg file1.ogg file2.ogg file3.ogg ...
+
 
 Checking stuff works:
 
 	Rewrite a file (parse pages, rewrite page data):
 
-		hogg rewrite file.ogg > newfile.ogg
+		hogg rip file.ogg > newfile.ogg
 		diff file.ogg newfile.ogg
 
 	Repacket a file (parse to packets, rewrite with original segmentation):
 
-		hogg repacket file.ogg > newfile.ogg
+		hogg reconstruct file.ogg > newfile.ogg
 		diff file.ogg newfile.ogg
