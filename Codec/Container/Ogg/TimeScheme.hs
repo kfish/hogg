@@ -8,8 +8,7 @@
 
 module Codec.Container.Ogg.TimeScheme (
   TimeScheme (..),
-  guessTimeScheme,
-  readTimeScheme
+  guessTimeScheme
 ) where
 
 import Data.Char
@@ -31,18 +30,25 @@ knownTimeSchemes :: [TimeScheme]
 knownTimeSchemes = [npt, smpte24, smpte24drop, smpte25, smpte25drop,
                     smpte30, smpte30drop, smpte50, smpte60, smpte60drop]
 
--- | Read a string representation of a TimeScheme
-readTimeScheme :: String -> Maybe TimeScheme
-readTimeScheme s = listToMaybe $ filter sameName knownTimeSchemes
-  where
-    sameName = \x ->  l (timeSchemeName x) == l s
-    l = map toLower
-
--- | Read a string representation of a TimeScheme
+-- | Guess the TimeScheme by rate
 guessTimeScheme :: Rational -> Maybe TimeScheme
 guessTimeScheme r = listToMaybe $ filter sameRate knownTimeSchemes
   where
     sameRate = \x ->  timeSchemeRate x == r
+
+------------------------------------------------------------
+-- Read
+--
+
+instance Read TimeScheme where
+  readsPrec _ = readsTimeScheme
+
+readsTimeScheme :: ReadS TimeScheme
+readsTimeScheme str = [(scheme, rest) | scheme <- matches]
+  where (tok, rest) = span (\x -> isAlphaNum x || x == '-') str
+        matches = filter sameName knownTimeSchemes
+        sameName = \x ->  l (timeSchemeName x) == l tok
+        l = map toLower
 
 ------------------------------------------------------------
 -- Show
