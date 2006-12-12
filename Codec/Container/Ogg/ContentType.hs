@@ -66,8 +66,29 @@ parseType (Just s) = listToMaybe $ filter (\x ->  l (label x) == l s) known
   where
     l = map toLower
 
+------------------------------------------------------------
+-- Eq
+--
+
 instance Eq ContentType where
   (==) a b = label a == label b
+
+------------------------------------------------------------
+-- Read
+--
+
+instance Read ContentType where
+  readsPrec _ = readsContentType
+
+readsContentType :: ReadS ContentType
+readsContentType str = [(c, rest) | (tok, rest) <- lex str, c <- matches tok]
+  where matches = \m -> filter (sameLabel m) known
+        sameLabel m = \x ->  l (label x) == l m
+        l = map toLower
+
+------------------------------------------------------------
+-- Show
+--
 
 instance Show ContentType where
   show x = label x
