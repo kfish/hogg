@@ -77,7 +77,6 @@ timeSum :: Rational -> ParsedTimeStamp -> [(Int, Int)]
 timeSum rate (ParsedTimeStamp hh mm ss subs) = case subs of
     Left ms -> [((t 1000 1 ms), 1000)]
     Right ff -> [((t n d ff), n)]
-    _ -> []
   where
       n = fromIntegral $ numerator rate
       d = fromIntegral $ denominator rate
@@ -115,12 +114,23 @@ readTime str = maybe [] (\x -> [(x, rest)]) parsed
           return $ ParsedTimeStamp h m s (Left ms)
 
         fDigits a = do
-          s <- twoDigits a
-          let r = (s, 0)
+          let (ss:mss) = split '.' a
+          s <- twoDigits ss
+          ms <- threeDigits $ safeHead mss
+          let r = (s, ms)
           return r
+
+        safeHead [] = []
+        safeHead (x:_) = x
 
         twoDigits [a,b] = Just (10 * (digitToInt a) + digitToInt b)
         twoDigits _ = Nothing
+
+        threeDigits (a:b:c:_) =
+          Just (100 * (digitToInt a) + 10 * (digitToInt b) + digitToInt c)
+        threeDigits [a,b] = Just (100 * (digitToInt a) + 10 * digitToInt b)
+        threeDigits [a] = Just (100 * digitToInt a)
+        threeDigits [] = Just 0
 
 split :: Eq a => a -> [a] -> [[a]]
 split delim s
