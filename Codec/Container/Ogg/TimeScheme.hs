@@ -8,7 +8,18 @@
 
 module Codec.Container.Ogg.TimeScheme (
   TimeScheme (..),
-  guessTimeScheme
+  guessTimeScheme,
+
+  -- | Some standard time schemes
+  smpte24,
+  smpte24drop,
+  smpte25,
+  smpte25drop,
+  smpte30,
+  smpte30drop,
+  smpte50,
+  smpte60,
+  smpte60drop
 ) where
 
 import Data.Char
