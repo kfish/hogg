@@ -50,36 +50,77 @@ instance Show Timestamp where
 -- Read
 --
 
+data ParsedTimeStamp =
+  ParsedTimeStamp {
+    hours :: Int
+    , minutes :: Int
+    , seconds :: Int
+    , subseconds :: Either Int Int -- Left ms or Right frames
+  }
+
 instance Read Timestamp where
   readsPrec _ = readsTimestamp
 
 readsTimestamp :: ReadS Timestamp
 readsTimestamp str = [(stamp, rest) |
                       (scheme, r) <- reads str :: [(TimeScheme, String)],
-                      (time, rest) <- readTime r,
+                      (time, rest) <- readTime $ tail r,
                       stamp <- makeStamp scheme time]
 
-makeStamp :: TimeScheme -> [Int] -> [Timestamp]
-makeStamp scheme ts = [Timestamp (Just (n, d))]
+makeStamp :: TimeScheme -> ParsedTimeStamp -> [Timestamp]
+makeStamp scheme ts = map rToTs (timeSum rate ts)
   where
-     rate = timeSchemeRate scheme
-     d = fromIntegral $ numerator rate
-     n = (timeSum ts) * (fromIntegral $ numerator rate)
+    rate = timeSchemeRate scheme
+    rToTs x = Timestamp (Just x)
 
-timeSum :: [Int] -> Int
-timeSum [] = 0
-timeSum [ss] = ss
-timeSum [mm, ss] = mm*60 + ss
-timeSum [hh, mm, ss] = hh*3600 + mm*60 + ss
+timeSum :: Rational -> ParsedTimeStamp -> [(Int, Int)]
+timeSum rate (ParsedTimeStamp hh mm ss subs) = case subs of
+    Left ms -> [((t 1000 1 ms), 1000)]
+    Right ff -> [((t n d ff), n)]
+    _ -> []
+  where
+      n = fromIntegral $ numerator rate
+      d = fromIntegral $ denominator rate
+      t tn td z = fromIntegral $ ((hh*60 +mm)*60 +ss)*tn + td*z
 
-readTime :: String -> [([Int], String)]
-readTime str = [(nums, rest)]
+readTime :: String -> [(ParsedTimeStamp, String)]
+readTime str = maybe [] (\x -> [(x, rest)]) parsed
   where 
-        (t, rest) = span (\x -> isAlphaNum x || x == ':') str
+        (t, rest) = span (\x -> isAlphaNum x || x == ':' || x == '.') str
         flam = split ':' t
-        nums = catMaybes $ map trogdor flam
-        trogdor [] = Nothing
-        trogdor [a,b] = Just (10 * (digitToInt a) + digitToInt b)
+        parsed :: Maybe ParsedTimeStamp
+        parsed = case flam of
+          [hh, mm, ss, "", ff] -> fromFrames hh mm ss ff
+          [mm, ss, "", ff] -> fromFrames "00" mm ss ff
+          [ss, "", ff] -> fromFrames "00" "00" ss ff
+          ["", ff] -> fromFrames "00" "00" "00" ff
+          [hh, mm, ss] -> fromNPT hh mm ss
+          [mm, ss] -> fromNPT "00" mm ss
+          [ss] -> fromNPT "00" "00" ss
+          _ -> Nothing
+
+        fromFrames :: String -> String -> String -> String
+                   -> Maybe ParsedTimeStamp
+        fromFrames hh mm ss ff = do
+          h <- twoDigits hh
+          m <- twoDigits mm
+          s <- twoDigits ss
+          f <- twoDigits ff
+          return $ ParsedTimeStamp h m s (Right f)
+
+        fromNPT hh mm ss = do
+          h <- twoDigits hh
+          m <- twoDigits mm
+          (s, ms) <- fDigits ss
+          return $ ParsedTimeStamp h m s (Left ms)
+
+        fDigits a = do
+          s <- twoDigits a
+          let r = (s, 0)
+          return r
+
+        twoDigits [a,b] = Just (10 * (digitToInt a) + digitToInt b)
+        twoDigits _ = Nothing
 
 split :: Eq a => a -> [a] -> [[a]]
 split delim s
