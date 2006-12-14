@@ -38,7 +38,15 @@ import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.TimeScheme
 
 ------------------------------------------------------------
--- Data
+-- | Typeclass: ContentTyped
+--
+
+class ContentTyped a where
+  contentTypeIs :: ContentType -> a -> Bool
+  contentTypeOf :: a -> Maybe ContentType
+
+------------------------------------------------------------
+-- | Data: ContentType
 --
 
 data ContentType =
@@ -96,14 +104,6 @@ readsContentType str = [(c, rest) | (tok, rest) <- lex str, c <- matches tok]
 
 instance Show ContentType where
   show x = label x
-
-------------------------------------------------------------
--- ContentTyped
---
-
-class ContentTyped a where
-  contentTypeIs :: ContentType -> a -> Bool
-  contentTypeOf :: a -> Maybe ContentType
 
 ------------------------------------------------------------
 -- Skeleton

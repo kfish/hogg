@@ -12,8 +12,6 @@ module Codec.Container.Ogg.Packet (
   uncutPacket,
   packetsToPages,
   pagesToPackets,
-  packetTimestamp,
-  packetIsType,
   packetToBS
 ) where
 
@@ -52,29 +50,22 @@ data OggSegment =
   }
 
 ------------------------------------------------------------
--- Predicates
+-- Custom Instances
 --
 
-packetIsType :: ContentType -> OggPacket -> Bool
-packetIsType t p = trackIsType t (packetTrack p)
-
 instance ContentTyped OggPacket where
-  contentTypeIs = packetIsType
+  contentTypeIs t p = contentTypeIs t (packetTrack p)
   contentTypeOf p = trackType (packetTrack p)
+
+instance Timestampable OggPacket where
+  timestampOf p = gpToTimestamp gp track
+    where
+      gp = packetGranulepos p
+      track = packetTrack p
 
 ------------------------------------------------------------
 -- Helpers
 --
-
--- | Calculate the timestamp of a packet
-packetTimestamp :: OggPacket -> Maybe Timestamp
-packetTimestamp p = timestamp
-  where gp = packetGranulepos p
-        track = packetTrack p
-        timestamp =  gpToTimestamp gp track
-
-instance Timestampable OggPacket where
-  timestampOf = packetTimestamp
 
 -- | Create a packet which spans a single page, ie. consists of only
 -- one segment
@@ -286,7 +277,7 @@ packetToBS p@(OggPacket d track gp bos eos _) = {-# SCC "packetToBS" #-}
     flags = ifb ++ ife
     ifb = if bos then " *** bos" else ""
     ife = if eos then " *** eos" else ""
-    ts = maybe "--:--:--::--" show (packetTimestamp p)
+    ts = maybe "--:--:--::--" show (timestampOf p)
     t = maybe "(Unknown)" show (trackType track)
     pDump = hexDump d
 
@@ -301,5 +292,5 @@ instance Show OggPacket where
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
-          ts = maybe "--:--:--::--" show (packetTimestamp p)
+          ts = maybe "--:--:--::--" show (timestampOf p)
           t = maybe "(Unknown)" show (trackType track)

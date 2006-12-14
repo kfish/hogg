@@ -8,11 +8,9 @@
 
 module Codec.Container.Ogg.Page (
   OggPage (..),
-  pageTimestamp,
   pageScan,
   pageWrite,
-  pageLength,
-  pageIsType
+  pageLength
 ) where
 
 import Codec.Container.Ogg.ByteFields
@@ -60,27 +58,20 @@ pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
           incplt = pageIncomplete g
           s = pageSegments g
 
--- | Calculate the timestamp of a page
-pageTimestamp :: OggPage -> Maybe Timestamp
-pageTimestamp g = timestamp
-  where gp = pageGranulepos g
-        track = pageTrack g
-        timestamp =  gpToTimestamp gp track
-
-instance Timestampable OggPage where
-  timestampOf = pageTimestamp
-
 ------------------------------------------------------------
--- Predicates
+-- Custom Instances
 --
 
--- | Determine whether a page is of a given content type
-pageIsType :: ContentType -> OggPage -> Bool
-pageIsType t g = trackIsType t (pageTrack g)
-
 instance ContentTyped OggPage where
-  contentTypeIs t g = trackIsType t (pageTrack g)
+  contentTypeIs t g = contentTypeIs t (pageTrack g)
   contentTypeOf g = trackType (pageTrack g)
+
+instance Timestampable OggPage where
+  -- | Calculate the timestamp of a page
+  timestampOf g = gpToTimestamp gp track
+    where
+      gp = pageGranulepos g
+      track = pageTrack g
 
 ------------------------------------------------------------
 -- pageWrite
@@ -220,16 +211,16 @@ splitSegments accum segments body
 
 instance Eq OggPage where
   (==) g1 g2 = (==) t1 t2
-    where t1 = pageTimestamp g1
-          t2 = pageTimestamp g2
+    where t1 = timestampOf g1
+          t2 = timestampOf g2
 
 instance Ord OggPage where
   compare g1 g2
     | pageBOS g1 = LT
     | pageBOS g2 = GT
     | otherwise = compare t1 t2
-    where t1 = pageTimestamp g1
-          t2 = pageTimestamp g2
+    where t1 = timestampOf g1
+          t2 = timestampOf g2
 
 ------------------------------------------------------------
 -- Show
@@ -244,5 +235,5 @@ instance Show OggPage where
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
           off = printf "0x%08x" ((fromIntegral o) :: Int)
-          ts = maybe "--:--:--::--" show (pageTimestamp g)
+          ts = maybe "--:--:--::--" show (timestampOf g)
           t = maybe "(Unknown)" show (trackType track)

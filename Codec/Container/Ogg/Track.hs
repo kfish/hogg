@@ -8,7 +8,6 @@
 
 module Codec.Container.Ogg.Track (
   OggTrack (..),
-  trackIsType,
   newTrack,
   nullTrack,
   bosToTrack,
