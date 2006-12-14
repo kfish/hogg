@@ -60,7 +60,7 @@ pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
           s = pageSegments g
 
 -- | Calculate the timestamp of a page
-pageTimestamp :: OggPage -> Timestamp
+pageTimestamp :: OggPage -> Maybe Timestamp
 pageTimestamp g = timestamp
   where gp = pageGranulepos g
         track = pageTrack g
@@ -229,12 +229,12 @@ instance Ord OggPage where
 
 instance Show OggPage where
   show g@(OggPage o track cont incplt bos eos gp _ segment_table) =
-    off ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength g) ++ " bytes\n" ++ "\t" ++ show (map L.length segment_table) ++ " " ++ show ts ++ "\n" ++ "\n"
+    off ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength g) ++ " bytes\n" ++ "\t" ++ show (map L.length segment_table) ++ " " ++ ts ++ "\n" ++ "\n"
     where flags = ifc ++ ift ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ift = if incplt then " (incplt)" else ""
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
           off = printf "0x%08x" ((fromIntegral o) :: Int)
-          ts = pageTimestamp g
+          ts = maybe "--:--:--::--" show (pageTimestamp g)
           t = maybe "(Unknown)" show (trackType track)

@@ -17,30 +17,34 @@ import Text.Printf
 
 import Codec.Container.Ogg.TimeScheme
 
-newtype Timestamp = Timestamp (Maybe (Int, Int))
-  deriving Eq
+data Timestamp =
+  Timestamp {
+    stamp :: Rational
+  }
+  -- deriving Ord, Eq
 
 ------------------------------------------------------------
 -- Ord
 --
 
 instance Ord Timestamp where
-  compare (Timestamp Nothing) _ = EQ
-  compare _ (Timestamp Nothing) = EQ
-  compare (Timestamp (Just (n1, d1))) (Timestamp (Just (n2, d2))) =
-    compare (n1 % d1) (n2 % d2)
+  compare (Timestamp r1) (Timestamp r2) = compare r1 r2
+
+instance Eq Timestamp where
+  (Timestamp r1) == (Timestamp r2) = r1 == r2
 
 ------------------------------------------------------------
 -- Show
 --
 
 instance Show Timestamp where
-  show (Timestamp Nothing) = "--:--:--.---"
-  show (Timestamp (Just (n, d)))
+  show (Timestamp r)
     | d == 0    = "00:00:00.000"
     | d < 100   = printf "%02d:%02d:%02d::%02d" hrs minN secN framesN
     | otherwise = printf "%02d:%02d:%02d.%03d" hrs minN secN msN
     where
+          n = numerator r
+          d = denominator r
           msN = quot (1000 * framesN) d
           (secT, framesN) = quotRem n d
           (minT, secN) = quotRem secT 60
@@ -52,35 +56,35 @@ instance Show Timestamp where
 
 data ParsedTimeStamp =
   ParsedTimeStamp {
-    hours :: Int
-    , minutes :: Int
-    , seconds :: Int
-    , subseconds :: Either Int Int -- Left ms or Right frames
+    hours :: Integer
+    , minutes :: Integer
+    , seconds :: Integer
+    , subseconds :: Either Integer Integer -- Left ms or Right frames
   }
 
 instance Read Timestamp where
   readsPrec _ = readsTimestamp
 
 readsTimestamp :: ReadS Timestamp
-readsTimestamp str = [(stamp, rest) |
+readsTimestamp str = [(t, rest) |
                       (scheme, r) <- reads str :: [(TimeScheme, String)],
                       (time, rest) <- readTime $ tail r,
-                      stamp <- makeStamp scheme time]
+                      t <- makeStamp scheme time]
 
 makeStamp :: TimeScheme -> ParsedTimeStamp -> [Timestamp]
 makeStamp scheme ts = map rToTs (timeSum rate ts)
   where
     rate = timeSchemeRate scheme
-    rToTs x = Timestamp (Just x)
+    rToTs x = Timestamp x
 
-timeSum :: Rational -> ParsedTimeStamp -> [(Int, Int)]
+timeSum :: Rational -> ParsedTimeStamp -> [Rational]
 timeSum rate (ParsedTimeStamp hh mm ss subs) = case subs of
-    Left ms -> [((t 1000 1 ms), 1000)]
-    Right ff -> [((t n d ff), n)]
+    Left ms -> [((t 1000 1 ms) % 1000)]
+    Right ff -> [((t n d ff) % n)]
   where
-      n = fromIntegral $ numerator rate
-      d = fromIntegral $ denominator rate
-      t tn td z = fromIntegral $ ((hh*60 +mm)*60 +ss)*tn + td*z
+      n = numerator rate
+      d = denominator rate
+      t tn td z = ((hh*60 +mm)*60 +ss)*tn + td*z
 
 readTime :: String -> [(ParsedTimeStamp, String)]
 readTime str = maybe [] (\x -> [(x, rest)]) parsed
@@ -120,16 +124,18 @@ readTime str = maybe [] (\x -> [(x, rest)]) parsed
           let r = (s, ms)
           return r
 
+        dig = fromIntegral . digitToInt
+
         safeHead [] = []
         safeHead (x:_) = x
 
-        twoDigits [a,b] = Just (10 * (digitToInt a) + digitToInt b)
+        twoDigits [a,b] = Just (10 * (dig a) + dig b)
         twoDigits _ = Nothing
 
         threeDigits (a:b:c:_) =
-          Just (100 * (digitToInt a) + 10 * (digitToInt b) + digitToInt c)
-        threeDigits [a,b] = Just (100 * (digitToInt a) + 10 * digitToInt b)
-        threeDigits [a] = Just (100 * digitToInt a)
+          Just (100 * (dig a) + 10 * (dig b) + dig c)
+        threeDigits [a,b] = Just (100 * (dig a) + 10 * dig b)
+        threeDigits [a] = Just (100 * dig a)
         threeDigits [] = Just 0
 
 split :: Eq a => a -> [a] -> [[a]]

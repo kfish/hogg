@@ -70,14 +70,14 @@ bosToTrack s d = OggTrack s ctype gr gs mh
     mh = maybe mhEmpty (\x -> metadata x d) ctype
 
 -- | Convert a granulepos to a timestamp
-gpToTimestamp :: Granulepos -> OggTrack -> Timestamp
+gpToTimestamp :: Granulepos -> OggTrack -> Maybe Timestamp
 gpToTimestamp mgp track
-  | g == Nothing = Timestamp Nothing
-  | r == Nothing = Timestamp Nothing
-  | otherwise    = Timestamp timestamp
+  | g == Nothing = Nothing
+  | r == Nothing = Nothing
+  | otherwise    = Just (Timestamp timestamp)
   where g = gpToGranules mgp track
         r = trackGranulerate track
-        timestamp = Just (fromIntegral granules*d, fromIntegral n)
+        timestamp = (granules*d) % n
         n = numerator gr
         d = denominator gr
         Just granules = g

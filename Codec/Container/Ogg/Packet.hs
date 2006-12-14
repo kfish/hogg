@@ -62,7 +62,7 @@ packetIsType t p = trackIsType t (packetTrack p)
 --
 
 -- | Calculate the timestamp of a packet
-packetTimestamp :: OggPacket -> Timestamp
+packetTimestamp :: OggPacket -> Maybe Timestamp
 packetTimestamp p = timestamp
   where gp = packetGranulepos p
         track = packetTrack p
@@ -274,11 +274,11 @@ packetToBS :: OggPacket -> C.ByteString
 packetToBS p@(OggPacket d track gp bos eos _) = {-# SCC "packetToBS" #-}
   C.concat [C.pack pHdr, pDump, C.singleton '\n']
   where
-    pHdr = show ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
+    pHdr = ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
     flags = ifb ++ ife
     ifb = if bos then " *** bos" else ""
     ife = if eos then " *** eos" else ""
-    ts = packetTimestamp p
+    ts = maybe "--:--:--::--" show (packetTimestamp p)
     t = maybe "(Unknown)" show (trackType track)
     pDump = hexDump d
 
@@ -288,10 +288,10 @@ packetToBS p@(OggPacket d track gp bos eos _) = {-# SCC "packetToBS" #-}
 
 instance Show OggPacket where
   show p@(OggPacket d track gp bos eos _) = {-# SCC "showOggPacket" #-}
-    show ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
+    ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
     -- ++ (hexDump d) ++ "\n"
     where flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
-          ts = packetTimestamp p
+          ts = maybe "--:--:--::--" show (packetTimestamp p)
           t = maybe "(Unknown)" show (trackType track)

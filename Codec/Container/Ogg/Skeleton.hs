@@ -86,7 +86,7 @@ z :: Int
 z = 0
 
 zTimestamp :: Timestamp
-zTimestamp = Timestamp (Just (0, 0))
+zTimestamp = Timestamp (0%1)
 
 emptyFishead :: OggFishead
 emptyFishead = OggFishead zTimestamp zTimestamp
@@ -112,8 +112,9 @@ fisheadWrite (OggFishead p b) = newFisheadData
     uData = L.concat $ List.map le64Fill [z, z]
 
 timestampFill :: Timestamp -> L.ByteString
-timestampFill (Timestamp Nothing) = L.concat $ List.map le64Fill [z, z]
-timestampFill (Timestamp (Just (n, d))) = L.concat $ List.map le64Fill [n, d]
+timestampFill (Timestamp r) = L.concat $ List.map le64Fill [n, d]
+  where n = numerator r
+        d = denominator r
 
 ------------------------------------------------------------
 -- fisboneToPacket

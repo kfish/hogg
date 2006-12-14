@@ -116,10 +116,17 @@ skeletonIdent = L.pack [0x66, 0x69, 0x73, 0x68, 0x65, 0x61, 0x64, 0x00]
 skeletonMetadata :: L.ByteString -> MessageHeaders
 skeletonMetadata d = MessageHeaders (fromList headerVals)
   where headerVals = [prestime, basetime]
-        prestime = ("Presentation-Time", [show p])
-        basetime = ("Basetime", [show b])
-        p = Timestamp (Just (le64At 12 d, le64At 20 d))
-        b = Timestamp (Just (le64At 28 d, le64At 36 d))
+        prestime = ("Presentation-Time", [show (t 12 20)])
+        basetime = ("Basetime", [show (t 28 36)])
+
+        -- | Read a timestamp encoded as a (le64,le64) rational, where a
+        -- denominator of 0 is interepreted as the result being 0.
+        t o1 o2 = case od of
+          0 -> Timestamp (0 % 1)
+          _ -> Timestamp (on % od)
+          where
+            on = le64At o1 d
+            od = le64At o2 d
 
 ------------------------------------------------------------
 -- CMML
