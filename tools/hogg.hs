@@ -190,7 +190,7 @@ tracks = do
   where
     trackMatch :: Maybe ContentType -> [OggTrack] -> [OggTrack]
     trackMatch Nothing ts = ts
-    trackMatch (Just t) ts = filter (trackIsType t) ts
+    trackMatch (Just t) ts = filter (contentTypeIs t) ts
 
 -- All pages, from all files, matching the given criteria
 pages :: Hot [[[OggPage]]]
@@ -198,14 +198,7 @@ pages = do
     c <- chains
     let allPages = map (map chainPages) c
     config <- asks hotConfig
-    return $ map (map (pageMatch config)) allPages
-  where
-    pageMatch :: Config -> [OggPage] -> [OggPage]
-    pageMatch c@(Config ctype _ start end _) gs = case ctype of
-        Nothing -> b
-        Just t -> filter (pageIsType t) b
-      where
-        b = between start end gs
+    return $ map (map (matchRange config)) allPages
 
 -- All packets, from all files, matching the given criteria
 packets :: Hot [[[OggPacket]]]
@@ -213,14 +206,14 @@ packets = do
     c <- chains
     let allPackets = map (map chainPackets) c
     config <- asks hotConfig
-    return $ map (map (packetMatch config)) allPackets
+    return $ map (map (matchRange config)) allPackets
+
+matchRange :: (ContentTyped a, Timestampable a) => Config -> [a] -> [a]
+matchRange c@(Config ctype _ start end _) xs = case ctype of
+    Nothing -> b
+    Just t -> filter (contentTypeIs t) b
   where
-    packetMatch :: Config -> [OggPacket] -> [OggPacket]
-    packetMatch c@(Config ctype _ start end _) ps = case ctype of
-        Nothing -> b
-        Just t -> filter (packetIsType t) b
-      where
-        b = between start end ps
+    b = between start end xs
 
 ------------------------------------------------------------
 -- Output helpers

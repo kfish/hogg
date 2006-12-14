@@ -42,7 +42,7 @@ data OggTrack =
   }
 
 ------------------------------------------------------------
---
+-- ContentTyped
 --
 
 -- | Predicate
@@ -51,6 +51,14 @@ trackIsType t0 track
   | (Just t0) == t1  = True
   | otherwise        = False
   where t1 = trackType track
+
+instance ContentTyped OggTrack where
+  contentTypeIs = trackIsType
+  contentTypeOf = trackType
+
+------------------------------------------------------------
+--
+--
 
 -- | The null track
 nullTrack :: OggTrack

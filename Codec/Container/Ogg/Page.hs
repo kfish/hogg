@@ -78,6 +78,10 @@ instance Timestampable OggPage where
 pageIsType :: ContentType -> OggPage -> Bool
 pageIsType t g = trackIsType t (pageTrack g)
 
+instance ContentTyped OggPage where
+  contentTypeIs t g = trackIsType t (pageTrack g)
+  contentTypeOf g = trackType (pageTrack g)
+
 ------------------------------------------------------------
 -- pageWrite
 --

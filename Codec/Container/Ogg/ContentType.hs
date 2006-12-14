@@ -13,6 +13,11 @@ module Codec.Container.Ogg.ContentType (
   granuleshift,
   parseType,
 
+  -- ContentTyped typeclass
+  ContentTyped,
+  contentTypeIs,
+  contentTypeOf,
+
   -- Some guaranteed-known content-types
   skeleton
 ) where
@@ -91,6 +96,14 @@ readsContentType str = [(c, rest) | (tok, rest) <- lex str, c <- matches tok]
 
 instance Show ContentType where
   show x = label x
+
+------------------------------------------------------------
+-- ContentTyped
+--
+
+class ContentTyped a where
+  contentTypeIs :: ContentType -> a -> Bool
+  contentTypeOf :: a -> Maybe ContentType
 
 ------------------------------------------------------------
 -- Skeleton

@@ -58,6 +58,10 @@ data OggSegment =
 packetIsType :: ContentType -> OggPacket -> Bool
 packetIsType t p = trackIsType t (packetTrack p)
 
+instance ContentTyped OggPacket where
+  contentTypeIs = packetIsType
+  contentTypeOf p = trackType (packetTrack p)
+
 ------------------------------------------------------------
 -- Helpers
 --
