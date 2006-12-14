@@ -15,6 +15,7 @@ import Text.Printf
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.List
+import Data.Maybe (fromJust)
 
 import Codec.Container.Ogg.Chain
 import Codec.Container.Ogg.ContentType
@@ -23,6 +24,7 @@ import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Packet
 import Codec.Container.Ogg.RawPage
 import Codec.Container.Ogg.Skeleton
+import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
 ------------------------------------------------------------
@@ -71,8 +73,10 @@ subCommands = [
 
 data Config =
   Config {
-    contentTypeCfg :: Maybe String,
+    contentTypeCfg :: Maybe ContentType,
     outputCfg :: Maybe String,
+    startCfg :: Maybe Timestamp,
+    endCfg :: Maybe Timestamp,
     files :: [FilePath]
   }
 
@@ -80,6 +84,8 @@ dftConfig =
   Config {
     contentTypeCfg = Nothing,
     outputCfg = Nothing,
+    startCfg = Nothing,
+    endCfg = Nothing,
     files = ["-"]
   }
 
@@ -88,6 +94,8 @@ dftConfig =
 data Option = Help
             | ContentTypeOpt String
             | OutputOpt String
+            | StartOpt String
+            | EndOpt String
             deriving Eq
 
 options :: [OptDescr Option]
@@ -95,6 +103,10 @@ options = [ Option ['h', '?'] ["help"] (NoArg Help)
               "Display this help and exit"
           , Option ['c']      ["content-type"] (ReqArg ContentTypeOpt "Content-Type")
               "Select the logical bitstreams for a specified content type"
+          , Option ['s']      ["start"] (ReqArg StartOpt "Timestamp")
+              "Specify a start time"
+          , Option ['e']      ["end"] (ReqArg EndOpt "Timestamp")
+              "Specify an end time"
           , Option ['o']      ["output"] (ReqArg OutputOpt "filename")
               "Specify output filename"
           ]
@@ -124,9 +136,13 @@ processConfig :: Config -> [Option] -> IO Config
 processConfig = foldM processOneOption
   where
     processOneOption config (ContentTypeOpt ctype) =
-      return $ config {contentTypeCfg = Just ctype}
+      return $ config {contentTypeCfg = parseType ctype}
     processOneOption config (OutputOpt output) =
       return $ config {outputCfg = Just output}
+    processOneOption config (StartOpt start) =
+      return $ config {startCfg = Just (read start)}
+    processOneOption config (EndOpt end) =
+      return $ config {endCfg = Just (read end)}
 
 ------------------------------------------------------------
 -- Hot: actions for getting Ogg data from the input files
@@ -160,7 +176,7 @@ tracks = do
     c <- chains
     let allTracks = map (map chainTracks) c
     config <- asks hotConfig
-    let ctype = parseType $ contentTypeCfg config
+    let ctype = contentTypeCfg config
     return $ map (map (trackMatch ctype)) allTracks
   where
     trackMatch :: Maybe ContentType -> [OggTrack] -> [OggTrack]
@@ -170,17 +186,24 @@ tracks = do
 -- All pages, from all files, matching the given criteria
 pages :: Hot [[[OggPage]]]
 pages = do
-    config <- asks hotConfig
-    let ctype = parseType $ contentTypeCfg config
     c <- chains
     let allPages = map (map chainPages) c
     config <- asks hotConfig
-    let ctype = parseType $ contentTypeCfg config
-    return $ map (map (pageMatch ctype)) allPages
+    return $ map (map (pageMatch config)) allPages
   where
-    pageMatch :: Maybe ContentType -> [OggPage] -> [OggPage]
-    pageMatch Nothing gs = gs
-    pageMatch (Just t) gs = filter (pageIsType t) gs
+    pageMatch :: Config -> [OggPage] -> [OggPage]
+    pageMatch c@(Config ctype _ start end _) gs = case ctype of
+        Nothing -> between
+        Just t -> filter (pageIsType t) between
+      where
+        between = case start of
+          Nothing -> takeWhile (before end) gs
+          _       -> takeWhile (before end) (dropWhile (before start) gs)
+        before :: Maybe Timestamp -> OggPage -> Bool
+        before Nothing _ = True
+        before (Just b) g = t == Nothing || (fromJust t) < b
+          where
+            t = pageTimestamp g
 
 -- All packets, from all files, matching the given criteria
 packets :: Hot [[[OggPacket]]]
@@ -188,12 +211,21 @@ packets = do
     c <- chains
     let allPackets = map (map chainPackets) c
     config <- asks hotConfig
-    let ctype = parseType $ contentTypeCfg config
-    return $ map (map (packetMatch ctype)) allPackets
+    return $ map (map (packetMatch config)) allPackets
   where
-    packetMatch :: Maybe ContentType -> [OggPacket] -> [OggPacket]
-    packetMatch Nothing ps = ps
-    packetMatch (Just t) ps = filter (packetIsType t) ps
+    packetMatch :: Config -> [OggPacket] -> [OggPacket]
+    packetMatch c@(Config ctype _ start end _) ps = case ctype of
+        Nothing -> between
+        Just t -> filter (packetIsType t) between
+      where
+        between = case start of
+          Nothing -> takeWhile (before end) ps
+          _       -> takeWhile (before end) (dropWhile (before start) ps)
+        before :: Maybe Timestamp -> OggPacket -> Bool
+        before Nothing _ = True
+        before (Just b) p = t == Nothing || (fromJust t) < b
+          where
+            t = packetTimestamp p
 
 ------------------------------------------------------------
 -- Output helpers

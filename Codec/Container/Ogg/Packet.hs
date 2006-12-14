@@ -12,6 +12,7 @@ module Codec.Container.Ogg.Packet (
   uncutPacket,
   packetsToPages,
   pagesToPackets,
+  packetTimestamp,
   packetIsType,
   packetToBS
 ) where

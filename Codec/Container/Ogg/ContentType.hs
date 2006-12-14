@@ -60,9 +60,8 @@ granulerate c d = maybe Nothing (\f -> Just (f d)) (granulerateF c)
 granuleshift :: ContentType -> L.ByteString -> Maybe Int
 granuleshift c d = maybe Nothing (\f -> Just (f d)) (granuleshiftF c)
 
-parseType :: Maybe String -> Maybe ContentType
-parseType Nothing = Nothing
-parseType (Just s) = listToMaybe $ filter (\x ->  l (label x) == l s) known
+parseType :: String -> Maybe ContentType
+parseType s = listToMaybe $ filter (\x ->  l (label x) == l s) known
   where
     l = map toLower
 

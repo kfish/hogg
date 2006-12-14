@@ -8,6 +8,7 @@
 
 module Codec.Container.Ogg.Page (
   OggPage (..),
+  pageTimestamp,
   pageScan,
   pageWrite,
   pageLength,
