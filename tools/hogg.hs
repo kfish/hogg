@@ -136,7 +136,8 @@ processConfig :: Config -> [Option] -> IO Config
 processConfig = foldM processOneOption
   where
     processOneOption config (ContentTypeOpt ctype) = do
-      let c = catchRead "Invalid content type" ctype
+      -- let c = catchRead "Invalid content type" ctype
+      let c = parseType ctype
       return $ config {contentTypeCfg = c}
     processOneOption config (OutputOpt output) = do
       return $ config {outputCfg = Just output}
