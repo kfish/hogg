@@ -135,14 +135,22 @@ processHelp opts = do
 processConfig :: Config -> [Option] -> IO Config
 processConfig = foldM processOneOption
   where
-    processOneOption config (ContentTypeOpt ctype) =
-      return $ config {contentTypeCfg = parseType ctype}
-    processOneOption config (OutputOpt output) =
+    processOneOption config (ContentTypeOpt ctype) = do
+      let c = catchRead "Invalid content type" ctype
+      return $ config {contentTypeCfg = c}
+    processOneOption config (OutputOpt output) = do
       return $ config {outputCfg = Just output}
-    processOneOption config (StartOpt start) =
-      return $ config {startCfg = Just (read start)}
-    processOneOption config (EndOpt end) =
-      return $ config {endCfg = Just (read end)}
+    processOneOption config (StartOpt start) = do
+      let s = catchRead "Invalid start time" start
+      return $ config {startCfg = Just s}
+    processOneOption config (EndOpt end) = do
+      let e = catchRead "Invalid end time" end
+      return $ config {endCfg = Just e}
+
+catchRead :: (Read a) => String -> String -> a
+catchRead msg x = case reads x of
+    [] -> error (msg ++ ": " ++ x)
+    [(ms,mt)] -> ms
 
 ------------------------------------------------------------
 -- Hot: actions for getting Ogg data from the input files
