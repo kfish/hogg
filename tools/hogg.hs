@@ -201,17 +201,10 @@ pages = do
   where
     pageMatch :: Config -> [OggPage] -> [OggPage]
     pageMatch c@(Config ctype _ start end _) gs = case ctype of
-        Nothing -> between
-        Just t -> filter (pageIsType t) between
+        Nothing -> b
+        Just t -> filter (pageIsType t) b
       where
-        between = case start of
-          Nothing -> takeWhile (before end) gs
-          _       -> takeWhile (before end) (dropWhile (before start) gs)
-        before :: Maybe Timestamp -> OggPage -> Bool
-        before Nothing _ = True
-        before (Just b) g = t == Nothing || (fromJust t) < b
-          where
-            t = pageTimestamp g
+        b = between start end gs
 
 -- All packets, from all files, matching the given criteria
 packets :: Hot [[[OggPacket]]]
@@ -223,17 +216,10 @@ packets = do
   where
     packetMatch :: Config -> [OggPacket] -> [OggPacket]
     packetMatch c@(Config ctype _ start end _) ps = case ctype of
-        Nothing -> between
-        Just t -> filter (packetIsType t) between
+        Nothing -> b
+        Just t -> filter (packetIsType t) b
       where
-        between = case start of
-          Nothing -> takeWhile (before end) ps
-          _       -> takeWhile (before end) (dropWhile (before start) ps)
-        before :: Maybe Timestamp -> OggPacket -> Bool
-        before Nothing _ = True
-        before (Just b) p = t == Nothing || (fromJust t) < b
-          where
-            t = packetTimestamp p
+        b = between start end ps
 
 ------------------------------------------------------------
 -- Output helpers

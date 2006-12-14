@@ -7,7 +7,11 @@
 -- Portability : portable
 
 module Codec.Container.Ogg.Timestamp (
-  Timestamp (..)
+  Timestamp (..),
+  Timestampable,
+  timestampOf,
+  between,
+  before
 ) where
 
 import Data.Char
@@ -143,3 +147,22 @@ split delim s
   | rest == [] = [token]
   | otherwise  = token : split delim (tail rest)
   where (token, rest) = span (/= delim) s
+
+------------------------------------------------------------
+-- Timestampable
+--
+
+class Timestampable a where
+  timestampOf :: a -> Maybe Timestamp
+
+between :: (Timestampable a) => Maybe Timestamp -> Maybe Timestamp -> [a] -> [a]
+between start end xs = case start of
+  Nothing -> takeWhile (before end) xs
+  _       -> takeWhile (before end) (dropWhile (before start) xs)
+
+before :: (Timestampable a) => Maybe Timestamp -> a -> Bool
+before Nothing _ = True
+before (Just b) x = t == Nothing || (fromJust t) < b
+  where
+    t = timestampOf x
+

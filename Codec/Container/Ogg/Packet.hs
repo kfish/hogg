@@ -69,6 +69,9 @@ packetTimestamp p = timestamp
         track = packetTrack p
         timestamp =  gpToTimestamp gp track
 
+instance Timestampable OggPacket where
+  timestampOf = packetTimestamp
+
 -- | Create a packet which spans a single page, ie. consists of only
 -- one segment
 uncutPacket :: L.ByteString -> OggTrack -> Granulepos -> OggPacket

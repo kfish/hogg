@@ -67,6 +67,9 @@ pageTimestamp g = timestamp
         track = pageTrack g
         timestamp =  gpToTimestamp gp track
 
+instance Timestampable OggPage where
+  timestampOf = pageTimestamp
+
 ------------------------------------------------------------
 -- Predicates
 --
