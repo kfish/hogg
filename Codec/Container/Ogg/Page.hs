@@ -67,7 +67,6 @@ instance ContentTyped OggPage where
   contentTypeOf g = trackType (pageTrack g)
 
 instance Timestampable OggPage where
-  -- | Calculate the timestamp of a page
   timestampOf g = gpToTimestamp gp track
     where
       gp = pageGranulepos g
