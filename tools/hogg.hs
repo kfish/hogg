@@ -183,38 +183,31 @@ chains = do
 
 -- All tracks, from all files, matching the given criteria
 tracks :: Hot [[[OggTrack]]]
-tracks = do
-    c <- chains
-    let allTracks = map (map chainTracks) c
-    config <- asks hotConfig
-    let ctype = contentTypeCfg config
-    return $ map (map (trackMatch ctype)) allTracks
-  where
-    trackMatch :: Maybe ContentType -> [OggTrack] -> [OggTrack]
-    trackMatch Nothing ts = ts
-    trackMatch (Just t) ts = filter (contentTypeIs t) ts
+tracks = chainMatch chainTracks
 
 -- All pages, from all files, matching the given criteria
 pages :: Hot [[[OggPage]]]
-pages = do
-    c <- chains
-    let allPages = map (map chainPages) c
-    config <- asks hotConfig
-    return $ map (map (matchType config)) allPages
+pages = chainMatch chainPages
 
 -- All packets, from all files, matching the given criteria
 packets :: Hot [[[OggPacket]]]
-packets = do
+packets = chainMatch chainPackets
+
+-- | A generic function to pull a list of things from a chain
+chainMatch :: (ContentTyped a) => (OggChain -> [a]) -> Hot [[[a]]]
+chainMatch f = do
     c <- chains
-    let allPackets = map (map chainPackets) c
-    config <- asks hotConfig
-    return $ map (map (matchType config)) allPackets
+    let all = map (map f) c
+    matching <- sequence $ (map (mapM matchType)) all
+    return matching
 
 -- | Filter a ContentTyped list by the given content type
-matchType :: (ContentTyped a) => Config -> [a] -> [a]
-matchType c@(Config ctype _ _ _ _) xs = case ctype of
-    Nothing -> xs
-    Just t -> filter (contentTypeIs t) xs
+matchType :: (ContentTyped a) => [a] -> Hot [a]
+matchType xs = do
+    config <- asks hotConfig
+    return $ case (contentTypeCfg config) of
+      Nothing -> xs
+      Just t -> filter (contentTypeIs t) xs
 
 -- | Filter a Timestampable list by the given time range
 matchRange :: (Timestampable a) => Config -> [a] -> [a]
