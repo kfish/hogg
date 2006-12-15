@@ -198,20 +198,28 @@ chainMatch :: (ContentTyped a) => (OggChain -> [a]) -> Hot [[[a]]]
 chainMatch f = do
     c <- chains
     let all = map (map f) c
-    matching <- sequence $ (map (mapM matchType)) all
+    matching <- sequence $ (map (mapM mType)) all
     return matching
 
 -- | Filter a ContentTyped list by the given content type
-matchType :: (ContentTyped a) => [a] -> Hot [a]
-matchType xs = do
+mType :: (ContentTyped a) => [a] -> Hot [a]
+mType xs = do
     config <- asks hotConfig
     return $ case (contentTypeCfg config) of
       Nothing -> xs
       Just t -> filter (contentTypeIs t) xs
 
+-- | Apply matchRange to all the inner inner lists
+matchRange :: (Timestampable a) => [[[a]]] -> Hot [[[a]]]
+matchRange all = do
+    matching <- sequence $ (map (mapM mRange)) all
+    return matching
+
 -- | Filter a Timestampable list by the given time range
-matchRange :: (Timestampable a) => Config -> [a] -> [a]
-matchRange c@(Config _ _ start end _) xs = between start end xs
+mRange :: (Timestampable a) => [a] -> Hot [a]
+mRange xs = do
+    config <- asks hotConfig
+    return $ between (startCfg config) (endCfg config) xs
 
 ------------------------------------------------------------
 -- Output helpers
@@ -289,7 +297,7 @@ dumpPacketsSub = SubCommand "dump" dumpPackets
 
 dumpPackets :: Hot ()
 dumpPackets = do
-    matchPackets <- packets
+    matchPackets <- matchRange =<< packets
     let d = \x -> reportPerChain $ map (C.concat . map packetToBS) x
     reportPerFile $ map d matchPackets
 
@@ -303,7 +311,7 @@ countPacketsSub = SubCommand "packetcount" countPackets
 
 countPackets :: Hot ()
 countPackets = do
-    matchPackets <- packets
+    matchPackets <- matchRange =<< packets
     let c = \x -> C.pack $ show (length x) ++ " packets\n"
     let r = \x -> reportPerChain $ map c x
     reportPerFile $ map r matchPackets
@@ -401,7 +409,7 @@ countPagesSub = SubCommand "pagecount" countPages
 
 countPages :: Hot ()
 countPages = do
-    matchPages <- pages
+    matchPages <- matchRange =<< pages
     let c = \x -> C.pack $ printf "%d pages\n" (length x)
     let r = \x -> reportPerChain $ map c x
     reportPerFile $ map r matchPages
@@ -416,7 +424,7 @@ dumpPagesSub = SubCommand "pagedump" dumpPages
 
 dumpPages :: Hot ()
 dumpPages = do
-    matchPages <- pages
+    matchPages <- matchRange =<< pages
     let d = \x -> C.concat $ map (C.pack . show) x
     let r = \x -> reportPerChain $ map d x
     reportPerFile $ map r matchPages
