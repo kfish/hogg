@@ -19,6 +19,7 @@ Build-Depends:       base, fps, mtl, HUnit
 -- For GHC 6.6, fps is built in
 -- Build-Depends:       base, mtl, HUnit
 Exposed-modules:     Codec.Container.Ogg.Chain
+                     Codec.Container.Ogg.Chop
                      Codec.Container.Ogg.RawPage
                      Codec.Container.Ogg.Page
                      Codec.Container.Ogg.Packet

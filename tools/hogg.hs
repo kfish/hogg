@@ -18,6 +18,7 @@ import Data.List
 import Data.Maybe (fromJust)
 
 import Codec.Container.Ogg.Chain
+import Codec.Container.Ogg.Chop
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.ListMerge
 import Codec.Container.Ogg.Page
@@ -60,6 +61,7 @@ subCommands = [
                rewritePagesSub,
                rewritePacketsSub,
                mergePagesSub,
+               chopSub,
                addSkelSub,
                countPacketsSub,
                countrwPagesSub,
@@ -198,7 +200,7 @@ pages = do
     c <- chains
     let allPages = map (map chainPages) c
     config <- asks hotConfig
-    return $ map (map (matchRange config)) allPages
+    return $ map (map (matchType config)) allPages
 
 -- All packets, from all files, matching the given criteria
 packets :: Hot [[[OggPacket]]]
@@ -206,14 +208,17 @@ packets = do
     c <- chains
     let allPackets = map (map chainPackets) c
     config <- asks hotConfig
-    return $ map (map (matchRange config)) allPackets
+    return $ map (map (matchType config)) allPackets
 
-matchRange :: (ContentTyped a, Timestampable a) => Config -> [a] -> [a]
-matchRange c@(Config ctype _ start end _) xs = case ctype of
-    Nothing -> b
-    Just t -> filter (contentTypeIs t) b
-  where
-    b = between start end xs
+-- | Filter a ContentTyped list by the given content type
+matchType :: (ContentTyped a) => Config -> [a] -> [a]
+matchType c@(Config ctype _ _ _ _) xs = case ctype of
+    Nothing -> xs
+    Just t -> filter (contentTypeIs t) xs
+
+-- | Filter a Timestampable list by the given time range
+matchRange :: (Timestampable a) => Config -> [a] -> [a]
+matchRange c@(Config _ _ start end _) xs = between start end xs
 
 ------------------------------------------------------------
 -- Output helpers
@@ -339,6 +344,26 @@ rewritePackets = do
     let r = \x -> L.concat $ map pageWrite (packetsToPages x)
     let r2 = \x -> outputPerChain $ map r x
     outputPerFile $ map r2 matchPackets
+
+------------------------------------------------------------
+-- chop
+--
+
+chopSub :: SubCommand
+chopSub = SubCommand "chop" chopPages
+  "Editing" "Chop a subrange out"
+
+chopPages :: Hot ()
+chopPages = do
+    config <- asks hotConfig
+    matchPages <- pages
+    let chopPages = map (map (chopRange config)) matchPages
+    let r = \x -> L.concat $ map pageWrite x
+    let r2 = \x -> outputPerChain $ map r x
+    outputPerFile $ map r2 chopPages
+
+chopRange :: Config -> [OggPage] -> [OggPage]
+chopRange c@(Config _ _ start end _) xs = chop start end xs
 
 ------------------------------------------------------------
 -- addSkel (addskel)

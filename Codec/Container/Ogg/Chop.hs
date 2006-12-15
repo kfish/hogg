@@ -1,0 +1,132 @@
+--
+-- Module      : Chop
+-- Copyright   : (c) Conrad Parker 2006
+-- License     : BSD-style
+-- Maintainer  : conradp@cse.unsw.edu.au
+-- Stability   : experimental
+-- Portability : portable
+
+module Codec.Container.Ogg.Chop (
+  chop
+) where
+
+import Codec.Container.Ogg.Page
+import Codec.Container.Ogg.Timestamp
+
+------------------------------------------------------------
+-- Types
+--
+
+data ChopTrack =
+  ChopTrack {
+    carry :: [OggPage]
+  }
+
+------------------------------------------------------------
+-- chop
+--
+
+chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
+chop Nothing Nothing gs = gs
+chop Nothing mEnd@(Just end) gs = takeWhile (before mEnd) gs
+chop (Just start) mEnd (g:gs) = case (timestampOf g) of
+  Nothing -> g : (chop (Just start) mEnd gs)
+  (Just gTime) -> case (compare start gTime) of
+    LT -> chop Nothing mEnd (g:gs)
+    _ -> chop (Just start) mEnd gs
+
+{-
+import qualified Data.ByteString.Lazy as L
+import Data.Maybe
+import Data.Word (Word32)
+
+import System.Random
+
+import Codec.Container.Ogg.ContentType
+import Codec.Container.Ogg.Granulepos
+import Codec.Container.Ogg.Track
+import Codec.Container.Ogg.Page
+import Codec.Container.Ogg.Packet
+import Codec.Container.Ogg.Skeleton
+
+-- Make a special instance of Random for Word32 that does not include
+-- 0xffffffff, as this value is treated specailly by libogg
+instance Random Word32 where
+  randomR = integralRandomR
+  random = randomR (0,0xffffffff-1)
+
+integralRandomR :: (Integral a, RandomGen g) => (a,a) -> g -> (a,g)
+integralRandomR  (a,b) g = case randomR (fromIntegral a :: Integer,
+                                         fromIntegral b :: Integer) g of
+                            (x,g') -> (fromIntegral x, g')
+
+-- | Add a Skeleton logical bitstream to an OggChain
+chainAddSkeleton :: OggChain -> IO OggChain
+chainAddSkeleton chain = do
+  serialno <- getStdRandom random
+  return $ chainAddSkeleton' serialno chain
+
+-- | Add a Skeleton logical bitstream with a given serialno to an OggChain
+chainAddSkeleton' :: Word32 -> OggChain -> OggChain
+chainAddSkeleton' serialno (OggChain tracks _ packets) = OggChain nt ng np
+  where
+    nt = [skelTrack] ++ tracks
+    ng = packetsToPages np
+    np = [fh] ++ ixBoss ++ ixFisbones ++ ixHdrs ++ [sEOS] ++ ixD
+
+    -- Construct a new track for the Skeleton
+    skelTrack = (newTrack serialno){trackType = Just skeleton}
+
+    -- Create the fishead and fisbone packets (all with pageIx 0)
+    fh = fisheadToPacket skelTrack emptyFishead
+    fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks
+
+    -- Separate out the BOS pages of the input
+    (boss, rest) = span packetBOS packets
+
+    -- Increment the pageIx of these original BOS pages by 1, as the
+    -- Skeleton fishead packet is being prepended
+    ixBoss = map (incPageIx 1) boss
+
+    -- Split the remainder of the input into headers and data
+    (hdrs, d) = splitAt totHeaders rest
+
+    -- ... for which we determine the total number of header pages
+    totHeaders = foldl (+) 0 tracksNHeaders
+    tracksNHeaders = map headers $ mapMaybe trackType tracks
+
+    -- Increment the pageIx of the original data packets by the number of
+    -- Skeleton pages
+    ixHdrs = map (incPageIx (1 + length fbs)) hdrs
+    ixD = map (incPageIx (2 + length fbs)) d
+
+    -- Set the pageIx of the fisbones in turn, beginning after the last
+    -- BOS page
+    ixFisbones = zipWith setPageIx [1+(length tracks)..] fbs
+
+    -- Generate an EOS packet for the Skeleton track
+    sEOS = (uncutPacket L.empty skelTrack sEOSgp){packetEOS = True}
+    sEOSgp = Granulepos (Just 0)
+
+-- An internal function for setting the pageIx of the segment of a packet.
+-- This is only designed for working with packets which are known to only
+-- and entirely span one page, such as Skeleton fisbones.
+setPageIx :: Int -> OggPacket -> OggPacket
+setPageIx ix p@(OggPacket _ _ _ _ _ (Just [oldSegment])) =
+  p{packetSegments = Just [newSegment]}
+  where
+    newSegment = oldSegment{segmentPageIx = ix}
+setPageIx _ _ = error "setPageIx used on non-uncut page"
+
+-- An internal function for incrementing the pageIx of all the segments of
+-- a packet.
+incPageIx :: Int -> OggPacket -> OggPacket
+incPageIx ixd p@(OggPacket _ _ _ _ _ (Just segments)) =
+  p{packetSegments = Just (map incSegIx segments)}
+  where
+    incSegIx :: OggSegment -> OggSegment
+    incSegIx s@(OggSegment _ oix _) = s{segmentPageIx = oix + ixd}
+-- Otherwise, the packet has no segmentation info so leave it untouched
+incPageIx _ p = p
+
+-}
