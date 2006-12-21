@@ -7,8 +7,13 @@
 -- Portability : portable
 
 module Codec.Container.Ogg.Chop (
+  Chop1,
+  runChop1,
+  chop1,
   chop
 ) where
+
+import Control.Monad.Identity
 
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Timestamp
@@ -21,6 +26,21 @@ data ChopTrack =
   ChopTrack {
     carry :: [OggPage]
   }
+
+type Chop1 a = Identity a
+
+runChop1 :: Chop1 a -> a
+runChop1 x = runIdentity x
+
+chop1 :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop1 [OggPage]
+chop1 Nothing Nothing gs = return gs
+chop1 Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
+chop1 (Just start) mEnd (g:gs) = case (timestampOf g) of
+  Nothing -> do
+    return g >> (chop1 (Just start) mEnd gs)
+  (Just gTime) -> case (compare start gTime) of
+    LT -> chop1 Nothing mEnd (g:gs)
+    _ -> chop1 (Just start) mEnd gs
 
 ------------------------------------------------------------
 -- chop
