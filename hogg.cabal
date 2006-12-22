@@ -6,7 +6,7 @@ Copyright:           Conrad Parker, 2006
 Author:              Conrad Parker
 Maintainer:          conradp@cse.unsw.edu.au
 Stability:           experimental
-Homepage:            http://www.annodex.net/~conrad/software/hogg.html
+Homepage:            http://snapper.kfish.org/~conrad/software/hogg/
 Synopsis:            Library and tools to manipulate the Ogg container format
 Description:
   The HOgg package provides a commandline tool for manipulating Ogg files.
@@ -20,6 +20,8 @@ Build-Depends:       base, fps, mtl, HUnit
 -- Build-Depends:       base, mtl, HUnit
 Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Chop
+                     Codec.Container.Ogg.ContentType
+                     Codec.Container.Ogg.ListMerge
                      Codec.Container.Ogg.RawPage
                      Codec.Container.Ogg.Page
                      Codec.Container.Ogg.Packet
@@ -32,7 +34,7 @@ Exposed-modules:     Codec.Container.Ogg.Chain
 Other-modules:       Codec.Container.Ogg.ByteFields
                      Codec.Container.Ogg.CRC
                      Codec.Container.Ogg.Dump
-                     Codec.Container.Ogg.ListMerge
+                     Codec.Container.Ogg.MessageHeaders
 ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields 
 -- ghc-options:         -prof -auto-all
 
