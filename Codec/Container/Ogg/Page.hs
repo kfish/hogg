@@ -227,8 +227,9 @@ instance Ord OggPage where
 
 instance Show OggPage where
   show g@(OggPage o track cont incplt bos eos gp _ segment_table) =
-    off ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (pageLength g) ++ " bytes\n" ++ "\t" ++ show (map L.length segment_table) ++ " " ++ ts ++ "\n" ++ "\n"
-    where flags = ifc ++ ift ++ ifb ++ ife
+    off ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ gpe ++ flags ++ ": " ++ show (pageLength g) ++ " bytes\n" ++ "\t" ++ show (map L.length segment_table) ++ " " ++ ts ++ "\n" ++ "\n"
+    where gpe = gpExplain gp track
+          flags = ifc ++ ift ++ ifb ++ ife
           ifc = if cont then " (cont)" else ""
           ift = if incplt then " (incplt)" else ""
           ifb = if bos then " *** bos" else ""

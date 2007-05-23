@@ -273,7 +273,8 @@ packetToBS :: OggPacket -> C.ByteString
 packetToBS p@(OggPacket d track gp bos eos _) = {-# SCC "packetToBS" #-}
   C.concat [C.pack pHdr, pDump, C.singleton '\n']
   where
-    pHdr = ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
+    pHdr = ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ gpe ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
+    gpe = gpExplain gp track
     flags = ifb ++ ife
     ifb = if bos then " *** bos" else ""
     ife = if eos then " *** eos" else ""
@@ -287,9 +288,10 @@ packetToBS p@(OggPacket d track gp bos eos _) = {-# SCC "packetToBS" #-}
 
 instance Show OggPacket where
   show p@(OggPacket d track gp bos eos _) = {-# SCC "showOggPacket" #-}
-    ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ show gp ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
+    ts ++ ": " ++ t ++ " serialno " ++ show (trackSerialno track) ++ ", granulepos " ++ gpe ++ flags ++ ": " ++ show (L.length d) ++ " bytes\n"
     -- ++ (hexDump d) ++ "\n"
-    where flags = ifb ++ ife
+    where gpe = gpExplain gp track
+          flags = ifb ++ ife
           ifb = if bos then " *** bos" else ""
           ife = if eos then " *** eos" else ""
           ts = maybe "--:--:--::--" show (timestampOf p)

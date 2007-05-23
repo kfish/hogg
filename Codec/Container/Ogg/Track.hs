@@ -11,7 +11,8 @@ module Codec.Container.Ogg.Track (
   newTrack,
   nullTrack,
   bosToTrack,
-  gpToTimestamp
+  gpToTimestamp,
+  gpExplain
 ) where
 
 import qualified Data.ByteString.Lazy as L
@@ -89,6 +90,14 @@ gpToTimestamp mgp track
         d = denominator gr
         Just granules = g
         Just (Granulerate gr) = r
+
+gpExplain :: Granulepos -> OggTrack -> String
+gpExplain mgp track
+  | s == Nothing = show mgp
+  | delta == 0   = show mgp
+  | otherwise    = show keyframe ++ "|" ++ show delta
+  where s = gpSplit mgp track
+        Just (keyframe, delta) = s
 
 -- | Convert a granluepos to a count of granules
 gpToGranules :: Granulepos -> OggTrack -> Maybe Integer
