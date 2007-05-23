@@ -7,6 +7,9 @@ import Control.Monad.Reader
 import Control.Monad
 import Control.Exception
 
+import Network.HTTP (rspBody)
+import Network.HTTP.UserAgent as UA
+
 import System.Environment (getArgs, getProgName)
 import System.Console.GetOpt
 
@@ -161,10 +164,14 @@ catchRead msg x = case reads x of
 
 -- get the named contents as a bytestring
 open :: String -> IO L.ByteString
-open f = do
-    h <- openFile f ReadMode
-    i <- L.hGetContents h
-    return i
+open f = case (isPrefixOf "http://" f) of
+    True -> do
+      rsp <- UA.get f
+      return $ rspBody rsp
+    False -> do
+      h <- openFile f ReadMode
+      i <- L.hGetContents h
+      return i
 
 -- rawpages is used only by "hogg dumpraw"
 rawpages :: Hot [[OggRawPage]]

@@ -17,7 +17,7 @@ Category:            Codec
 -- For GHC 6.4 etc., we require external fps (Data.ByteString.Lazy)
 -- Build-Depends:       base, fps, mtl, HUnit
 -- For GHC 6.6, fps is built in
-Build-Depends:       base, mtl, HUnit
+Build-Depends:       base, mtl, HUnit, HTTP1
 Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Chop
                      Codec.Container.Ogg.ContentType
