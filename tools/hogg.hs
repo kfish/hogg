@@ -159,27 +159,26 @@ catchRead msg x = case reads x of
 -- Hot: actions for getting Ogg data from the input files
 --
 
+-- get the named contents as a bytestring
+open :: String -> IO L.ByteString
+open f = do
+    h <- openFile f ReadMode
+    i <- L.hGetContents h
+    return i
+
 -- rawpages is used only by "hogg dumpraw"
 rawpages :: Hot [[OggRawPage]]
 rawpages = do
     filenames <- asks hotFilenames
-    handles <- mapM ioOpenReadFile filenames
-    inputs <- mapM ioGetContents handles
+    inputs <- mapM (liftIO . open) filenames
     return $ map rawPageScan inputs
-  where
-    ioOpenReadFile f = liftIO $ openFile f ReadMode
-    ioGetContents = liftIO . L.hGetContents
 
 -- chains, tracks, pages, packets
 chains :: Hot [[OggChain]]
 chains = do
     filenames <- asks hotFilenames
-    handles <- mapM ioOpenReadFile filenames
-    inputs <- mapM ioGetContents handles
+    inputs <- mapM (liftIO . open) filenames
     return $ map chainScan inputs
-  where
-    ioOpenReadFile f = liftIO $ openFile f ReadMode
-    ioGetContents = liftIO . L.hGetContents
 
 -- All tracks, from all files, matching the given criteria
 tracks :: Hot [[[OggTrack]]]
