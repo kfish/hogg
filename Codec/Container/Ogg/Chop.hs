@@ -7,9 +7,6 @@
 -- Portability : portable
 
 module Codec.Container.Ogg.Chop (
-  Chop1,
-  runChop1,
-  chop1,
   chop
 ) where
 
@@ -27,12 +24,12 @@ data ChopTrack =
     carry :: [OggPage]
   }
 
-type Chop1 a = Identity a
+type Chop a = Identity a
 
-runChop1 :: Chop1 a -> a
-runChop1 x = runIdentity x
+runChop :: Chop a -> a
+runChop x = runIdentity x
 
-chop1 :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop1 [OggPage]
+chop1 :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chop1 Nothing Nothing gs = return gs
 chop1 Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
 chop1 (Just start) mEnd (g:gs) = case (timestampOf g) of
@@ -42,10 +39,14 @@ chop1 (Just start) mEnd (g:gs) = case (timestampOf g) of
     LT -> chop1 Nothing mEnd (g:gs)
     _ -> chop1 (Just start) mEnd gs
 
+chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
+chop start end xs = runChop (chop1 start end xs)
+
 ------------------------------------------------------------
 -- chop
 --
 
+{-
 chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
 chop Nothing Nothing gs = gs
 chop Nothing mEnd@(Just end) gs = takeWhile (before mEnd) gs
@@ -54,6 +55,7 @@ chop (Just start) mEnd (g:gs) = case (timestampOf g) of
   (Just gTime) -> case (compare start gTime) of
     LT -> chop Nothing mEnd (g:gs)
     _ -> chop (Just start) mEnd gs
+-}
 
 {-
 import qualified Data.ByteString.Lazy as L

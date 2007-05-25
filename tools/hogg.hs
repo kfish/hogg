@@ -370,8 +370,8 @@ chopPages = do
     outputPerFile $ map r2 chopPages
 
 chopRange :: Config -> [OggPage] -> [OggPage]
--- chopRange c@(Config _ _ start end _) xs = chop start end xs
-chopRange c@(Config _ _ start end _) xs = runChop1 (chop1 start end xs)
+chopRange c@(Config _ _ start end _) xs = chop start end xs
+-- chopRange c@(Config _ _ start end _) xs = runChop (chop1 start end xs)
 
 ------------------------------------------------------------
 -- addSkel (addskel)
