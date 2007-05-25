@@ -27,6 +27,7 @@ Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Packet
                      Codec.Container.Ogg.Granulepos
                      Codec.Container.Ogg.Granulerate
+                     Codec.Container.Ogg.Serial
                      Codec.Container.Ogg.Skeleton
                      Codec.Container.Ogg.Track
                      Codec.Container.Ogg.TimeScheme

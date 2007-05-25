@@ -14,15 +14,13 @@ module Codec.Container.Ogg.Chain (
 
 import qualified Data.ByteString.Lazy as L
 import Data.Maybe
-import Data.Word (Word32)
-
-import System.Random
 
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Track
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Packet
+import Codec.Container.Ogg.Serial
 import Codec.Container.Ogg.Skeleton
 
 -- | A section of a chained Ogg physical bitstream. This corresponds to
@@ -48,25 +46,14 @@ chainScan d
 -- chainAddSkeleton
 --
 
--- Make a special instance of Random for Word32 that does not include
--- 0xffffffff, as this value is treated specailly by libogg
-instance Random Word32 where
-  randomR = integralRandomR
-  random = randomR (0,0xffffffff-1)
-
-integralRandomR :: (Integral a, RandomGen g) => (a,a) -> g -> (a,g)
-integralRandomR  (a,b) g = case randomR (fromIntegral a :: Integer,
-                                         fromIntegral b :: Integer) g of
-                            (x,g') -> (fromIntegral x, g')
-
 -- | Add a Skeleton logical bitstream to an OggChain
 chainAddSkeleton :: OggChain -> IO OggChain
 chainAddSkeleton chain = do
-  serialno <- getStdRandom random
+  serialno <- genSerial
   return $ chainAddSkeleton' serialno chain
 
 -- | Add a Skeleton logical bitstream with a given serialno to an OggChain
-chainAddSkeleton' :: Word32 -> OggChain -> OggChain
+chainAddSkeleton' :: Serial -> OggChain -> OggChain
 chainAddSkeleton' serialno (OggChain tracks _ packets) = OggChain nt ng np
   where
     nt = [skelTrack] ++ tracks

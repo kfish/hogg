@@ -79,7 +79,7 @@ uncutPacket d t gp = OggPacket d t gp False False segs
 -- packetsToPages
 --
 
--- A map from track serialno to seqno
+-- A map from track to seqno
 type SeqnoMap = Map.Map OggTrack Word32
 
 data CarryPage = CarryPage {

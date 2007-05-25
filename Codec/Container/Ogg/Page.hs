@@ -18,6 +18,7 @@ import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.RawPage
 import Codec.Container.Ogg.CRC
 import Codec.Container.Ogg.Granulepos
+import Codec.Container.Ogg.Serial
 import Codec.Container.Ogg.Track
 import Codec.Container.Ogg.Timestamp
 
@@ -182,7 +183,7 @@ pageBuild allowBOS o t d = buildResult allowBOS bos where
   segments = splitSegments 0 segtab body
   rest = L.drop pageLen d 
 
-findOrAddTrack :: Word32 -> L.ByteString -> [OggTrack] -> (Maybe OggTrack, OggTrack)
+findOrAddTrack :: Serial -> L.ByteString -> [OggTrack] -> (Maybe OggTrack, OggTrack)
 findOrAddTrack s d t = foat fTrack
   where
     fTrack = find (\x -> trackSerialno x == s) t

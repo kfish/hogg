@@ -17,7 +17,6 @@ module Codec.Container.Ogg.Track (
 
 import qualified Data.ByteString.Lazy as L
 import Data.Bits
-import Data.Word (Word32)
 import Data.Ratio
 
 import Text.Printf
@@ -26,6 +25,7 @@ import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Granulerate
 import Codec.Container.Ogg.MessageHeaders
+import Codec.Container.Ogg.Serial
 import Codec.Container.Ogg.Timestamp
 
 ------------------------------------------------------------
@@ -34,7 +34,7 @@ import Codec.Container.Ogg.Timestamp
 
 data OggTrack =
   OggTrack {
-    trackSerialno :: Word32,
+    trackSerialno :: Serial,
     trackType :: Maybe ContentType,
     trackGranulerate :: Maybe Granulerate,
     trackGranuleshift :: Maybe Int,
@@ -65,11 +65,11 @@ nullTrack :: OggTrack
 nullTrack = OggTrack 0 Nothing Nothing Nothing mhEmpty
 
 -- | A new track, with a given serialno
-newTrack :: Word32 -> OggTrack
+newTrack :: Serial -> OggTrack
 newTrack serialno = OggTrack serialno Nothing Nothing Nothing mhEmpty
 
 -- Instantiate an OggTrack given a serialno and a bos page
-bosToTrack :: Word32 -> L.ByteString -> OggTrack
+bosToTrack :: Serial -> L.ByteString -> OggTrack
 bosToTrack s d = OggTrack s ctype gr gs mh
   where
     ctype = identify d

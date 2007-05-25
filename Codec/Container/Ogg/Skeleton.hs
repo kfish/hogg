@@ -29,6 +29,7 @@ import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Granulerate
 import Codec.Container.Ogg.MessageHeaders
 import Codec.Container.Ogg.Packet
+import Codec.Container.Ogg.Serial
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
@@ -44,7 +45,7 @@ data OggFishead =
 
 data OggFisbone =
   OggFisbone {
-    fisboneSerialno :: Word32,
+    fisboneSerialno :: Serial,
     fisboneNHeaders :: Int,
     fisboneGranulerate :: Granulerate,
     fisboneStartgranule :: Word64,
