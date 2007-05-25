@@ -56,9 +56,9 @@ chainAddSkeleton chain = do
 chainAddSkeleton' :: Serial -> OggChain -> OggChain
 chainAddSkeleton' serialno (OggChain tracks _ packets) = OggChain nt ng np
   where
-    nt = [skelTrack] ++ tracks
+    nt = skelTrack : tracks
     ng = packetsToPages np
-    np = [fh] ++ ixBoss ++ ixFisbones ++ ixHdrs ++ [sEOS] ++ ixD
+    np = fh : concat [ixBoss, ixFisbones, ixHdrs, [sEOS], ixD]
 
     -- Construct a new track for the Skeleton
     skelTrack = (newTrack serialno){trackType = Just skeleton}
@@ -78,7 +78,7 @@ chainAddSkeleton' serialno (OggChain tracks _ packets) = OggChain nt ng np
     (hdrs, d) = splitAt totHeaders rest
 
     -- ... for which we determine the total number of header pages
-    totHeaders = foldl (+) 0 tracksNHeaders
+    totHeaders = sum tracksNHeaders
     tracksNHeaders = map headers $ mapMaybe trackType tracks
 
     -- Increment the pageIx of the original data packets by the number of
