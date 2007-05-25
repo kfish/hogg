@@ -11,6 +11,7 @@ module Codec.Container.Ogg.Chop (
 ) where
 
 import Control.Monad.Identity
+import Control.Monad.State
 
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Timestamp
@@ -19,15 +20,15 @@ import Codec.Container.Ogg.Timestamp
 -- Types
 --
 
-data ChopTrack =
-  ChopTrack {
-    carry :: [OggPage]
+data ChopState =
+  ChopState {
+    chopDummy :: Integer
   }
 
-type Chop a = Identity a
+type Chop a = (StateT ChopState Identity) a
 
-runChop :: Chop a -> a
-runChop x = runIdentity x
+runChop :: ChopState -> Chop a -> (a, ChopState)
+runChop st x = runIdentity (runStateT x st)
 
 chop1 :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chop1 Nothing Nothing gs = return gs
@@ -40,7 +41,7 @@ chop1 (Just start) mEnd (g:gs) = case (timestampOf g) of
     _ -> chop1 (Just start) mEnd gs
 
 chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
-chop start end xs = runChop (chop1 start end xs)
+chop start end xs = fst $ runChop (ChopState 0) (chop1 start end xs)
 
 ------------------------------------------------------------
 -- chop
