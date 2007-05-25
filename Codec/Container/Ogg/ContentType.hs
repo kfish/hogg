@@ -276,7 +276,7 @@ flac = ContentType
 flacIdent :: L.ByteString
 flacIdent = L.pack [0x7f, 0x46, 0x4c, 0x41, 0x43, 0x01]
 
--- Extract sample rate from OggPCM2 BOS header
+-- Extract sample rate from FLAC BOS header
 flacMetadata :: L.ByteString -> MessageHeaders
 flacMetadata d = MessageHeaders (fromList headerVals)
   where headerVals = [samplerate, channels]
