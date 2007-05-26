@@ -18,6 +18,7 @@ import Data.Maybe
 
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
+import Codec.Container.Ogg.ListMerge
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
@@ -102,8 +103,8 @@ chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
         chopAccum g
     case (compare start gTime) of
       LT -> do
-        -- TODO: Dump accum buffer into bitstream
-        as <- getAccum g
+        -- Dump accum buffer into bitstream
+        as <- getAccum
         cs <- chopRaw Nothing mEnd gs
         return $ as ++ cs
       _  -> do
@@ -136,10 +137,14 @@ changedK g = do
 
 -- | Accumulate a page
 chopAccum :: OggPage -> Chop ()
-chopAccum g = do
-  m <- get
-  let m' = Map.adjust (chopTrackAccum g) (pageTrack g) m
-  put m'
+chopAccum g = case (trackGranuleshift t) of
+    Nothing -> return ()
+    _ -> do
+      m <- get
+      let m' = Map.adjust (chopTrackAccum g) t m
+      put m'
+  where
+    t = pageTrack g
 
 chopTrackAccum :: OggPage -> ChopTrackState -> ChopTrackState
 chopTrackAccum g ts = ts{pageAccum = (g:gs)}
@@ -147,11 +152,15 @@ chopTrackAccum g ts = ts{pageAccum = (g:gs)}
 
 -- | Prune accumulated pages
 pruneAccum :: OggPage -> Chop ()
-pruneAccum g = do
-  m <- get
-  k <- getK g
-  let m' = Map.adjust (pruneTrackAccum g k) (pageTrack g) m
-  put m'
+pruneAccum g = case (trackGranuleshift t) of
+    Nothing -> return ()
+    _ -> do
+      m <- get
+      k <- getK g
+      let m' = Map.adjust (pruneTrackAccum g k) t m
+      put m'
+  where
+    t = pageTrack g
 
 pruneTrackAccum :: OggPage -> Integer -> ChopTrackState -> ChopTrackState
 pruneTrackAccum g k ts = ts{pageAccum = g:gs}
@@ -162,12 +171,12 @@ pruneTrackAccum g k ts = ts{pageAccum = g:gs}
     grans x = fromJust $ gpToGranules (pageGranulepos x) t
 
 -- | get accumulated pages
-getAccum :: OggPage -> Chop [OggPage]
-getAccum g = do
+getAccum :: Chop [OggPage]
+getAccum = do
   m <- get
-  ts <- Map.lookup (pageTrack g) m
-  let as = pageAccum ts
-  return $ reverse as
+  let accums = Map.fold (\x b -> (reverse . pageAccum) x : b) [] m
+      as = listMerge accums
+  return as
 
 -- | Add the total number of headers that this track expects
 addHeaders :: OggPage -> Chop ()
