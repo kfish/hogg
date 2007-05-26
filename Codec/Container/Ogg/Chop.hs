@@ -55,10 +55,16 @@ emptyChopTrackState = ChopTrackState 0 0 []
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
 
+-- | a version of takeWhile that includes the first bounding failure
+takeWhileB :: (a -> Bool) -> [a] -> [a]
+takeWhileB _ [] = []
+takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
+                      else [x]
+
 -- | Top-level bitstream chopper -- handles headers
 chopTop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopTop Nothing Nothing gs = return gs
-chopTop Nothing mEnd@(Just _) gs = return $ takeWhile (before mEnd) gs
+chopTop Nothing mEnd@(Just _) gs = return $ takeWhileB (before mEnd) gs
 chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
   True -> do
     addHeaders g -- Add the number of headers for this track
@@ -77,7 +83,7 @@ chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
 -- | Raw bitstream chopper -- after headers
 chopRaw :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopRaw Nothing Nothing gs = return gs
-chopRaw Nothing mEnd@(Just _) gs = return $ takeWhile (before mEnd) gs
+chopRaw Nothing mEnd@(Just _) gs = return $ takeWhileB (before mEnd) gs
 chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
   Nothing -> do
     -- TODO: Add this page to accum buffer
@@ -152,7 +158,7 @@ pruneTrackAccum g k ts = ts{pageAccum = g:gs}
   where
     as = pageAccum ts
     t = pageTrack g
-    gs = takeWhile (\x -> (grans x >= k)) as
+    gs = takeWhileB (\x -> (grans x >= k)) as
     grans x = fromJust $ gpToGranules (pageGranulepos x) t
 
 -- | get accumulated pages
