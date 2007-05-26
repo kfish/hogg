@@ -33,7 +33,7 @@ type Chop a = (StateT ChopState Identity) a
 
 -- | chop start end pages
 chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
-chop start end xs = fst $ runChop emptyChopState (chop1 start end xs)
+chop start end xs = fst $ runChop emptyChopState (chopTop start end xs)
 
 emptyChopState :: ChopState
 emptyChopState = ChopState (fromInteger 0)
@@ -41,28 +41,36 @@ emptyChopState = ChopState (fromInteger 0)
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
 
-chop1 :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
-chop1 Nothing Nothing gs = return gs
-chop1 Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
-chop1 (Just start) mEnd (g:gs) = case (pageBOS g) of
+-- | Top-level bitstream chopper -- handles headers
+chopTop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopTop Nothing Nothing gs = return gs
+chopTop Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
+chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
   True -> do
     addHeaders g
     subHeaders g
-    cs <- chop1 (Just start) mEnd gs
+    cs <- chopTop (Just start) mEnd gs
     return $ g : cs
   False -> do
     r <- gets headersRemaining
     case (compare 0 r) of
       LT -> do
         subHeaders g
-        cs <- chop1 (Just start) mEnd gs
+        cs <- chopTop (Just start) mEnd gs
         return $ g : cs
-      _  -> case (timestampOf g) of
-        Nothing -> do
-          return g >> (chop1 (Just start) mEnd gs)
-        (Just gTime) -> case (compare start gTime) of
-          LT -> chop1 Nothing mEnd (g:gs)
-          _  -> chop1 (Just start) mEnd gs
+      _  -> chopRaw (Just start) mEnd (g:gs)
+
+-- | Raw bitstream chopper -- after headers
+chopRaw :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopRaw Nothing Nothing gs = return gs
+chopRaw Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
+chopRaw Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
+chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
+  Nothing -> do
+    return g >> (chopRaw (Just start) mEnd gs)
+  (Just gTime) -> case (compare start gTime) of
+    LT -> chopRaw Nothing mEnd (g:gs)
+    _  -> chopRaw (Just start) mEnd gs
 
 -- | Add the total number of headers that this track expects
 addHeaders :: OggPage -> Chop ()
