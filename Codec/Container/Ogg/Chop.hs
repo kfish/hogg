@@ -68,7 +68,7 @@ takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
 -- | Top-level bitstream chopper -- handles headers
 chopTop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopTop Nothing Nothing gs = return gs
-chopTop Nothing mEnd@(Just _) gs = chopEnd mEnd gs
+chopTop Nothing mEnd@(Just _) gs = chopTo mEnd gs
 chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
   True -> do
     addHeaders g -- Add the number of headers for this track
@@ -87,7 +87,7 @@ chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
 -- | Raw bitstream chopper -- after headers
 chopRaw :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopRaw Nothing Nothing gs = return gs
-chopRaw Nothing mEnd@(Just _) gs = chopEnd mEnd gs
+chopRaw Nothing mEnd@(Just _) gs = chopTo mEnd gs
 chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
   Nothing -> do
     -- Add this page to accum buffer
@@ -114,18 +114,18 @@ chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
         chopRaw (Just start) mEnd gs
 
 -- | Chop to the specified end time
-chopEnd :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
-chopEnd _ [] = return []
-chopEnd mEnd (g:gs) = case (before mEnd g) of
+chopTo :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopTo _ [] = return []
+chopTo mEnd (g:gs) = case (before mEnd g) of
     True  -> do
-      cs <- chopEnd mEnd gs
+      cs <- chopTo mEnd gs
       return $ g : cs
-    False -> chopEnd' mEnd (g:gs)
+    False -> chopEnd mEnd (g:gs)
 
 -- | Handle last pages of all tracks
-chopEnd' :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
-chopEnd' _ [] = return []
-chopEnd' mEnd (g:gs) = do
+chopEnd :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopEnd _ [] = return []
+chopEnd mEnd (g:gs) = do
     m <- get
     ts <- Map.lookup (pageTrack g) m
     case (ended ts) of
@@ -133,11 +133,11 @@ chopEnd' mEnd (g:gs) = do
         isEnded <- allEnded
         case isEnded of
           True -> return []
-          False -> chopEnd' mEnd gs
+          False -> chopEnd mEnd gs
       False -> do
         let m' = Map.adjust (\ts -> ts{ended = True}) (pageTrack g) m
         put m'
-        cs <- chopEnd' mEnd gs
+        cs <- chopEnd mEnd gs
         return $ g{pageEOS = True} : cs
 
 -- | Determine whether all tracks are ended
