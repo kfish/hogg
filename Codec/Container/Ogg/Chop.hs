@@ -38,7 +38,10 @@ data ChopTrackState =
 
     -- Just to spice things up (and simplify the algorithm)
     -- the page accumulator is kept in reverse order
-    pageAccum :: [OggPage]
+    pageAccum :: [OggPage],
+
+    -- Whether or not this track has delivered beyond the chop end
+    ended :: Bool
   }
 
 type Chop a = (StateT ChopState Identity) a
@@ -51,7 +54,7 @@ emptyChopState :: ChopState
 emptyChopState = Map.empty
 
 emptyChopTrackState :: ChopTrackState
-emptyChopTrackState = ChopTrackState 0 0 []
+emptyChopTrackState = ChopTrackState 0 0 [] False
 
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
@@ -65,7 +68,7 @@ takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
 -- | Top-level bitstream chopper -- handles headers
 chopTop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopTop Nothing Nothing gs = return gs
-chopTop Nothing mEnd@(Just _) gs = return $ takeWhileB (before mEnd) gs
+chopTop Nothing mEnd@(Just _) gs = chopEnd mEnd gs
 chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
   True -> do
     addHeaders g -- Add the number of headers for this track
@@ -84,10 +87,10 @@ chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
 -- | Raw bitstream chopper -- after headers
 chopRaw :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopRaw Nothing Nothing gs = return gs
-chopRaw Nothing mEnd@(Just _) gs = return $ takeWhileB (before mEnd) gs
+chopRaw Nothing mEnd@(Just _) gs = chopEnd mEnd gs
 chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
   Nothing -> do
-    -- TODO: Add this page to accum buffer
+    -- Add this page to accum buffer
     chopAccum g
     return g >> (chopRaw (Just start) mEnd gs)
   (Just gTime) -> do
@@ -109,6 +112,48 @@ chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
         return $ as ++ cs
       _  -> do
         chopRaw (Just start) mEnd gs
+
+-- | Chop to the specified end time
+chopEnd :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopEnd _ [] = return []
+chopEnd mEnd (g:gs) = case (before mEnd g) of
+    True  -> do
+      cs <- chopEnd mEnd gs
+      return $ g : cs
+    False -> chopEnd' mEnd (g:gs)
+
+-- | Handle last pages of all tracks
+chopEnd' :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopEnd' _ [] = return []
+chopEnd' mEnd (g:gs) = do
+    m <- get
+    ts <- Map.lookup (pageTrack g) m
+    case (ended ts) of
+      True -> do
+        isEnded <- allEnded
+        case isEnded of
+          True -> return []
+          False -> chopEnd' mEnd gs
+      False -> do
+        let m' = Map.adjust (\ts -> ts{ended = True}) (pageTrack g) m
+        put m'
+        cs <- chopEnd' mEnd gs
+        return $ g : cs
+
+allEnded :: Chop Bool
+allEnded = do
+    m <- get
+    return $ Map.fold (\x b -> ended x && b) True m
+
+-- return $ takeWhileB (before mEnd) gs
+
+{-
+takeWhileB :: (a -> Bool) -> [a] -> [a]
+takeWhileB _ [] = []
+takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
+                      else [x]
+-}
+
 
 -- | Get prevK for a given track
 getK :: OggPage -> Chop Integer

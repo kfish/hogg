@@ -162,7 +162,7 @@ between start end xs = case start of
 
 before :: (Timestampable a) => Maybe Timestamp -> a -> Bool
 before Nothing _ = True
-before (Just b) x = t == Nothing || (fromJust t) < b
+before (Just b) x = t == Nothing || (fromJust t) <= b
   where
     t = timestampOf x
 
