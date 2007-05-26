@@ -67,6 +67,7 @@ takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
 
 -- | Top-level bitstream chopper -- handles headers
 chopTop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopTop _ _ [] = return []
 chopTop Nothing Nothing gs = return gs
 chopTop Nothing mEnd@(Just _) gs = chopTo mEnd gs
 chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
@@ -86,6 +87,7 @@ chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
 
 -- | Raw bitstream chopper -- after headers
 chopRaw :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopRaw _ _ [] = return []
 chopRaw Nothing Nothing gs = return gs
 chopRaw Nothing mEnd@(Just _) gs = chopTo mEnd gs
 chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
@@ -135,7 +137,7 @@ chopEnd mEnd (g:gs) = do
           True -> return []
           False -> chopEnd mEnd gs
       False -> do
-        let m' = Map.adjust (\ts -> ts{ended = True}) (pageTrack g) m
+        let m' = Map.adjust (\ts' -> ts'{ended = True}) (pageTrack g) m
         put m'
         cs <- chopEnd mEnd gs
         return $ g{pageEOS = True} : cs
@@ -242,7 +244,7 @@ modifyHeaders t n = do
 doneHeaders :: Chop Bool
 doneHeaders = do
   m <- get
-  return $ foldWithKey (\k t b -> (headersRemaining t <= 0) && b) True m
+  return $ Map.fold (\t b -> (headersRemaining t <= 0) && b) True m
 
 ------------------------------------------------------------
 -- chop
