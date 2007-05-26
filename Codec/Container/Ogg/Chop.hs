@@ -158,7 +158,9 @@ getK g = do
 
 -- | Set prevK for a given track
 setK :: OggPage -> Chop ()
-setK g = do
+setK g = case (pageGranulepos g) of
+  Granulepos Nothing -> return ()
+  _ -> do
     m <- get
     let k = fromJust $ pageKeyGranule g
         m' = Map.adjust (s' k) (pageTrack g) m
@@ -168,10 +170,12 @@ setK g = do
 
 -- | Has the K part of the granulepos changed?
 changedK :: OggPage -> Chop Bool
-changedK g = do
-  c <- getK g
-  let k = fromJust $ pageKeyGranule g
-  return (k /= c)
+changedK g = case (pageGranulepos g) of
+  Granulepos Nothing -> return False
+  _ -> do
+    c <- getK g
+    let k = fromJust $ pageKeyGranule g
+    return (k /= c)
 
 -- | Accumulate a page
 chopAccum :: OggPage -> Chop ()
@@ -205,8 +209,11 @@ pruneTrackAccum g k ts = ts{pageAccum = g:gs}
   where
     as = pageAccum ts
     t = pageTrack g
-    gs = takeWhileB (\x -> (grans x >= k)) as
-    grans x = fromJust $ gpToGranules (pageGranulepos x) t
+    -- gs = takeWhileB (\x -> (grans x >= k)) as
+    gs = takeWhileB later as
+    later x = case (pageGranulepos x) of
+      Granulepos Nothing -> True
+      _ -> (fromJust $ gpToGranules (pageGranulepos x) t) >= k
 
 -- | get accumulated pages
 getAccum :: Chop [OggPage]
