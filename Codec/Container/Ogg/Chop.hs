@@ -13,8 +13,12 @@ module Codec.Container.Ogg.Chop (
 import Control.Monad.Identity
 import Control.Monad.State
 
+import Data.Maybe
+
+import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Timestamp
+import Codec.Container.Ogg.Track
 
 ------------------------------------------------------------
 -- Types
@@ -22,10 +26,17 @@ import Codec.Container.Ogg.Timestamp
 
 data ChopState =
   ChopState {
-    chopDummy :: Integer
+    headersRemaining :: Int
   }
 
 type Chop a = (StateT ChopState Identity) a
+
+-- | chop start end pages
+chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
+chop start end xs = fst $ runChop emptyChopState (chop1 start end xs)
+
+emptyChopState :: ChopState
+emptyChopState = ChopState (fromInteger 0)
 
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
@@ -33,15 +44,46 @@ runChop st x = runIdentity (runStateT x st)
 chop1 :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chop1 Nothing Nothing gs = return gs
 chop1 Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
-chop1 (Just start) mEnd (g:gs) = case (timestampOf g) of
-  Nothing -> do
-    return g >> (chop1 (Just start) mEnd gs)
-  (Just gTime) -> case (compare start gTime) of
-    LT -> chop1 Nothing mEnd (g:gs)
-    _ -> chop1 (Just start) mEnd gs
+chop1 (Just start) mEnd (g:gs) = case (pageBOS g) of
+  True -> do
+    addHeaders g
+    subHeaders g
+    cs <- chop1 (Just start) mEnd gs
+    return $ g : cs
+  False -> do
+    r <- gets headersRemaining
+    case (compare 0 r) of
+      LT -> do
+        subHeaders g
+        cs <- chop1 (Just start) mEnd gs
+        return $ g : cs
+      _  -> case (timestampOf g) of
+        Nothing -> do
+          return g >> (chop1 (Just start) mEnd gs)
+        (Just gTime) -> case (compare start gTime) of
+          LT -> chop1 Nothing mEnd (g:gs)
+          _  -> chop1 (Just start) mEnd gs
 
-chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
-chop start end xs = fst $ runChop (ChopState 0) (chop1 start end xs)
+-- | Add the total number of headers that this track expects
+addHeaders :: OggPage -> Chop ()
+addHeaders g = do
+  let h = headers $ fromJust (trackType (pageTrack g))
+  modifyHeaders h
+
+-- | Subtract the number of completed header packets provided by this page
+subHeaders :: OggPage -> Chop ()
+subHeaders g = do
+  let segs = length $ pageSegments g
+      incmplt = pageIncomplete g
+      n = if incmplt then (segs-1) else segs
+  modifyHeaders (-n)
+
+-- | State modifier to change the number of headers remaining
+modifyHeaders :: Int -> Chop ()
+modifyHeaders n = do
+  r <- gets headersRemaining
+  s <- get
+  put s{headersRemaining = r + n}
 
 ------------------------------------------------------------
 -- chop
