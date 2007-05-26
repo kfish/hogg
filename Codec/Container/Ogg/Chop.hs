@@ -138,22 +138,13 @@ chopEnd' mEnd (g:gs) = do
         let m' = Map.adjust (\ts -> ts{ended = True}) (pageTrack g) m
         put m'
         cs <- chopEnd' mEnd gs
-        return $ g : cs
+        return $ g{pageEOS = True} : cs
 
+-- | Determine whether all tracks are ended
 allEnded :: Chop Bool
 allEnded = do
     m <- get
     return $ Map.fold (\x b -> ended x && b) True m
-
--- return $ takeWhileB (before mEnd) gs
-
-{-
-takeWhileB :: (a -> Bool) -> [a] -> [a]
-takeWhileB _ [] = []
-takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
-                      else [x]
--}
-
 
 -- | Get prevK for a given track
 getK :: OggPage -> Chop Integer
