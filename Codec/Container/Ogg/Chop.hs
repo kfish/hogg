@@ -17,6 +17,7 @@ import Data.Map as Map
 import Data.Maybe
 
 import Codec.Container.Ogg.ContentType
+import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
@@ -30,6 +31,9 @@ type ChopState = Map.Map OggTrack ChopTrackState
 data ChopTrackState =
   ChopTrackState {
     headersRemaining :: Int,
+
+    -- Greatest previously inferred keyframe value
+    prevK :: Integer,
 
     -- Just to spice things up (and simplify the algorithm)
     -- the page accumulator is kept in reverse order
@@ -46,7 +50,7 @@ emptyChopState :: ChopState
 emptyChopState = Map.empty
 
 emptyChopTrackState :: ChopTrackState
-emptyChopTrackState = ChopTrackState 0 []
+emptyChopTrackState = ChopTrackState 0 0 []
 
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
@@ -54,7 +58,7 @@ runChop st x = runIdentity (runStateT x st)
 -- | Top-level bitstream chopper -- handles headers
 chopTop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopTop Nothing Nothing gs = return gs
-chopTop Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
+chopTop Nothing mEnd@(Just _) gs = return $ takeWhile (before mEnd) gs
 chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
   True -> do
     addHeaders g -- Add the number of headers for this track
@@ -73,30 +77,91 @@ chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
 -- | Raw bitstream chopper -- after headers
 chopRaw :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopRaw Nothing Nothing gs = return gs
-chopRaw Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
-chopRaw Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
+chopRaw Nothing mEnd@(Just _) gs = return $ takeWhile (before mEnd) gs
 chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
   Nothing -> do
     -- TODO: Add this page to accum buffer
+    chopAccum g
     return g >> (chopRaw (Just start) mEnd gs)
-  (Just gTime) -> case (compare start gTime) of
-    LT -> do
-      -- TODO: Dump accum buffer into bitstream
-      chopRaw Nothing mEnd (g:gs)
-    _  -> do
-      -- TODO: Add this page to accum buffer
-      chopRaw (Just start) mEnd gs
+  (Just gTime) -> do
+    p <- changedK g
+    case p of
+      False -> do
+        -- Add this page to accum buffer
+        chopAccum g
+      True -> do
+        pruneAccum g
+        setK g
+        -- Add this page to accum buffer
+        chopAccum g
+    case (compare start gTime) of
+      LT -> do
+        -- TODO: Dump accum buffer into bitstream
+        as <- getAccum g
+        cs <- chopRaw Nothing mEnd gs
+        return $ as ++ cs
+      _  -> do
+        chopRaw (Just start) mEnd gs
 
-{-
+-- | Get prevK for a given track
+getK :: OggPage -> Chop Integer
+getK g = do
+  m <- get
+  ts <- Map.lookup (pageTrack g) m
+  let c = prevK ts
+  return c
+
+-- | Set prevK for a given track
+setK :: OggPage -> Chop ()
+setK g = do
+    m <- get
+    let k = fromJust $ pageKeyGranule g
+        m' = Map.adjust (s' k) (pageTrack g) m
+    put m'
+  where
+    s' k ts = ts{prevK = k}
+
+-- | Has the K part of the granulepos changed?
+changedK :: OggPage -> Chop Bool
+changedK g = do
+  c <- getK g
+  let k = fromJust $ pageKeyGranule g
+  return (k /= c)
+
+-- | Accumulate a page
 chopAccum :: OggPage -> Chop ()
 chopAccum g = do
-  m <- gets pageAccum
-  let m' = if some_conditional then
-             Map.adjustWithKey (:) (pageTrack g) m
-           else
+  m <- get
+  let m' = Map.adjust (chopTrackAccum g) (pageTrack g) m
+  put m'
 
-  put s{pageAccum = m'}
--}
+chopTrackAccum :: OggPage -> ChopTrackState -> ChopTrackState
+chopTrackAccum g ts = ts{pageAccum = (g:gs)}
+  where gs = pageAccum ts
+
+-- | Prune accumulated pages
+pruneAccum :: OggPage -> Chop ()
+pruneAccum g = do
+  m <- get
+  k <- getK g
+  let m' = Map.adjust (pruneTrackAccum g k) (pageTrack g) m
+  put m'
+
+pruneTrackAccum :: OggPage -> Integer -> ChopTrackState -> ChopTrackState
+pruneTrackAccum g k ts = ts{pageAccum = g:gs}
+  where
+    as = pageAccum ts
+    t = pageTrack g
+    gs = takeWhile (\x -> (grans x >= k)) as
+    grans x = fromJust $ gpToGranules (pageGranulepos x) t
+
+-- | get accumulated pages
+getAccum :: OggPage -> Chop [OggPage]
+getAccum g = do
+  m <- get
+  ts <- Map.lookup (pageTrack g) m
+  let as = pageAccum ts
+  return $ reverse as
 
 -- | Add the total number of headers that this track expects
 addHeaders :: OggPage -> Chop ()

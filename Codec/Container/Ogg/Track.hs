@@ -12,6 +12,8 @@ module Codec.Container.Ogg.Track (
   nullTrack,
   bosToTrack,
   gpToTimestamp,
+  gpToGranules,
+  gpSplit,
   gpExplain
 ) where
 

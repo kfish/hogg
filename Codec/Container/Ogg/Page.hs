@@ -10,7 +10,8 @@ module Codec.Container.Ogg.Page (
   OggPage (..),
   pageScan,
   pageWrite,
-  pageLength
+  pageLength,
+  pageKeyGranule
 ) where
 
 import Codec.Container.Ogg.ByteFields
@@ -58,6 +59,14 @@ pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
     where (numsegs, _) = buildSegtab 0 [] incplt s
           incplt = pageIncomplete g
           s = pageSegments g
+
+-- | Determine the keygranule of a page
+pageKeyGranule :: OggPage -> Maybe Integer
+pageKeyGranule g = case (pageGranulepos g) of
+  Granulepos Nothing -> Nothing
+  gp@(Granulepos (Just _)) -> do
+    let Just (k, _) = gpSplit gp (pageTrack g)
+    return k
 
 ------------------------------------------------------------
 -- Custom Instances
