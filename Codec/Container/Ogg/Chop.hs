@@ -13,6 +13,7 @@ module Codec.Container.Ogg.Chop (
 import Control.Monad.Identity
 import Control.Monad.State
 
+import Data.Map as Map
 import Data.Maybe
 
 import Codec.Container.Ogg.ContentType
@@ -24,9 +25,15 @@ import Codec.Container.Ogg.Track
 -- Types
 --
 
-data ChopState =
-  ChopState {
-    headersRemaining :: Int
+type ChopState = Map.Map OggTrack ChopTrackState
+
+data ChopTrackState =
+  ChopTrackState {
+    headersRemaining :: Int,
+
+    -- Just to spice things up (and simplify the algorithm)
+    -- the page accumulator is kept in reverse order
+    pageAccum :: [OggPage]
   }
 
 type Chop a = (StateT ChopState Identity) a
@@ -36,7 +43,10 @@ chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
 chop start end xs = fst $ runChop emptyChopState (chopTop start end xs)
 
 emptyChopState :: ChopState
-emptyChopState = ChopState (fromInteger 0)
+emptyChopState = Map.empty
+
+emptyChopTrackState :: ChopTrackState
+emptyChopTrackState = ChopTrackState 0 []
 
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
@@ -47,15 +57,15 @@ chopTop Nothing Nothing gs = return gs
 chopTop Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
 chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
   True -> do
-    addHeaders g
-    subHeaders g
+    addHeaders g -- Add the number of headers for this track
+    subHeaders g -- Subtract the number contained in this page
     cs <- chopTop (Just start) mEnd gs
     return $ g : cs
   False -> do
-    r <- gets headersRemaining
-    case (compare 0 r) of
-      LT -> do
-        subHeaders g
+    p <- doneHeaders
+    case p of
+      False -> do
+        subHeaders g -- Subtract the number contained in this page
         cs <- chopTop (Just start) mEnd gs
         return $ g : cs
       _  -> chopRaw (Just start) mEnd (g:gs)
@@ -67,16 +77,33 @@ chopRaw Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
 chopRaw Nothing mEnd@(Just end) gs = return $ takeWhile (before mEnd) gs
 chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
   Nothing -> do
+    -- TODO: Add this page to accum buffer
     return g >> (chopRaw (Just start) mEnd gs)
   (Just gTime) -> case (compare start gTime) of
-    LT -> chopRaw Nothing mEnd (g:gs)
-    _  -> chopRaw (Just start) mEnd gs
+    LT -> do
+      -- TODO: Dump accum buffer into bitstream
+      chopRaw Nothing mEnd (g:gs)
+    _  -> do
+      -- TODO: Add this page to accum buffer
+      chopRaw (Just start) mEnd gs
+
+{-
+chopAccum :: OggPage -> Chop ()
+chopAccum g = do
+  m <- gets pageAccum
+  let m' = if some_conditional then
+             Map.adjustWithKey (:) (pageTrack g) m
+           else
+
+  put s{pageAccum = m'}
+-}
 
 -- | Add the total number of headers that this track expects
 addHeaders :: OggPage -> Chop ()
 addHeaders g = do
-  let h = headers $ fromJust (trackType (pageTrack g))
-  modifyHeaders h
+  let t = pageTrack g
+      h = headers $ fromJust (trackType t)
+  modifyHeaders t h
 
 -- | Subtract the number of completed header packets provided by this page
 subHeaders :: OggPage -> Chop ()
@@ -84,14 +111,22 @@ subHeaders g = do
   let segs = length $ pageSegments g
       incmplt = pageIncomplete g
       n = if incmplt then (segs-1) else segs
-  modifyHeaders (-n)
+  modifyHeaders (pageTrack g) (-n)
 
 -- | State modifier to change the number of headers remaining
-modifyHeaders :: Int -> Chop ()
-modifyHeaders n = do
-  r <- gets headersRemaining
-  s <- get
-  put s{headersRemaining = r + n}
+modifyHeaders :: OggTrack -> Int -> Chop ()
+modifyHeaders t n = do
+  m <- get
+  let st = Map.findWithDefault emptyChopTrackState t m
+      r = headersRemaining st
+      m' = Map.insert t st{headersRemaining = r + n} m
+  put m'
+
+-- | Determine whether all tracks have no headers remaining
+doneHeaders :: Chop Bool
+doneHeaders = do
+  m <- get
+  return $ foldWithKey (\k t b -> (headersRemaining t <= 0) && b) True m
 
 ------------------------------------------------------------
 -- chop
