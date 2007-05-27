@@ -10,7 +10,9 @@ module Codec.Container.Ogg.Skeleton (
   OggFishead (..),
   OggFisbone (..),
   emptyFishead,
+  fisheadToPage,
   fisheadToPacket,
+  fisboneToPage,
   fisboneToPacket,
   trackToFisbone,
   tracksToFisbones
@@ -29,6 +31,7 @@ import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Granulerate
 import Codec.Container.Ogg.MessageHeaders
 import Codec.Container.Ogg.Packet
+import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Serial
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
@@ -93,6 +96,13 @@ emptyFishead :: OggFishead
 emptyFishead = OggFishead zTimestamp zTimestamp
 
 ------------------------------------------------------------
+-- fisheadToPage
+--
+
+fisheadToPage :: OggTrack -> OggFishead -> OggPage
+fisheadToPage t f = head $ packetsToPages [fisheadToPacket t f]
+
+------------------------------------------------------------
 -- fisheadToPacket
 --
 
@@ -116,6 +126,13 @@ timestampFill :: Timestamp -> L.ByteString
 timestampFill (Timestamp r) = L.concat $ List.map le64Fill [n, d]
   where n = numerator r
         d = denominator r
+
+------------------------------------------------------------
+-- fisboneToPage
+--
+
+fisboneToPage :: OggTrack -> OggFisbone -> OggPage
+fisboneToPage t f = head $ packetsToPages [fisboneToPacket t f]
 
 ------------------------------------------------------------
 -- fisboneToPacket

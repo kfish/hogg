@@ -9,6 +9,7 @@
 module Codec.Container.Ogg.Packet (
   OggPacket (..),
   OggSegment (..),
+  uncutPage,
   uncutPacket,
   packetsToPages,
   pagesToPackets,
@@ -66,6 +67,10 @@ instance Timestampable OggPacket where
 ------------------------------------------------------------
 -- Helpers
 --
+
+-- | Create a page which contains only a single complete packet
+uncutPage :: L.ByteString -> OggTrack -> Granulepos -> OggPage
+uncutPage d t gp = head $ packetsToPages [uncutPacket d t gp]
 
 -- | Create a packet which spans a single page, ie. consists of only
 -- one segment
