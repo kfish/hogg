@@ -181,8 +181,8 @@ rawpages = do
     return $ map rawPageScan inputs
 
 -- chains, tracks, pages, packets
-chains :: Hot [[OggChain]]
-chains = do
+allChains :: Hot [[OggChain]]
+allChains = do
     filenames <- asks hotFilenames
     inputs <- mapM (liftIO . open) filenames
     return $ map chainScan inputs
@@ -199,10 +199,29 @@ pages = chainMatch chainPages
 packets :: Hot [[[OggPacket]]]
 packets = chainMatch chainPackets
 
+-- All chains, from all files, with elements matching the given criteria
+chains :: Hot [[OggChain]]
+chains = chainMatchM chainFilter
+
+-- | A monadic generic function to pull a list of things from a chain
+chainMatchM :: (OggChain -> Hot a) -> Hot [[a]]
+chainMatchM f = do
+    c <- allChains
+    let all = map (mapM f) c
+    sequence all
+
+-- | Filter all elements of a chain by the given criteria
+chainFilter :: OggChain -> Hot OggChain
+chainFilter (OggChain t gs ps) = do
+    t' <- mType t
+    gs' <- mType gs
+    ps' <- mType ps
+    return $ OggChain t' gs' ps'
+
 -- | A generic function to pull a list of things from a chain
 chainMatch :: (ContentTyped a) => (OggChain -> [a]) -> Hot [[[a]]]
 chainMatch f = do
-    c <- chains
+    c <- allChains
     let all = map (map f) c
     matching <- sequence $ (map (mapM mType)) all
     return matching
@@ -363,15 +382,14 @@ chopSub = SubCommand "chop" chopPages
 chopPages :: Hot ()
 chopPages = do
     config <- asks hotConfig
-    matchPages <- pages
-    let chopPages = map (map (chopRange config)) matchPages
-    let r = \x -> L.concat $ map pageWrite x
-    let r2 = \x -> outputPerChain $ map r x
-    outputPerFile $ map r2 chopPages
+    matchChains <- chains
+    let chopChains = map (map (chopRange config)) matchChains
+    let c = \x -> L.concat $ map pageWrite (chainPages x)
+    let c2 = \x -> outputPerChain $ map c x
+    outputPerFile $ map c2 chopChains
 
-chopRange :: Config -> [OggPage] -> [OggPage]
+chopRange :: Config -> OggChain -> OggChain
 chopRange c@(Config _ _ start end _) xs = chop start end xs
--- chopRange c@(Config _ _ start end _) xs = runChop (chop1 start end xs)
 
 ------------------------------------------------------------
 -- addSkel (addskel)
@@ -383,7 +401,7 @@ addSkelSub = SubCommand "addskel" addSkel
 
 addSkel :: Hot ()
 addSkel = do
-    c <- chains
+    c <- allChains
     skels <- mapM (mapM ioAddSkeleton) c
     let s = \x -> L.concat $ map pageWrite (chainPages x)
     let s2 = \x -> outputPerChain $ map s x

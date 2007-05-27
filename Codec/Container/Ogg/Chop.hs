@@ -16,10 +16,12 @@ import Control.Monad.State
 import Data.Map as Map
 import Data.Maybe
 
+import Codec.Container.Ogg.Chain
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.ListMerge
 import Codec.Container.Ogg.Page
+import Codec.Container.Ogg.Packet
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
@@ -46,9 +48,9 @@ data ChopTrackState =
 
 type Chop a = (StateT ChopState Identity) a
 
--- | chop start end pages
-chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
-chop start end xs = fst $ runChop emptyChopState (chopTop start end xs)
+-- | chop start end chain
+chop :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> OggChain
+chop start end chain = fst $ runChop emptyChopState (chopTop start end chain)
 
 emptyChopState :: ChopState
 emptyChopState = Map.empty
@@ -59,29 +61,29 @@ emptyChopTrackState = ChopTrackState 0 0 [] False
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
 
--- | a version of takeWhile that includes the first bounding failure
-takeWhileB :: (a -> Bool) -> [a] -> [a]
-takeWhileB _ [] = []
-takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
-                      else [x]
-
 -- | Top-level bitstream chopper -- handles headers
-chopTop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
-chopTop _ _ [] = return []
-chopTop Nothing Nothing gs = return gs
-chopTop Nothing mEnd@(Just _) gs = chopTo mEnd gs
-chopTop (Just start) mEnd (g:gs)
+chopTop :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> Chop OggChain
+chopTop mStart mEnd (OggChain tracks pages _) = do
+  pages' <- chopTop' mStart mEnd pages
+  let packets' = pagesToPackets pages' 
+  return $ OggChain tracks pages' packets'
+
+chopTop' :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopTop' _ _ [] = return []
+chopTop' Nothing Nothing gs = return gs
+chopTop' Nothing mEnd@(Just _) gs = chopTo mEnd gs
+chopTop' (Just start) mEnd (g:gs)
   | pageBOS g = do
     addHeaders g -- Add the number of headers for this track
     subHeaders g -- Subtract the number contained in this page
-    cs <- chopTop (Just start) mEnd gs
+    cs <- chopTop' (Just start) mEnd gs
     return $ g : cs
   | otherwise = do
     p <- doneHeaders
     case p of
       False -> do
         subHeaders g -- Subtract the number contained in this page
-        cs <- chopTop (Just start) mEnd gs
+        cs <- chopTop' (Just start) mEnd gs
         return $ g : cs
       _  -> chopRaw (Just start) mEnd (g:gs)
 
@@ -209,7 +211,6 @@ pruneTrackAccum g k ts = ts{pageAccum = g:gs}
   where
     as = pageAccum ts
     t = pageTrack g
-    -- gs = takeWhileB (\x -> (grans x >= k)) as
     gs = takeWhileB later as
     later x = case (pageGranulepos x) of
       Granulepos Nothing -> True
@@ -252,6 +253,12 @@ doneHeaders :: Chop Bool
 doneHeaders = do
   m <- get
   return $ Map.fold (\t b -> (headersRemaining t <= 0) && b) True m
+
+-- | a version of takeWhile that includes the first bounding failure
+takeWhileB :: (a -> Bool) -> [a] -> [a]
+takeWhileB _ [] = []
+takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
+                      else [x]
 
 ------------------------------------------------------------
 -- 
