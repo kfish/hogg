@@ -70,13 +70,13 @@ chopTop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopTop _ _ [] = return []
 chopTop Nothing Nothing gs = return gs
 chopTop Nothing mEnd@(Just _) gs = chopTo mEnd gs
-chopTop (Just start) mEnd (g:gs) = case (pageBOS g) of
-  True -> do
+chopTop (Just start) mEnd (g:gs)
+  | pageBOS g = do
     addHeaders g -- Add the number of headers for this track
     subHeaders g -- Subtract the number contained in this page
     cs <- chopTop (Just start) mEnd gs
     return $ g : cs
-  False -> do
+  | otherwise = do
     p <- doneHeaders
     case p of
       False -> do
@@ -118,11 +118,11 @@ chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
 -- | Chop to the specified end time
 chopTo :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopTo _ [] = return []
-chopTo mEnd (g:gs) = case (before mEnd g) of
-    True  -> do
+chopTo mEnd (g:gs)
+  | before mEnd g = do
       cs <- chopTo mEnd gs
       return $ g : cs
-    False -> chopEnd mEnd (g:gs)
+  | otherwise = chopEnd mEnd (g:gs)
 
 -- | Handle last pages of all tracks
 chopEnd :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
@@ -254,19 +254,8 @@ doneHeaders = do
   return $ Map.fold (\t b -> (headersRemaining t <= 0) && b) True m
 
 ------------------------------------------------------------
--- chop
+-- 
 --
-
-{-
-chop :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> [OggPage]
-chop Nothing Nothing gs = gs
-chop Nothing mEnd@(Just end) gs = takeWhile (before mEnd) gs
-chop (Just start) mEnd (g:gs) = case (timestampOf g) of
-  Nothing -> g : (chop (Just start) mEnd gs)
-  (Just gTime) -> case (compare start gTime) of
-    LT -> chop Nothing mEnd (g:gs)
-    _ -> chop (Just start) mEnd gs
--}
 
 {-
 import qualified Data.ByteString.Lazy as L
