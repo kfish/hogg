@@ -223,8 +223,7 @@ chainMatch :: (ContentTyped a) => (OggChain -> [a]) -> Hot [[[a]]]
 chainMatch f = do
     c <- allChains
     let all = map (map f) c
-    matching <- sequence $ (map (mapM mType)) all
-    return matching
+    sequence $ (map (mapM mType)) all
 
 -- | Filter a ContentTyped list by the given content type
 mType :: (ContentTyped a) => [a] -> Hot [a]
@@ -236,9 +235,7 @@ mType xs = do
 
 -- | Apply matchRange to all the inner inner lists
 matchRange :: (Timestampable a) => [[[a]]] -> Hot [[[a]]]
-matchRange all = do
-    matching <- sequence $ (map (mapM mRange)) all
-    return matching
+matchRange all = sequence $ (map (mapM mRange)) all
 
 -- | Filter a Timestampable list by the given time range
 mRange :: (Timestampable a) => [a] -> Hot [a]
