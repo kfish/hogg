@@ -203,7 +203,7 @@ packets = chainMatch chainPackets
 chains :: Hot [[OggChain]]
 chains = chainMatchM chainFilter
 
--- | A monadic generic function to pull a list of things from a chain
+-- | A generic function to run a Hot function over all chains
 chainMatchM :: (OggChain -> Hot a) -> Hot [[a]]
 chainMatchM f = do
     c <- allChains
