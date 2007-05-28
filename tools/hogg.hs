@@ -386,7 +386,11 @@ chopPages = do
     outputPerFile $ map c2 chopChains
 
 chopRange :: Config -> OggChain -> OggChain
-chopRange c@(Config _ _ start end _) xs = chop start end xs
+chopRange c@(Config _ _ start end _) xs = chop True start end xs
+
+-- TODO: implement an option for the following ...
+-- To make with no skeleton bitstream:
+-- chopRange c@(Config _ _ start end _) xs = chop False start end xs
 
 ------------------------------------------------------------
 -- addSkel (addskel)

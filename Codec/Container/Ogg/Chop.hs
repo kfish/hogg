@@ -37,6 +37,9 @@ type ChopState = Map.Map OggTrack ChopTrackState
 
 data ChopTrackState =
   ChopTrackState {
+    ctsBOS :: [OggPage],
+    ctsHdrs :: [OggPage],
+    
     headersRemaining :: Int,
 
     -- Greatest previously inferred keyframe value
@@ -53,22 +56,25 @@ data ChopTrackState =
 type Chop a = (StateT ChopState Identity) a
 
 -- | chop start end chain
-chop :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> OggChain
-chop start end chain = fst $ runChop emptyChopState (chopTop start end chain)
+chop :: Bool -> Maybe Timestamp -> Maybe Timestamp -> OggChain -> OggChain
+chop skel start end chain =
+  fst $ runChop emptyChopState (chopTop skel start end chain)
 
 emptyChopState :: ChopState
 emptyChopState = Map.empty
 
 emptyChopTrackState :: ChopTrackState
-emptyChopTrackState = ChopTrackState 0 0 [] False
+emptyChopTrackState = ChopTrackState [] [] 0 0 [] False
 
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
 
 -- | Top-level bitstream chopper -- handles headers
-chopTop :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> Chop OggChain
-chopTop mStart mEnd (OggChain tracks pages _) = do
-  pages' <- chopTop' mStart mEnd pages
+chopTop :: Bool -> Maybe Timestamp -> Maybe Timestamp -> OggChain
+        -> Chop OggChain
+chopTop skel mStart mEnd (OggChain tracks pages _) = do
+  let chopT = if skel then chopTop' else chopTopN'
+  pages' <- chopT mStart mEnd pages
   let packets' = pagesToPackets pages' 
   return $ OggChain tracks pages' packets'
 
@@ -77,6 +83,65 @@ chopTop' _ _ [] = return []
 chopTop' Nothing Nothing gs = return gs
 chopTop' Nothing mEnd@(Just _) gs = chopTo mEnd gs
 chopTop' (Just start) mEnd (g:gs)
+  | pageBOS g = do
+    pushBOS g -- Remember this BOS page
+    chopTop' (Just start) mEnd gs
+  | otherwise = do
+    p <- doneHeaders
+    case p of
+      False -> do
+        pushHdr g -- Remember this header
+        chopTop' (Just start) mEnd gs
+      _  -> chopCtrl (Just start) mEnd (g:gs)
+
+pushBOS :: OggPage -> Chop ()
+pushBOS g = do
+    addHeaders g -- Add the number of headers for this track
+    subHeaders g -- Subtract the number contained in this page
+    m <- get
+    let st = Map.findWithDefault emptyChopTrackState t m
+        m' = Map.insert t st{ctsBOS = [g]} m
+    put m'
+  where
+    t = pageTrack g
+
+pushHdr :: OggPage -> Chop ()
+pushHdr g = do
+    subHeaders g -- Subtract the number contained in this page
+    m <- get
+    let st = Map.findWithDefault emptyChopTrackState t m
+        hdrs = ctsHdrs st
+        m' = Map.insert t st{ctsHdrs = hdrs++[g]} m
+    put m'
+  where
+    t = pageTrack g
+
+-- | Dump the control section
+chopCtrl :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopCtrl mStart mEnd gs = do
+    boss <- popBOSs
+    hdrs <- popHdrs
+    cs <- chopRaw mStart mEnd gs
+    return $ boss ++ hdrs ++ cs
+
+popBOSs :: Chop [OggPage]
+popBOSs = popPages ctsBOS
+
+popHdrs :: Chop [OggPage]
+popHdrs = popPages ctsHdrs
+
+popPages :: (ChopTrackState -> [OggPage]) -> Chop [OggPage]
+popPages f = do
+    m <- get
+    let gs = Map.fold (\a b -> (f a)++b) [] m
+    return gs
+
+-- | A version of ChopTop that does not add a Skeleton bitstream
+chopTopN' :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
+chopTopN' _ _ [] = return []
+chopTopN' Nothing Nothing gs = return gs
+chopTopN' Nothing mEnd@(Just _) gs = chopTo mEnd gs
+chopTopN' (Just start) mEnd (g:gs)
   | pageBOS g = do
     addHeaders g -- Add the number of headers for this track
     subHeaders g -- Subtract the number contained in this page
