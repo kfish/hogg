@@ -15,7 +15,7 @@ import Control.Monad.Identity
 import Control.Monad.State
 
 import qualified Data.ByteString.Lazy as L
-import qualified Data.Map as Map
+import Data.List
 import Data.Maybe
 
 import Codec.Container.Ogg.Chain
@@ -33,10 +33,11 @@ import Codec.Container.Ogg.Track
 -- Types
 --
 
-type ChopState = Map.Map OggTrack ChopTrackState
+type ChopState = [ChopTrackState]
 
 data ChopTrackState =
   ChopTrackState {
+    ctsTrack :: OggTrack,
     ctsBOS :: [OggPage],
     ctsHdrs :: [OggPage],
     
@@ -61,10 +62,10 @@ chop skel start end chain =
   fst $ runChop emptyChopState (chopTop skel start end chain)
 
 emptyChopState :: ChopState
-emptyChopState = Map.empty
+emptyChopState = []
 
-emptyChopTrackState :: ChopTrackState
-emptyChopTrackState = ChopTrackState [] [] 0 0 [] False
+newChopTrackState :: OggTrack -> ChopTrackState
+newChopTrackState t = ChopTrackState t [] [] 0 0 [] False
 
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
@@ -85,36 +86,50 @@ chopTop' Nothing mEnd@(Just _) gs = chopTo mEnd gs
 chopTop' (Just start) mEnd (g:gs)
   | pageBOS g = do
     pushBOS g -- Remember this BOS page
+    addHeaders g -- Add the number of headers for this track
+    subHeaders g -- Subtract the number contained in this page
     chopTop' (Just start) mEnd gs
   | otherwise = do
     p <- doneHeaders
     case p of
       False -> do
+        subHeaders g -- Subtract the number contained in this page
         pushHdr g -- Remember this header
         chopTop' (Just start) mEnd gs
       _  -> chopCtrl (Just start) mEnd (g:gs)
 
+-- | Find the ChopTrackState associated with this OggPage (indexed by track)
+findState :: OggPage -> Chop ChopTrackState
+findState g = do
+    l <- get
+    let t = pageTrack g
+        mSt = find (\x -> ctsTrack x == t) l
+    return $ fromMaybe (newChopTrackState t) mSt
+
+-- | Replace a ChopTrackState (only if already existing)
+replState :: ChopTrackState -> Chop ()
+replState st = do
+    l <- get
+    let l' = foldr (\x -> if (sameTrack x) then (:) st else (:) x) [] l
+    put l'
+  where
+    sameTrack x = (ctsTrack x == ctsTrack st)
+
 pushBOS :: OggPage -> Chop ()
 pushBOS g = do
-    addHeaders g -- Add the number of headers for this track
-    subHeaders g -- Subtract the number contained in this page
-    m <- get
-    let st = Map.findWithDefault emptyChopTrackState t m
-        m' = Map.insert t st{ctsBOS = [g]} m
-    put m'
+    l <- get
+    let st = (newChopTrackState t){ctsBOS = [g]}
+        l' = l ++ [st]
+    put l'
   where
     t = pageTrack g
 
 pushHdr :: OggPage -> Chop ()
 pushHdr g = do
-    subHeaders g -- Subtract the number contained in this page
-    m <- get
-    let st = Map.findWithDefault emptyChopTrackState t m
-        hdrs = ctsHdrs st
-        m' = Map.insert t st{ctsHdrs = hdrs++[g]} m
-    put m'
-  where
-    t = pageTrack g
+    ts <- findState g
+    let hdrs = ctsHdrs ts
+        h' = hdrs++[g]
+    replState ts{ctsHdrs = h'}
 
 -- | Dump the control section
 chopCtrl :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
@@ -132,8 +147,8 @@ popHdrs = popPages ctsHdrs
 
 popPages :: (ChopTrackState -> [OggPage]) -> Chop [OggPage]
 popPages f = do
-    m <- get
-    let gs = Map.fold (\a b -> (f a)++b) [] m
+    l <- get
+    let gs = foldr (\a b -> (f a)++b) [] l
     return gs
 
 -- | A version of ChopTop that does not add a Skeleton bitstream
@@ -199,8 +214,7 @@ chopTo mEnd (g:gs)
 chopEnd :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopEnd _ [] = return []
 chopEnd mEnd (g:gs) = do
-    m <- get
-    ts <- Map.lookup (pageTrack g) m
+    ts <- findState g
     case (ended ts) of
       True -> do
         isEnded <- allEnded
@@ -208,22 +222,20 @@ chopEnd mEnd (g:gs) = do
           True -> return []
           False -> chopEnd mEnd gs
       False -> do
-        let m' = Map.adjust (\ts' -> ts'{ended = True}) (pageTrack g) m
-        put m'
+        replState ts{ended = True}
         cs <- chopEnd mEnd gs
         return $ g{pageEOS = True} : cs
 
 -- | Determine whether all tracks are ended
 allEnded :: Chop Bool
 allEnded = do
-    m <- get
-    return $ Map.fold (\x b -> ended x && b) True m
+    l <- get
+    return $ foldr (\x b -> ended x && b) True l
 
 -- | Get prevK for a given track
 getK :: OggPage -> Chop Integer
 getK g = do
-  m <- get
-  ts <- Map.lookup (pageTrack g) m
+  ts <- findState g
   let c = prevK ts
   return c
 
@@ -232,12 +244,9 @@ setK :: OggPage -> Chop ()
 setK g = case (pageGranulepos g) of
   Granulepos Nothing -> return ()
   _ -> do
-    m <- get
     let k = fromJust $ pageKeyGranule g
-        m' = Map.adjust (s' k) (pageTrack g) m
-    put m'
-  where
-    s' k ts = ts{prevK = k}
+    ts <- findState g
+    replState ts{prevK = k}
 
 -- | Has the K part of the granulepos changed?
 changedK :: OggPage -> Chop Bool
@@ -253,26 +262,22 @@ chopAccum :: OggPage -> Chop ()
 chopAccum g = case (trackGranuleshift t) of
     Nothing -> return ()
     _ -> do
-      m <- get
-      let m' = Map.adjust (chopTrackAccum g) t m
-      put m'
-  where
+      ts <- findState g
+      let gs = pageAccum ts
+      replState ts{pageAccum = (g:gs)}
+  where 
     t = pageTrack g
-
-chopTrackAccum :: OggPage -> ChopTrackState -> ChopTrackState
-chopTrackAccum g ts = ts{pageAccum = (g:gs)}
-  where gs = pageAccum ts
 
 -- | Prune accumulated pages
 pruneAccum :: OggPage -> Chop ()
 pruneAccum g = case (trackGranuleshift t) of
     Nothing -> return ()
     _ -> do
-      m <- get
       k <- getK g
-      let m' = Map.adjust (pruneTrackAccum g k) t m
-      put m'
-  where
+      ts <- findState g
+      let ts' = pruneTrackAccum g k ts
+      replState ts'
+  where 
     t = pageTrack g
 
 pruneTrackAccum :: OggPage -> Integer -> ChopTrackState -> ChopTrackState
@@ -288,8 +293,8 @@ pruneTrackAccum g k ts = ts{pageAccum = g:gs}
 -- | get accumulated pages
 getAccum :: Chop [OggPage]
 getAccum = do
-  m <- get
-  let accums = Map.fold (\x b -> (reverse . pageAccum) x : b) [] m
+  l <- get
+  let accums = foldr (\x b -> (reverse . pageAccum) x : b) [] l
       as = listMerge accums
   return as
 
@@ -298,7 +303,7 @@ addHeaders :: OggPage -> Chop ()
 addHeaders g = do
   let t = pageTrack g
       h = headers $ fromJust (trackType t)
-  modifyHeaders t h
+  modifyHeaders g h
 
 -- | Subtract the number of completed header packets provided by this page
 subHeaders :: OggPage -> Chop ()
@@ -306,22 +311,20 @@ subHeaders g = do
   let segs = length $ pageSegments g
       incmplt = pageIncomplete g
       n = if incmplt then (segs-1) else segs
-  modifyHeaders (pageTrack g) (-n)
+  modifyHeaders g (-n)
 
 -- | State modifier to change the number of headers remaining
-modifyHeaders :: OggTrack -> Int -> Chop ()
-modifyHeaders t n = do
-  m <- get
-  let st = Map.findWithDefault emptyChopTrackState t m
-      r = headersRemaining st
-      m' = Map.insert t st{headersRemaining = r + n} m
-  put m'
+modifyHeaders :: OggPage -> Int -> Chop ()
+modifyHeaders g n = do
+  ts <- findState g
+  let r = headersRemaining ts
+  replState ts{headersRemaining = r + n}
 
 -- | Determine whether all tracks have no headers remaining
 doneHeaders :: Chop Bool
 doneHeaders = do
-  m <- get
-  return $ Map.fold (\t b -> (headersRemaining t <= 0) && b) True m
+  l <- get
+  return $ foldr (\t b -> (headersRemaining t <= 0) && b) True l
 
 -- | a version of takeWhile that includes the first bounding failure
 takeWhileB :: (a -> Bool) -> [a] -> [a]
