@@ -7,13 +7,15 @@
 -- Portability : portable
 
 module Codec.Container.Ogg.Chop (
+  chainAddSkeletonG, -- XXX: For debugging only, TO BE REMOVED
   chop
 ) where
 
 import Control.Monad.Identity
 import Control.Monad.State
 
-import Data.Map as Map
+import qualified Data.ByteString.Lazy as L
+import qualified Data.Map as Map
 import Data.Maybe
 
 import Codec.Container.Ogg.Chain
@@ -22,6 +24,8 @@ import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.ListMerge
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Packet
+import Codec.Container.Ogg.Serial
+import Codec.Container.Ogg.Skeleton
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
@@ -261,87 +265,67 @@ takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
                       else [x]
 
 ------------------------------------------------------------
--- 
+-- chainAddSkeletonG -- Version of chainAddSKeleton working on pages
 --
 
-{-
-import qualified Data.ByteString.Lazy as L
-import Data.Maybe
-import Data.Word (Word32)
-
-import System.Random
-
-import Codec.Container.Ogg.ContentType
-import Codec.Container.Ogg.Granulepos
-import Codec.Container.Ogg.Track
-import Codec.Container.Ogg.Page
-import Codec.Container.Ogg.Packet
-import Codec.Container.Ogg.Skeleton
-
--- Make a special instance of Random for Word32 that does not include
--- 0xffffffff, as this value is treated specailly by libogg
-instance Random Word32 where
-  randomR = integralRandomR
-  random = randomR (0,0xffffffff-1)
-
-integralRandomR :: (Integral a, RandomGen g) => (a,a) -> g -> (a,g)
-integralRandomR  (a,b) g = case randomR (fromIntegral a :: Integer,
-                                         fromIntegral b :: Integer) g of
-                            (x,g') -> (fromIntegral x, g')
-
 -- | Add a Skeleton logical bitstream to an OggChain
-chainAddSkeleton :: OggChain -> IO OggChain
-chainAddSkeleton chain = do
-  serialno <- getStdRandom random
-  return $ chainAddSkeleton' serialno chain
+chainAddSkeletonG :: OggChain -> IO OggChain
+chainAddSkeletonG chain = do
+  serialno <- genSerial
+  return $ chainAddSkeletonG' serialno chain
 
 -- | Add a Skeleton logical bitstream with a given serialno to an OggChain
-chainAddSkeleton' :: Word32 -> OggChain -> OggChain
-chainAddSkeleton' serialno (OggChain tracks _ packets) = OggChain nt ng np
+chainAddSkeletonG' :: Serial -> OggChain -> OggChain
+chainAddSkeletonG' serialno (OggChain tracks pages _) = OggChain nt ng np
   where
-    nt = [skelTrack] ++ tracks
-    ng = packetsToPages np
-    np = [fh] ++ ixBoss ++ ixFisbones ++ ixHdrs ++ [sEOS] ++ ixD
+    nt = skelTrack : tracks
+    ng = fh : concat [ixBoss, ixFisbones, ixHdrs, [sEOS], ixD]
+    np = pagesToPackets ng
 
     -- Construct a new track for the Skeleton
     skelTrack = (newTrack serialno){trackType = Just skeleton}
 
     -- Create the fishead and fisbone packets (all with pageIx 0)
-    fh = fisheadToPacket skelTrack emptyFishead
-    fbs = map (fisboneToPacket skelTrack) $ tracksToFisbones tracks
+    fh = fisheadToPage skelTrack emptyFishead
+    fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
 
     -- Separate out the BOS pages of the input
-    (boss, rest) = span packetBOS packets
+    (boss, rest) = span pageBOS pages
 
     -- Increment the pageIx of these original BOS pages by 1, as the
     -- Skeleton fishead packet is being prepended
-    ixBoss = map (incPageIx 1) boss
+    -- ixBoss = map (incPageIx 1) boss
+    ixBoss = boss
 
     -- Split the remainder of the input into headers and data
     (hdrs, d) = splitAt totHeaders rest
 
     -- ... for which we determine the total number of header pages
-    totHeaders = foldl (+) 0 tracksNHeaders
+    totHeaders = sum tracksNHeaders
     tracksNHeaders = map headers $ mapMaybe trackType tracks
 
     -- Increment the pageIx of the original data packets by the number of
     -- Skeleton pages
-    ixHdrs = map (incPageIx (1 + length fbs)) hdrs
-    ixD = map (incPageIx (2 + length fbs)) d
+    -- ixHdrs = map (incPageIx (1 + length fbs)) hdrs
+    -- ixD = map (incPageIx (2 + length fbs)) d
+    ixHdrs = hdrs
+    ixD = d
 
     -- Set the pageIx of the fisbones in turn, beginning after the last
     -- BOS page
-    ixFisbones = zipWith setPageIx [1+(length tracks)..] fbs
+    -- ixFisbones = zipWith setPageIx [1+(length tracks)..] fbs
+    ixFisbones = fbs
 
-    -- Generate an EOS packet for the Skeleton track
-    sEOS = (uncutPacket L.empty skelTrack sEOSgp){packetEOS = True}
+    -- Generate an EOS page for the Skeleton track
+    sEOS = (uncutPage L.empty skelTrack sEOSgp){pageEOS = True}
     sEOSgp = Granulepos (Just 0)
 
+{-
 -- An internal function for setting the pageIx of the segment of a packet.
 -- This is only designed for working with packets which are known to only
 -- and entirely span one page, such as Skeleton fisbones.
-setPageIx :: Int -> OggPacket -> OggPacket
-setPageIx ix p@(OggPacket _ _ _ _ _ (Just [oldSegment])) =
+setPageIxG :: Int -> OggPage -> OggPacket
+setPageIxG ix p@(OggPacket _ _ _ _ _ (Just [oldSegment])) =
   p{packetSegments = Just [newSegment]}
   where
     newSegment = oldSegment{segmentPageIx = ix}
@@ -357,5 +341,4 @@ incPageIx ixd p@(OggPacket _ _ _ _ _ (Just segments)) =
     incSegIx s@(OggSegment _ oix _) = s{segmentPageIx = oix + ixd}
 -- Otherwise, the packet has no segmentation info so leave it untouched
 incPageIx _ p = p
-
 -}

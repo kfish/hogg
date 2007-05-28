@@ -404,7 +404,7 @@ addSkel = do
     let s2 = \x -> outputPerChain $ map s x
     outputPerFile $ map s2 skels
   where
-    ioAddSkeleton x = liftIO $ chainAddSkeleton x
+    ioAddSkeleton x = liftIO $ chainAddSkeletonG x
   
 ------------------------------------------------------------
 -- countrwPages (countrw)
