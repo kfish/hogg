@@ -89,11 +89,8 @@ fisbonePadding = L.concat $ List.map u8Fill [z, z, z]
 z :: Int
 z = 0
 
-zTimestamp :: Timestamp
-zTimestamp = Timestamp (0%1)
-
 emptyFishead :: OggFishead
-emptyFishead = OggFishead zTimestamp zTimestamp
+emptyFishead = OggFishead zeroTimestamp zeroTimestamp
 
 ------------------------------------------------------------
 -- fisheadToPage

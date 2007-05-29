@@ -9,6 +9,7 @@
 module Codec.Container.Ogg.Timestamp (
   Timestamp (..),
   Timestampable,
+  zeroTimestamp,
   timestampOf,
   between,
   before
@@ -36,6 +37,13 @@ instance Ord Timestamp where
 
 instance Eq Timestamp where
   (Timestamp r1) == (Timestamp r2) = r1 == r2
+
+------------------------------------------------------------
+-- Constants
+--
+
+zeroTimestamp :: Timestamp
+zeroTimestamp = Timestamp (0%1)
 
 ------------------------------------------------------------
 -- Show
