@@ -57,9 +57,16 @@ data ChopTrackState =
 type Chop a = (StateT ChopState Identity) a
 
 -- | chop start end chain
-chop :: Bool -> Maybe Timestamp -> Maybe Timestamp -> OggChain -> OggChain
-chop skel start end chain =
-  fst $ runChop emptyChopState (chopTop skel start end chain)
+chop :: Bool -> Maybe Timestamp -> Maybe Timestamp -> OggChain -> IO OggChain
+chop skel start end chain = do
+  st <- case skel of
+          True  -> do
+            -- Construct a new track for the Skeleton
+            s <- genSerial
+            let skelTrack = (newTrack s){trackType = Just skeleton}
+            return [newChopTrackState skelTrack]
+          False -> return $ emptyChopState
+  return $ fst $ runChop st (chopTop skel start end chain)
 
 emptyChopState :: ChopState
 emptyChopState = []
@@ -135,30 +142,19 @@ pushHdr g = do
 chopCtrl :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopCtrl mStart mEnd gs = do
     l <- get
-    let presentation = fromMaybe zeroTimestamp mStart
+    let (skelTrack:tracks) = map ctsTrack l
+        presentation = fromMaybe zeroTimestamp mStart
         base = zeroTimestamp
         fh = fisheadToPage skelTrack $ OggFishead presentation base
-        tracks = map ctsTrack l
         fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
+        -- Generate an EOS page for the Skeleton track
+        sEOS = (uncutPage L.empty skelTrack sEOSgp){pageEOS = True}
+        sEOSgp = Granulepos (Just 0)
 
     boss <- popBOSs
     hdrs <- popHdrs
     cs <- chopRaw mStart mEnd gs
     return $ [fh] ++ boss ++ fbs ++ hdrs ++ [sEOS] ++ cs
-  where
-    serialno = 7
-
-    -- Construct a new track for the Skeleton
-    skelTrack = (newTrack serialno){trackType = Just skeleton}
-
-    -- Create the fishead and fisbone packets (all with pageIx 0)
-    -- fh = fisheadToPage skelTrack emptyFishead
-    -- fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
-
-    -- Generate an EOS page for the Skeleton track
-    sEOS = (uncutPage L.empty skelTrack sEOSgp){pageEOS = True}
-    sEOSgp = Granulepos (Just 0)
-
 
 popBOSs :: Chop [OggPage]
 popBOSs = popPages ctsBOS

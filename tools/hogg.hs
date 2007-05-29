@@ -380,13 +380,13 @@ chopPages :: Hot ()
 chopPages = do
     config <- asks hotConfig
     matchChains <- chains
-    let chopChains = map (map (chopRange config)) matchChains
+    chopChains <- mapM (mapM (chopRange config)) matchChains
     let c = \x -> L.concat $ map pageWrite (chainPages x)
     let c2 = \x -> outputPerChain $ map c x
     outputPerFile $ map c2 chopChains
 
-chopRange :: Config -> OggChain -> OggChain
-chopRange c@(Config _ _ start end _) xs = chop True start end xs
+chopRange :: Config -> OggChain -> Hot OggChain
+chopRange c@(Config _ _ start end _) xs = liftIO $ chop True start end xs
 
 -- TODO: implement an option for the following ...
 -- To make with no skeleton bitstream:
