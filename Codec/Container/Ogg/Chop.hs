@@ -135,8 +135,10 @@ pushHdr g = do
 chopCtrl :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopCtrl mStart mEnd gs = do
     l <- get
-    let tracks = map ctsTrack l
-        fh = fisheadToPage skelTrack emptyFishead
+    let presentation = fromMaybe zeroTimestamp mStart
+        base = zeroTimestamp
+        fh = fisheadToPage skelTrack $ OggFishead presentation base
+        tracks = map ctsTrack l
         fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
 
     boss <- popBOSs
