@@ -134,10 +134,29 @@ pushHdr g = do
 -- | Dump the control section
 chopCtrl :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
 chopCtrl mStart mEnd gs = do
+    l <- get
+    let tracks = map ctsTrack l
+        fh = fisheadToPage skelTrack emptyFishead
+        fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
+
     boss <- popBOSs
     hdrs <- popHdrs
     cs <- chopRaw mStart mEnd gs
-    return $ boss ++ hdrs ++ cs
+    return $ [fh] ++ boss ++ fbs ++ hdrs ++ [sEOS] ++ cs
+  where
+    serialno = 7
+
+    -- Construct a new track for the Skeleton
+    skelTrack = (newTrack serialno){trackType = Just skeleton}
+
+    -- Create the fishead and fisbone packets (all with pageIx 0)
+    -- fh = fisheadToPage skelTrack emptyFishead
+    -- fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
+
+    -- Generate an EOS page for the Skeleton track
+    sEOS = (uncutPage L.empty skelTrack sEOSgp){pageEOS = True}
+    sEOSgp = Granulepos (Just 0)
+
 
 popBOSs :: Chop [OggPage]
 popBOSs = popPages ctsBOS
