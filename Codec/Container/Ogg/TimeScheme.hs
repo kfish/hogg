@@ -11,6 +11,7 @@ module Codec.Container.Ogg.TimeScheme (
   guessTimeScheme,
 
   -- | Some standard time schemes
+  npt,
   smpte24,
   smpte24drop,
   smpte25,
@@ -55,7 +56,10 @@ instance Read TimeScheme where
   readsPrec _ = readsTimeScheme
 
 readsTimeScheme :: ReadS TimeScheme
-readsTimeScheme str = [(scheme, rest) | scheme <- matches]
+readsTimeScheme [] = []
+readsTimeScheme str@(c:_)
+  | isDigit c = [(npt, str)]
+  | otherwise = [(scheme, tail rest) | scheme <- matches]
   where (tok, rest) = span (\x -> isAlphaNum x || x == '-') str
         matches = filter sameName knownTimeSchemes
         sameName = \x ->  l (timeSchemeName x) == l tok

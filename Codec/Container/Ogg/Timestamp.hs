@@ -80,7 +80,7 @@ instance Read Timestamp where
 readsTimestamp :: ReadS Timestamp
 readsTimestamp str = [(t, rest) |
                       (scheme, r) <- reads str :: [(TimeScheme, String)],
-                      (time, rest) <- readTime $ tail r,
+                      (time, rest) <- readTime r,
                       t <- makeStamp scheme time]
 
 makeStamp :: TimeScheme -> ParsedTimeStamp -> [Timestamp]
@@ -142,6 +142,7 @@ readTime str = maybe [] (\x -> [(x, rest)]) parsed
         safeHead (x:_) = x
 
         twoDigits [a,b] = Just (10 * (dig a) + dig b)
+        twoDigits [a] = Just (dig a)
         twoDigits _ = Nothing
 
         threeDigits (a:b:c:_) =
