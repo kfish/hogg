@@ -8,7 +8,8 @@
 
 module Codec.Container.Ogg.Chop (
   chainAddSkeletonG, -- XXX: For debugging only, TO BE REMOVED
-  chop
+  chop,
+  chopWithSkel
 ) where
 
 import Control.Monad.Identity
@@ -56,17 +57,18 @@ data ChopTrackState =
 
 type Chop a = (StateT ChopState Identity) a
 
+chop :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> IO OggChain
+chop start end chain =
+  return $ fst $ runChop emptyChopState (chopTop start end chain)
+
 -- | chop start end chain
-chop :: Bool -> Maybe Timestamp -> Maybe Timestamp -> OggChain -> IO OggChain
-chop skel start end chain = do
-  st <- case skel of
-          True  -> do
-            -- Construct a new track for the Skeleton
-            s <- genSerial
-            let skelTrack = (newTrack s){trackType = Just skeleton}
-            return [newChopTrackState skelTrack]
-          False -> return $ emptyChopState
-  return $ fst $ runChop st (chopTop skel start end chain)
+chopWithSkel :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> IO OggChain
+chopWithSkel start end chain = do
+    -- Construct a new track for the Skeleton
+    s <- genSerial
+    let skelTrack = (newTrack s){trackType = Just skeleton}
+        st = [newChopTrackState skelTrack]
+    return $ fst $ runChop st (chopTop start end chain)
 
 emptyChopState :: ChopState
 emptyChopState = []
@@ -78,11 +80,9 @@ runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
 
 -- | Top-level bitstream chopper -- handles headers
-chopTop :: Bool -> Maybe Timestamp -> Maybe Timestamp -> OggChain
-        -> Chop OggChain
-chopTop skel mStart mEnd (OggChain tracks pages _) = do
-  let chopT = if skel then chopTop' else chopTopN'
-  pages' <- chopT mStart mEnd pages
+chopTop :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> Chop OggChain
+chopTop mStart mEnd (OggChain tracks pages _) = do
+  pages' <- chopTop' mStart mEnd pages
   let packets' = pagesToPackets pages' 
   return $ OggChain tracks pages' packets'
 
@@ -103,90 +103,7 @@ chopTop' (Just start) mEnd (g:gs)
         subHeaders g -- Subtract the number contained in this page
         pushHdr g -- Remember this header
         chopTop' (Just start) mEnd gs
-      _  -> chopCtrl (Just start) mEnd (g:gs)
-
--- | Find the ChopTrackState associated with this OggPage (indexed by track)
-findState :: OggPage -> Chop ChopTrackState
-findState g = do
-    l <- get
-    let t = pageTrack g
-        mSt = find (\x -> ctsTrack x == t) l
-    return $ fromMaybe (newChopTrackState t) mSt
-
--- | Replace a ChopTrackState (only if already existing)
-replState :: ChopTrackState -> Chop ()
-replState st = do
-    l <- get
-    let l' = foldr (\x -> if (sameTrack x) then (:) st else (:) x) [] l
-    put l'
-  where
-    sameTrack x = (ctsTrack x == ctsTrack st)
-
-pushBOS :: OggPage -> Chop ()
-pushBOS g = do
-    l <- get
-    let st = (newChopTrackState t){ctsBOS = [g]}
-        l' = l ++ [st]
-    put l'
-  where
-    t = pageTrack g
-
-pushHdr :: OggPage -> Chop ()
-pushHdr g = do
-    ts <- findState g
-    let hdrs = ctsHdrs ts
-        h' = hdrs++[g]
-    replState ts{ctsHdrs = h'}
-
--- | Dump the control section
-chopCtrl :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
-chopCtrl mStart mEnd gs = do
-    l <- get
-    let (skelTrack:tracks) = map ctsTrack l
-        presentation = fromMaybe zeroTimestamp mStart
-        base = zeroTimestamp
-        fh = fisheadToPage skelTrack $ OggFishead presentation base
-        fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
-        -- Generate an EOS page for the Skeleton track
-        sEOS = (uncutPage L.empty skelTrack sEOSgp){pageEOS = True}
-        sEOSgp = Granulepos (Just 0)
-
-    boss <- popBOSs
-    hdrs <- popHdrs
-    cs <- chopRaw mStart mEnd gs
-    return $ [fh] ++ boss ++ fbs ++ hdrs ++ [sEOS] ++ cs
-
-popBOSs :: Chop [OggPage]
-popBOSs = popPages ctsBOS
-
-popHdrs :: Chop [OggPage]
-popHdrs = popPages ctsHdrs
-
-popPages :: (ChopTrackState -> [OggPage]) -> Chop [OggPage]
-popPages f = do
-    l <- get
-    let gs = foldr (\a b -> (f a)++b) [] l
-    return gs
-
--- | A version of ChopTop that does not add a Skeleton bitstream
-chopTopN' :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
-chopTopN' _ _ [] = return []
-chopTopN' Nothing Nothing gs = return gs
-chopTopN' Nothing mEnd@(Just _) gs = chopTo mEnd gs
-chopTopN' (Just start) mEnd (g:gs)
-  | pageBOS g = do
-    addHeaders g -- Add the number of headers for this track
-    subHeaders g -- Subtract the number contained in this page
-    cs <- chopTop' (Just start) mEnd gs
-    return $ g : cs
-  | otherwise = do
-    p <- doneHeaders
-    case p of
-      False -> do
-        subHeaders g -- Subtract the number contained in this page
-        cs <- chopTop' (Just start) mEnd gs
-        return $ g : cs
-      _  -> chopRaw (Just start) mEnd (g:gs)
+      True  -> chopRaw (Just start) mEnd (g:gs)
 
 -- | Raw bitstream chopper -- after headers
 chopRaw :: Maybe Timestamp -> Maybe Timestamp -> [OggPage] -> Chop [OggPage]
@@ -211,12 +128,34 @@ chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
         chopAccum g
     case (compare start gTime) of
       LT -> do
-        -- Dump accum buffer into bitstream
-        as <- getAccum
+        -- Prepend Control section
+        ctrl <- chopCtrl (Just start)
         cs <- chopRaw Nothing mEnd gs
-        return $ as ++ cs
+        return $ ctrl ++ cs
       _  -> do
         chopRaw (Just start) mEnd gs
+
+-- | Dump the control section
+chopCtrl :: Maybe Timestamp -> Chop [OggPage]
+chopCtrl mStart = do
+    l <- get
+    let (skelTrack:tracks) = map ctsTrack l
+        haveSkel = (trackType skelTrack == Just skeleton)
+        presentation = fromMaybe zeroTimestamp mStart
+        base = zeroTimestamp
+        fh = fisheadToPage skelTrack $ OggFishead presentation base
+        fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
+        -- Generate an EOS page for the Skeleton track
+        sEOS = (uncutPage L.empty skelTrack sEOSgp){pageEOS = True}
+        sEOSgp = Granulepos (Just 0)
+
+    boss <- popBOSs
+    hdrs <- popHdrs
+    -- Include accum buffer in bitstream
+    as <- getAccum
+    case haveSkel of
+      True -> return $ [fh] ++ boss ++ fbs ++ hdrs ++ [sEOS] ++ as
+      False -> return $ boss ++ hdrs ++ as
 
 -- | Chop to the specified end time
 chopTo :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
@@ -242,6 +181,56 @@ chopEnd mEnd (g:gs) = do
         replState ts{ended = True}
         cs <- chopEnd mEnd gs
         return $ g{pageEOS = True} : cs
+
+-- | Find the ChopTrackState associated with this OggPage (indexed by track)
+findState :: OggPage -> Chop ChopTrackState
+findState g = do
+    l <- get
+    let t = pageTrack g
+        mSt = find (\x -> ctsTrack x == t) l
+    return $ fromMaybe (newChopTrackState t) mSt
+
+-- | Replace a ChopTrackState (only if already existing)
+replState :: ChopTrackState -> Chop ()
+replState st = do
+    l <- get
+    let l' = foldr (\x -> if (sameTrack x) then (:) st else (:) x) [] l
+    put l'
+  where
+    sameTrack x = (ctsTrack x == ctsTrack st)
+
+-- | Push a Beginning-Of-Stream page onto ChopState
+pushBOS :: OggPage -> Chop ()
+pushBOS g = do
+    l <- get
+    let st = (newChopTrackState t){ctsBOS = [g]}
+        l' = l ++ [st]
+    put l'
+  where
+    t = pageTrack g
+
+-- | Push a header page onto ChopState
+pushHdr :: OggPage -> Chop ()
+pushHdr g = do
+    ts <- findState g
+    let hdrs = ctsHdrs ts
+        h' = hdrs++[g]
+    replState ts{ctsHdrs = h'}
+
+-- | Pop all Beginning-Of-Stream pages from ChopState
+popBOSs :: Chop [OggPage]
+popBOSs = popPages ctsBOS
+
+-- | Pop all header pages from ChopState
+popHdrs :: Chop [OggPage]
+popHdrs = popPages ctsHdrs
+
+-- | Generic page popper for BOS, headers
+popPages :: (ChopTrackState -> [OggPage]) -> Chop [OggPage]
+popPages f = do
+    l <- get
+    let gs = foldr (\a b -> (f a)++b) [] l
+    return gs
 
 -- | Determine whether all tracks are ended
 allEnded :: Chop Bool

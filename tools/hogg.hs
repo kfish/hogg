@@ -386,7 +386,7 @@ chopPages = do
     outputPerFile $ map c2 chopChains
 
 chopRange :: Config -> OggChain -> Hot OggChain
-chopRange c@(Config _ _ start end _) xs = liftIO $ chop True start end xs
+chopRange c@(Config _ _ start end _) xs = liftIO $ chopWithSkel start end xs
 
 -- TODO: implement an option for the following ...
 -- To make with no skeleton bitstream:
