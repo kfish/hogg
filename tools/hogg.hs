@@ -390,7 +390,7 @@ chopRange c@(Config _ _ start end _) xs = liftIO $ chopWithSkel start end xs
 
 -- TODO: implement an option for the following ...
 -- To make with no skeleton bitstream:
--- chopRange c@(Config _ _ start end _) xs = chop False start end xs
+-- chopRange c@(Config _ _ start end _) xs = liftIO $ chop start end xs
 
 ------------------------------------------------------------
 -- addSkel (addskel)
