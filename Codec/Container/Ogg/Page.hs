@@ -119,9 +119,11 @@ pageWrite (OggPage _ track cont incplt bos eos gp seqno s) = newPageData
 
 buildSegtab :: Int -> [Word8] -> Bool -> [L.ByteString] -> (Int, [Word8])
 buildSegtab numsegs accum _ [] = (numsegs, accum)
-buildSegtab numsegs accum incplt (x:xs) = buildSegtab (numsegs+length(tab)) (accum ++ tab) incplt xs where
-  (q,r) = quotRem (fromIntegral $ L.length x) 255
-  tab = buildTab q r xs incplt
+buildSegtab numsegs accum incplt (x:xs) =
+    buildSegtab (numsegs+length(tab)) (accum ++ tab) incplt xs
+  where
+    (q,r) = quotRem (fromIntegral $ L.length x) 255
+    tab = buildTab q r xs incplt
 
 buildTab :: Int -> Int -> [a] -> Bool -> [Word8]
 buildTab 0 r _ _ = [fromIntegral r]
@@ -144,7 +146,7 @@ pageScan' allowBOS offset tracks input
   | L.isPrefixOf pageMarker input = pageResult
   | otherwise                     = pageScan' allowBOS (offset+1) tracks (L.tail input)
   where
-        pageResult = pageProcess offset tracks $ pageBuild allowBOS offset tracks input
+    pageResult = pageProcess offset tracks $ pageBuild allowBOS offset tracks input
 
 -- | Process the output of pageBuild, interpret as either the end of a chain
 -- or the construction of a new page in the current chain
