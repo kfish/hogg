@@ -7,7 +7,6 @@
 -- Portability : portable
 
 module Codec.Container.Ogg.Chop (
-  chainAddSkeletonG, -- XXX: For debugging only, TO BE REMOVED
   chop,
   chopWithSkel
 ) where
@@ -57,11 +56,14 @@ data ChopTrackState =
 
 type Chop a = (StateT ChopState Identity) a
 
+-- | Chop a bitstream, do NOT add a Skeleton bitstream
+-- | chop start end chain
 chop :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> IO OggChain
 chop start end chain =
   return $ fst $ runChop emptyChopState (chopTop start end chain)
 
--- | chop start end chain
+-- | Chop a bitstream, adding a Skeleton bitstream
+-- | chopWithSkel start end chain
 chopWithSkel :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> IO OggChain
 chopWithSkel start end chain = do
     -- Construct a new track for the Skeleton
@@ -70,12 +72,15 @@ chopWithSkel start end chain = do
         st = [newChopTrackState skelTrack]
     return $ fst $ runChop st (chopTop start end chain)
 
+-- An initial ChopState for a chop without adding skeleton
 emptyChopState :: ChopState
 emptyChopState = []
 
+-- Initial state for a new track
 newChopTrackState :: OggTrack -> ChopTrackState
 newChopTrackState t = ChopTrackState t [] [] 0 0 [] False
 
+-- | Run the Chop monad
 runChop :: ChopState -> Chop a -> (a, ChopState)
 runChop st x = runIdentity (runStateT x st)
 
@@ -337,82 +342,3 @@ takeWhileB :: (a -> Bool) -> [a] -> [a]
 takeWhileB _ [] = []
 takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
                       else [x]
-
-------------------------------------------------------------
--- chainAddSkeletonG -- Version of chainAddSKeleton working on pages
---
-
--- | Add a Skeleton logical bitstream to an OggChain
-chainAddSkeletonG :: OggChain -> IO OggChain
-chainAddSkeletonG chain = do
-  serialno <- genSerial
-  return $ chainAddSkeletonG' serialno chain
-
--- | Add a Skeleton logical bitstream with a given serialno to an OggChain
-chainAddSkeletonG' :: Serial -> OggChain -> OggChain
-chainAddSkeletonG' serialno (OggChain tracks pages _) = OggChain nt ng np
-  where
-    nt = skelTrack : tracks
-    ng = fh : concat [ixBoss, ixFisbones, ixHdrs, [sEOS], ixD]
-    np = pagesToPackets ng
-
-    -- Construct a new track for the Skeleton
-    skelTrack = (newTrack serialno){trackType = Just skeleton}
-
-    -- Create the fishead and fisbone packets (all with pageIx 0)
-    fh = fisheadToPage skelTrack emptyFishead
-    fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
-
-    -- Separate out the BOS pages of the input
-    (boss, rest) = span pageBOS pages
-
-    -- Increment the pageIx of these original BOS pages by 1, as the
-    -- Skeleton fishead packet is being prepended
-    -- ixBoss = map (incPageIx 1) boss
-    ixBoss = boss
-
-    -- Split the remainder of the input into headers and data
-    (hdrs, d) = splitAt totHeaders rest
-
-    -- ... for which we determine the total number of header pages
-    totHeaders = sum tracksNHeaders
-    tracksNHeaders = map headers $ mapMaybe trackType tracks
-
-    -- Increment the pageIx of the original data packets by the number of
-    -- Skeleton pages
-    -- ixHdrs = map (incPageIx (1 + length fbs)) hdrs
-    -- ixD = map (incPageIx (2 + length fbs)) d
-    ixHdrs = hdrs
-    ixD = d
-
-    -- Set the pageIx of the fisbones in turn, beginning after the last
-    -- BOS page
-    -- ixFisbones = zipWith setPageIx [1+(length tracks)..] fbs
-    ixFisbones = fbs
-
-    -- Generate an EOS page for the Skeleton track
-    sEOS = (uncutPage L.empty skelTrack sEOSgp){pageEOS = True}
-    sEOSgp = Granulepos (Just 0)
-
-{-
--- An internal function for setting the pageIx of the segment of a packet.
--- This is only designed for working with packets which are known to only
--- and entirely span one page, such as Skeleton fisbones.
-setPageIxG :: Int -> OggPage -> OggPacket
-setPageIxG ix p@(OggPacket _ _ _ _ _ (Just [oldSegment])) =
-  p{packetSegments = Just [newSegment]}
-  where
-    newSegment = oldSegment{segmentPageIx = ix}
-setPageIx _ _ = error "setPageIx used on non-uncut page"
-
--- An internal function for incrementing the pageIx of all the segments of
--- a packet.
-incPageIx :: Int -> OggPacket -> OggPacket
-incPageIx ixd p@(OggPacket _ _ _ _ _ (Just segments)) =
-  p{packetSegments = Just (map incSegIx segments)}
-  where
-    incSegIx :: OggSegment -> OggSegment
-    incSegIx s@(OggSegment _ oix _) = s{segmentPageIx = oix + ixd}
--- Otherwise, the packet has no segmentation info so leave it untouched
-incPageIx _ p = p
--}
