@@ -43,6 +43,8 @@ data ChopTrackState =
     
     headersRemaining :: Int,
 
+    ctsStartgranule :: Granulepos,
+
     -- Greatest previously inferred keyframe value
     prevK :: Integer,
 
@@ -78,7 +80,7 @@ emptyChopState = []
 
 -- Initial state for a new track
 newChopTrackState :: OggTrack -> ChopTrackState
-newChopTrackState t = ChopTrackState t [] [] 0 0 [] False
+newChopTrackState t = ChopTrackState t [] [] 0 (Granulepos Nothing) 0 [] False
 
 -- | Run the Chop monad
 runChop :: ChopState -> Chop a -> (a, ChopState)
@@ -144,12 +146,12 @@ chopRaw (Just start) mEnd (g:gs) = case (timestampOf g) of
 chopCtrl :: Maybe Timestamp -> Chop [OggPage]
 chopCtrl mStart = do
     l <- get
-    let (skelTrack:tracks) = map ctsTrack l
+    let skelTrack = ctsTrack $ head l
         haveSkel = (trackType skelTrack == Just skeleton)
         presentation = fromMaybe zeroTimestamp mStart
         base = zeroTimestamp
         fh = fisheadToPage skelTrack $ OggFishead presentation base
-        fbs = map (fisboneToPage skelTrack) $ tracksToFisbones tracks
+        fbs = Data.Maybe.mapMaybe (chopFisbone skelTrack) (tail l)
         -- Generate an EOS page for the Skeleton track
         sEOS = (uncutPage L.empty skelTrack sEOSgp){pageEOS = True}
         sEOSgp = Granulepos (Just 0)
@@ -161,6 +163,13 @@ chopCtrl mStart = do
     case haveSkel of
       True -> return $ [fh] ++ boss ++ fbs ++ hdrs ++ [sEOS] ++ as
       False -> return $ boss ++ hdrs ++ as
+
+-- | Create a Fisbone page out of a ChopTrackState
+chopFisbone :: OggTrack -> ChopTrackState -> Maybe OggPage
+chopFisbone skelTrack cts = do
+    fb <- trackToFisbone $ ctsTrack cts
+    let fb' = fb{fisboneStartgranule = gpUnpack $ ctsStartgranule cts}
+    return $ fisboneToPage skelTrack fb'
 
 -- | Chop to the specified end time
 chopTo :: Maybe Timestamp -> [OggPage] -> Chop [OggPage]
@@ -292,11 +301,14 @@ pruneAccum g = case (trackGranuleshift t) of
     t = pageTrack g
 
 pruneTrackAccum :: OggPage -> Integer -> ChopTrackState -> ChopTrackState
-pruneTrackAccum g k ts = ts{pageAccum = g:gs}
+pruneTrackAccum g k ts = ts{pageAccum = g:gs, ctsStartgranule = sg}
   where
     as = pageAccum ts
     t = pageTrack g
-    gs = takeWhileB later as
+    (gs, sgs) = spanB later as
+    sg = gpOfHead sgs
+    gpOfHead [] = Granulepos Nothing
+    gpOfHead (x:_) = pageGranulepos x
     later x = case (pageGranulepos x) of
       Granulepos Nothing -> True
       _ -> (fromJust $ gpToGranules (pageGranulepos x) t) >= k
@@ -337,8 +349,10 @@ doneHeaders = do
   l <- get
   return $ foldr (\t b -> (headersRemaining t <= 0) && b) True l
 
--- | a version of takeWhile that includes the first bounding failure
-takeWhileB :: (a -> Bool) -> [a] -> [a]
-takeWhileB _ [] = []
-takeWhileB p (x:xs) = if p x then x : takeWhileB p xs
-                      else [x]
+-- | a version of span that includes the first bounding failure
+spanB :: (a -> Bool) -> [a] -> ([a], [a])
+spanB _ [] = ([],[])
+spanB p (x:xs) 
+    | p x       =  (x:ys,zs) 
+    | otherwise =  ([x],xs)
+                   where (ys,zs) = spanB p xs
