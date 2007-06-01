@@ -469,7 +469,7 @@ mergePages = do
     -- XXX: only use the first chain of each input file. Using subsequent
     -- chains won't work anyway unless corresponding chains in each file are
     -- of identical duration.
-    let firstChainPages = map (map head) matchPages
+    let firstChainPages = map head matchPages
     outputL $ L.concat $ map pageWrite $ listMerge firstChainPages
 
 ------------------------------------------------------------
