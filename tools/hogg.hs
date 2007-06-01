@@ -63,8 +63,8 @@ subCommands = [
                dumpRawPagesSub,
                rewritePagesSub,
                rewritePacketsSub,
-               mergePagesSub,
                chopSub,
+               mergePagesSub,
                addSkelSub,
                countPacketsSub,
                countrwPagesSub,
@@ -374,7 +374,7 @@ rewritePackets = do
 
 chopSub :: SubCommand
 chopSub = SubCommand "chop" chopPages
-  "Editing" "Chop a subrange out"
+  "Editing" "Extract part of an Ogg file (specify start and/or end time)"
 
 chopPages :: Hot ()
 chopPages = do
