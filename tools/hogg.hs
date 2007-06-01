@@ -374,7 +374,7 @@ rewritePackets = do
 
 chopSub :: SubCommand
 chopSub = SubCommand "chop" chopPages
-  "Editing" "Extract part of an Ogg file (specify start and/or end time)"
+  "Editing" "Extract a section (specify start and/or end time)"
 
 chopPages :: Hot ()
 chopPages = do
