@@ -15,8 +15,8 @@ GHC 6.4 at: http://www.cse.unsw.edu.au/~dons/fps.html (version 0.7 or greater)
 
 Building:
 
-Note that if you are building with GHC6.6, you will need to edit hogg.cabal
-by removing 'fps' from the Build-Depends line.
+Note that if you are building with GHC 6.4, you will need to edit hogg.cabal
+by adding 'fps' to the Build-Depends line.
 
 	$ chmod +x Setup.hs
 	$ ./Setup.hs configure
@@ -49,6 +49,10 @@ Usage:
 		hogg dump -c vorbis file.ogg ...
 		hogg pagedump -c vorbis file.ogg ...
 		hogg dumpraw -c vorbis file.ogg ...
+
+	Chop out part of a file
+
+		hogg chop --start 01:10 --end 2:30 -o output.ogg file.ogg
 
         Merge
  
