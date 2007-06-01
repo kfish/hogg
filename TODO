@@ -2,7 +2,6 @@ TODO for HOgg.
 
 verify skeleton
 
-anxmux (time offset gen)
 anx byte offset reporting
 cmml insert
 cmml extract
@@ -16,8 +15,6 @@ filter: subcommand to rewrite serialno, inc/dec granulepos of matching tracks
 
 optimize: remux the pages to avoid packet splitting
 
-chop: extract a section [start, end] of a file
-
 splice/edit (concat data from different files if the encoding parms are the
 same, or cut/edit bits from the same file)
 
@@ -28,3 +25,8 @@ web server frontend
 
 Test against all files from:
   http://www1.mplayerhq.hu/MPlayer/samples/ogg/
+
+DONE:
+anxmux (time offset gen)
+chop: extract a section [start, end] of a file
+
