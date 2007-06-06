@@ -117,7 +117,7 @@ fisheadWrite (OggFishead p b) = newFisheadData
     hData = L.concat [fisheadIdent, le16Fill vMajor, le16Fill vMinor]
     pData = timestampFill p
     bData = timestampFill b
-    uData = L.concat $ List.map le64Fill [z, z]
+    uData = L.concat $ List.map le32Fill $ take 5 $ repeat z
 
 timestampFill :: Timestamp -> L.ByteString
 timestampFill (Timestamp r) = L.concat $ List.map le64Fill [n, d]
