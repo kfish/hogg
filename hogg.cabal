@@ -2,11 +2,11 @@ Name:                hogg
 Version:             0.2.0
 License:             BSD3
 License-file:        LICENSE
-Copyright:           Conrad Parker, 2006
+Copyright:           Conrad Parker, 2007
 Author:              Conrad Parker
 Maintainer:          conradp@cse.unsw.edu.au
 Stability:           experimental
-Homepage:            http://snapper.kfish.org/~conrad/software/hogg/
+Homepage:            http://www.kfish.org/software/hogg/
 Synopsis:            Library and tools to manipulate the Ogg container format
 Description:
   The HOgg package provides a commandline tool for manipulating Ogg files.
