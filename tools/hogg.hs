@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -cpp #-}
 module Main where
 
 import System.Exit
@@ -7,8 +8,10 @@ import Control.Monad.Reader
 import Control.Monad
 import Control.Exception
 
+#ifdef USE_HTTP
 import Network.HTTP (rspBody)
 import Network.HTTP.UserAgent as UA
+#endif
 
 import System.Environment (getArgs, getProgName)
 import System.Console.GetOpt
@@ -164,11 +167,15 @@ catchRead msg x = case reads x of
 
 -- get the named contents as a bytestring
 open :: String -> IO L.ByteString
-open f = case (isPrefixOf "http://" f) of
+open f =
+#ifdef USE_HTTP
+  case (isPrefixOf "http://" f) of
     True -> do
       rsp <- UA.get f
       return $ rspBody rsp
-    False -> do
+    False ->
+#endif
+             do
       h <- openFile f ReadMode
       i <- L.hGetContents h
       return i
