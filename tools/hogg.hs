@@ -73,6 +73,7 @@ subCommands = [
                countPacketsSub,
                countrwPagesSub,
                countPagesSub,
+               knownCodecsSub,
                helpSub
               ]
 
@@ -529,6 +530,18 @@ dumpRawPages = do
     reportPerFile $ map d matchPages
 
 ------------------------------------------------------------
+-- known-types
+--
+
+knownCodecsSub :: SubCommand
+knownCodecsSub = SubCommand "known-codecs" knownCodecs
+  "Miscellaneous" "List codecs known by this version of hogg"
+  []
+
+knownCodecs :: Hot ()
+knownCodecs = liftIO $ mapM_ putStrLn knownContentTypes
+
+------------------------------------------------------------
 -- help
 --
 
@@ -546,7 +559,7 @@ longHelp :: [String] -> [String]
 -- | "hogg help" with no arguments: Give a list of all subcommands
 longHelp [] =
     ["Usage: hogg <subcommand> [options] filename ...\n\n"] ++
-    map categoryHelp ["Commands", "Reporting", "Extraction", "Editing"] ++
+    map categoryHelp ["Commands", "Reporting", "Extraction", "Editing", "Miscellaneous"] ++
     -- map categoryHelp ["Testing"] ++
     ["Please report bugs to <ogg-dev@xiph.org>\n"]
 
@@ -565,12 +578,17 @@ contextHelp command [] = longHelp [] ++ contextError
   where contextError = ["\n*** \"" ++ command ++ "\": Unknown command.\n"]
 contextHelp command (item:_) = synopsis ++ usage ++ examples ++
     ["\n" ++ optionsHelp command]
-  where usage = ["Usage: hogg " ++ command ++ " [options] filename\n"]
+  where usage = ["Usage: hogg " ++ command ++ hasOpts command]
+        hasOpts "help" = " <subcommand>\n"
+        hasOpts "known-codecs" = "\n"
+        hasOpts _ = " [options] filename\n"
         synopsis = [command ++ ": " ++ subSynopsis item ++ "\n"]
-        examples = ["\nExamples:"] ++
-                   flip map (subExamples item) (\(desc,opts) ->
-                     "\n  " ++ desc ++ ":\n    hogg " ++ command ++
-                     " " ++ opts ++ "\n")
+        examples = case (subExamples item) of
+                     [] -> []
+                     _  -> ["\nExamples:"] ++
+                           flip map (subExamples item) (\(desc,opts) ->
+                             "\n  " ++ desc ++ ":\n    hogg " ++ command ++
+                             " " ++ opts ++ "\n")
 
 -- | Provide usage information [for a specific command]
 optionsHelp command = usageInfo "Options:" options

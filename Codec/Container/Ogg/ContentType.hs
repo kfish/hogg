@@ -8,6 +8,10 @@
 
 module Codec.Container.Ogg.ContentType (
   ContentType (..),
+
+  -- | A list of content type labels (eg. "Vorbis", "Theora") known by HOgg
+  knownContentTypes,
+
   identify,
   granulerate,
   granuleshift,
@@ -25,6 +29,7 @@ module Codec.Container.Ogg.ContentType (
 import Data.Bits
 import qualified Data.ByteString.Lazy as L
 import Data.Char
+import Data.List (sort)
 import Data.Map (fromList)
 import Data.Maybe
 import Data.Ratio
@@ -60,6 +65,9 @@ data ContentType =
     granuleshiftF :: Maybe (L.ByteString -> Int), -- used by granuleshift
     metadata :: L.ByteString -> MessageHeaders
   }
+
+knownContentTypes :: [String]
+knownContentTypes = sort $ map label known
 
 known :: [ContentType]
 known = [skeleton, cmml, vorbis, theora, speex, flac, oggpcm2]
