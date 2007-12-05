@@ -55,7 +55,8 @@ data SubCommand =
     subName :: String,
     subMethod :: Hot (),
     subCategory :: String,
-    subSynopsis :: String
+    subSynopsis :: String,
+    subExamples :: [(String,String)] -- [(example description, flags)]
   }
 
 subCommands :: [SubCommand]
@@ -308,6 +309,8 @@ outputPerChain = L.concat
 infoSub :: SubCommand
 infoSub = SubCommand "info" info
     "Reporting" "Display information about the file and its bitstreams"
+    [("Describe all bitstreams in file.ogg", "file.ogg"),
+     ("Describe only the Theora bitstream in file.ogg", "-c theora file.ogg")]
 
 info :: Hot ()
 info = do
@@ -323,6 +326,8 @@ info = do
 dumpPacketsSub :: SubCommand
 dumpPacketsSub = SubCommand "dump" dumpPackets
     "Reporting" "Hexdump packets of an Ogg file"
+    [("Dump all bitstreams in file.ogg", "file.ogg"),
+     ("Dump only the Theora bitstream in file.ogg", "-c theora file.ogg")]
 
 dumpPackets :: Hot ()
 dumpPackets = do
@@ -337,6 +342,8 @@ dumpPackets = do
 countPacketsSub :: SubCommand
 countPacketsSub = SubCommand "packetcount" countPackets
     "Testing" "Count packets of an Ogg file" 
+    [("Count packets of all bitstreams in file.ogg", "file.ogg"),
+     ("Count packets from only the Theora bitstream in file.ogg", "-c theora file.ogg")]
 
 countPackets :: Hot ()
 countPackets = do
@@ -352,6 +359,9 @@ countPackets = do
 rewritePagesSub :: SubCommand
 rewritePagesSub = SubCommand "rip" rewritePages
     "Extraction" "Rip selected logical bistreams from an Ogg file (default: all)"
+    [("Extract all bitstreams from file.ogg", "file.ogg -o output.ogg"),
+     ("Extract only the Theora bitstream from file.ogg",
+      "-c theora -o output.ogg file.ogg")]
 
 rewritePages :: Hot ()
 rewritePages = do
@@ -367,6 +377,9 @@ rewritePages = do
 rewritePacketsSub :: SubCommand
 rewritePacketsSub = SubCommand "reconstruct" rewritePackets
     "Extraction" "Reconstruct an Ogg file by doing a full packet demux"
+    [("Reconstruct all bitstreams from file.ogg", "file.ogg -o output.ogg"),
+     ("Reconstruct only the Theora bitstream from file.ogg",
+      "-c theora -o output.ogg file.ogg")]
 
 rewritePackets :: Hot ()
 rewritePackets = do
@@ -381,7 +394,14 @@ rewritePackets = do
 
 chopSub :: SubCommand
 chopSub = SubCommand "chop" chopPages
-  "Editing" "Extract a section (specify start and/or end time)"
+    "Editing" "Extract a section (specify start and/or end time)"
+    [("Extract the first minute of file.ogg", "-e 1:00 file.ogg"),
+     ("Extract from the second to the fifth minute of file.ogg",
+      "-s 2:00 -e 5:00 -o output.ogg file.ogg"),
+     ("Extract only the Theora video stream, from 02:00 to 05:00, of file.ogg",
+      "-c theora -s 2:00 -e 5:00 -o output.ogg file.ogg"),
+     ("Extract, specifying SMPTE-25 frame offsets",
+      "-c theora -s smpte-25:00:02:03::12 -e smpte-25:00:05:02::04 -o output.ogg file.ogg")]
 
 chopPages :: Hot ()
 chopPages = do
@@ -406,6 +426,7 @@ chopRange c@(Config _ _ start end _) xs = liftIO $ chopWithSkel start end xs
 addSkelSub :: SubCommand
 addSkelSub = SubCommand "addskel" addSkel
   "Editing" "Write a Skeleton logical bitstream"
+  [("Add a Skeleton to file.ogg", "-o output.ogg file.ogg")]
 
 addSkel :: Hot ()
 addSkel = do
@@ -424,6 +445,9 @@ addSkel = do
 countrwPagesSub :: SubCommand
 countrwPagesSub = SubCommand "countrw" countrwPages
     "Testing" "Rewrite via packets and display a count of pages produced"
+    [("Rewrite and count packets of all bitstreams in file.ogg", "file.ogg"),
+     ("Rewrite and count packets from only the Theora bitstream in file.ogg",
+      "-c theora file.ogg")]
 
 countrwPages :: Hot ()
 countrwPages = do
@@ -439,6 +463,9 @@ countrwPages = do
 countPagesSub :: SubCommand
 countPagesSub = SubCommand "pagecount" countPages
     "Testing" "Count pages of an Ogg file" 
+    [("Count pages of all bitstreams in file.ogg", "file.ogg"),
+     ("Count pages from only the Theora bitstream in file.ogg",
+      "-c theora file.ogg")]
 
 countPages :: Hot ()
 countPages = do
@@ -454,6 +481,9 @@ countPages = do
 dumpPagesSub :: SubCommand
 dumpPagesSub = SubCommand "pagedump" dumpPages
     "Reporting" "Display page structure of an Ogg file"
+    [("Dump pages of all bitstreams in file.ogg", "file.ogg"),
+     ("Dump pages of only the Theora bitstream in file.ogg",
+      "-c theora file.ogg")]
 
 dumpPages :: Hot ()
 dumpPages = do
@@ -469,6 +499,8 @@ dumpPages = do
 mergePagesSub :: SubCommand
 mergePagesSub = SubCommand "merge" mergePages
     "Editing" "Merge, interleaving pages in order of presentation time"
+    [("Merge pages of audio.ogg and video.ogg",
+      "-o output.ogg audio.ogg video.ogg")]
 
 mergePages :: Hot ()
 mergePages = do
@@ -486,6 +518,9 @@ mergePages = do
 dumpRawPagesSub :: SubCommand
 dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
     "Reporting" "Dump raw (unparsed) page data"
+    [("Dump raw pages of all bitstreams in file.ogg", "file.ogg"),
+     ("Dump raw pages of only the Theora bitstream in file.ogg",
+      "-c theora file.ogg")]
 
 dumpRawPages :: Hot ()
 dumpRawPages = do
@@ -499,7 +534,8 @@ dumpRawPages = do
 
 helpSub :: SubCommand
 helpSub = SubCommand "help" help
-  "Commands" "Display help for a specific subcommand"
+  "Commands" "Display help for a specific subcommand (eg. \"hogg help chop\")"
+  [("Display help for the \"hogg chop\" subcommand", "chop")]
 
 help :: Hot ()
 help = do
@@ -527,9 +563,14 @@ categoryHelp c = c ++ ":\n" ++ concat (map itemHelp items) ++ "\n"
 -- | Provide detailed help for a specific command
 contextHelp command [] = longHelp [] ++ contextError
   where contextError = ["\n*** \"" ++ command ++ "\": Unknown command.\n"]
-contextHelp command (item:_) = synopsis ++ usage ++ ["\n" ++ optionsHelp command]
+contextHelp command (item:_) = synopsis ++ usage ++ examples ++
+    ["\n" ++ optionsHelp command]
   where usage = ["Usage: hogg " ++ command ++ " [options] filename\n"]
         synopsis = [command ++ ": " ++ subSynopsis item ++ "\n"]
+        examples = ["\nExamples:"] ++
+                   flip map (subExamples item) (\(desc,opts) ->
+                     "\n  " ++ desc ++ ":\n    hogg " ++ command ++
+                     " " ++ opts ++ "\n")
 
 -- | Provide usage information [for a specific command]
 optionsHelp command = usageInfo "Options:" options
