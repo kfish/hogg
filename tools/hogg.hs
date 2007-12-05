@@ -56,7 +56,8 @@ data SubCommand =
     subMethod :: Hot (),
     subCategory :: String,
     subSynopsis :: String,
-    subExamples :: [(String,String)] -- [(example description, flags)]
+    subExamples :: [(String,String)], -- [(example description, flags)]
+    subOptions :: [[OptDescr Option]] -- eg. [rangeOptions, cTypeOptions]
   }
 
 subCommands :: [SubCommand]
@@ -99,6 +100,11 @@ dftConfig =
     files = ["-"]
   }
 
+-- We will be comparing preset lists of these explicitly, so define an Eq
+-- for options. We just compare short options for simplicity.
+instance Eq (OptDescr Option) where
+  (==) (Option a _ _ _) (Option b _ _ _) =  a == b
+
 -- Options available for subcommands
 --
 data Option = Help
@@ -109,17 +115,29 @@ data Option = Help
             deriving Eq
 
 options :: [OptDescr Option]
-options = [ Option ['h', '?'] ["help"] (NoArg Help)
-              "Display this help and exit"
-          , Option ['c']      ["content-type"] (ReqArg ContentTypeOpt "Content-Type")
-              "Select the logical bitstreams for a specified content type"
-          , Option ['s']      ["start"] (ReqArg StartOpt "Timestamp")
-              "Specify a start time"
-          , Option ['e']      ["end"] (ReqArg EndOpt "Timestamp")
-              "Specify an end time"
-          , Option ['o']      ["output"] (ReqArg OutputOpt "filename")
-              "Specify output filename"
-          ]
+options = concat $ helpOptions : allOptions
+
+allOptions :: [[OptDescr Option]]
+allOptions = [cTypeOptions, rangeOptions, outputOptions]
+
+helpOptions, cTypeOptions, rangeOptions, outputOptions :: [OptDescr Option]
+
+helpOptions = [
+  Option ['h', '?'] ["help"] (NoArg Help) "Display this help and exit"]
+
+cTypeOptions = [
+  Option ['c']      ["content-type"] (ReqArg ContentTypeOpt "Content-Type")
+         "Select the logical bitstreams for a specified content type"]
+
+rangeOptions = [
+  Option ['s']      ["start"] (ReqArg StartOpt "Timestamp")
+         "Specify a start time",
+  Option ['e']      ["end"] (ReqArg EndOpt "Timestamp")
+           "Specify an end time" ]
+
+outputOptions = [
+  Option ['o']      ["output"] (ReqArg OutputOpt "filename")
+         "Specify output filename" ]
 
 processArgs :: [String] -> IO (Config, [String])
 processArgs args = do
@@ -312,6 +330,7 @@ infoSub = SubCommand "info" info
     "Reporting" "Display information about the file and its bitstreams"
     [("Describe all bitstreams in file.ogg", "file.ogg"),
      ("Describe only the Theora bitstream in file.ogg", "-c theora file.ogg")]
+    [cTypeOptions]
 
 info :: Hot ()
 info = do
@@ -329,6 +348,7 @@ dumpPacketsSub = SubCommand "dump" dumpPackets
     "Reporting" "Hexdump packets of an Ogg file"
     [("Dump all bitstreams in file.ogg", "file.ogg"),
      ("Dump only the Theora bitstream in file.ogg", "-c theora file.ogg")]
+    allOptions
 
 dumpPackets :: Hot ()
 dumpPackets = do
@@ -344,7 +364,9 @@ countPacketsSub :: SubCommand
 countPacketsSub = SubCommand "packetcount" countPackets
     "Testing" "Count packets of an Ogg file" 
     [("Count packets of all bitstreams in file.ogg", "file.ogg"),
-     ("Count packets from only the Theora bitstream in file.ogg", "-c theora file.ogg")]
+     ("Count packets from only the Theora bitstream in file.ogg",
+      "-c theora file.ogg")]
+    [cTypeOptions, rangeOptions]
 
 countPackets :: Hot ()
 countPackets = do
@@ -363,6 +385,7 @@ rewritePagesSub = SubCommand "rip" rewritePages
     [("Extract all bitstreams from file.ogg", "file.ogg -o output.ogg"),
      ("Extract only the Theora bitstream from file.ogg",
       "-c theora -o output.ogg file.ogg")]
+    allOptions
 
 rewritePages :: Hot ()
 rewritePages = do
@@ -381,6 +404,7 @@ rewritePacketsSub = SubCommand "reconstruct" rewritePackets
     [("Reconstruct all bitstreams from file.ogg", "file.ogg -o output.ogg"),
      ("Reconstruct only the Theora bitstream from file.ogg",
       "-c theora -o output.ogg file.ogg")]
+    allOptions
 
 rewritePackets :: Hot ()
 rewritePackets = do
@@ -403,6 +427,7 @@ chopSub = SubCommand "chop" chopPages
       "-c theora -s 2:00 -e 5:00 -o output.ogg file.ogg"),
      ("Extract, specifying SMPTE-25 frame offsets",
       "-c theora -s smpte-25:00:02:03::12 -e smpte-25:00:05:02::04 -o output.ogg file.ogg")]
+    allOptions
 
 chopPages :: Hot ()
 chopPages = do
@@ -428,6 +453,7 @@ addSkelSub :: SubCommand
 addSkelSub = SubCommand "addskel" addSkel
   "Editing" "Write a Skeleton logical bitstream"
   [("Add a Skeleton to file.ogg", "-o output.ogg file.ogg")]
+  [outputOptions]
 
 addSkel :: Hot ()
 addSkel = do
@@ -449,6 +475,7 @@ countrwPagesSub = SubCommand "countrw" countrwPages
     [("Rewrite and count packets of all bitstreams in file.ogg", "file.ogg"),
      ("Rewrite and count packets from only the Theora bitstream in file.ogg",
       "-c theora file.ogg")]
+    [cTypeOptions, rangeOptions]
 
 countrwPages :: Hot ()
 countrwPages = do
@@ -467,6 +494,7 @@ countPagesSub = SubCommand "pagecount" countPages
     [("Count pages of all bitstreams in file.ogg", "file.ogg"),
      ("Count pages from only the Theora bitstream in file.ogg",
       "-c theora file.ogg")]
+    [cTypeOptions, rangeOptions]
 
 countPages :: Hot ()
 countPages = do
@@ -485,6 +513,7 @@ dumpPagesSub = SubCommand "pagedump" dumpPages
     [("Dump pages of all bitstreams in file.ogg", "file.ogg"),
      ("Dump pages of only the Theora bitstream in file.ogg",
       "-c theora file.ogg")]
+    allOptions
 
 dumpPages :: Hot ()
 dumpPages = do
@@ -502,6 +531,7 @@ mergePagesSub = SubCommand "merge" mergePages
     "Editing" "Merge, interleaving pages in order of presentation time"
     [("Merge pages of audio.ogg and video.ogg",
       "-o output.ogg audio.ogg video.ogg")]
+    [outputOptions]
 
 mergePages :: Hot ()
 mergePages = do
@@ -522,6 +552,7 @@ dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
     [("Dump raw pages of all bitstreams in file.ogg", "file.ogg"),
      ("Dump raw pages of only the Theora bitstream in file.ogg",
       "-c theora file.ogg")]
+    allOptions
 
 dumpRawPages :: Hot ()
 dumpRawPages = do
@@ -536,7 +567,8 @@ dumpRawPages = do
 knownCodecsSub :: SubCommand
 knownCodecsSub = SubCommand "known-codecs" knownCodecs
   "Miscellaneous" "List codecs known by this version of hogg"
-  []
+  [] -- Examples
+  [] -- Options
 
 knownCodecs :: Hot ()
 knownCodecs = liftIO $ mapM_ putStrLn knownContentTypes
@@ -549,6 +581,7 @@ helpSub :: SubCommand
 helpSub = SubCommand "help" help
   "Commands" "Display help for a specific subcommand (eg. \"hogg help chop\")"
   [("Display help for the \"hogg chop\" subcommand", "chop")]
+  [] -- Options
 
 help :: Hot ()
 help = do
@@ -577,11 +610,13 @@ categoryHelp c = c ++ ":\n" ++ concat (map itemHelp items) ++ "\n"
 contextHelp command [] = longHelp [] ++ contextError
   where contextError = ["\n*** \"" ++ command ++ "\": Unknown command.\n"]
 contextHelp command (item:_) = synopsis ++ usage ++ examples ++
-    ["\n" ++ optionsHelp command]
-  where usage = ["Usage: hogg " ++ command ++ hasOpts command]
-        hasOpts "help" = " <subcommand>\n"
-        hasOpts "known-codecs" = "\n"
-        hasOpts _ = " [options] filename\n"
+    ["\n" ++ optionsHelp item]
+  where usage = ["Usage: hogg " ++ command ++ hasOpts command ++ outOpts]
+        hasOpts "help" = " <subcommand>"
+        hasOpts _ = " [options]"
+        outOpts = case elem outputOptions (subOptions item) of
+                    True -> " filename ...\n"
+                    False -> "\n"
         synopsis = [command ++ ": " ++ subSynopsis item ++ "\n"]
         examples = case (subExamples item) of
                      [] -> []
@@ -591,7 +626,8 @@ contextHelp command (item:_) = synopsis ++ usage ++ examples ++
                              " " ++ opts ++ "\n")
 
 -- | Provide usage information [for a specific command]
-optionsHelp command = usageInfo "Options:" options
+optionsHelp item = usageInfo "Options:"
+                     (concat $ helpOptions : subOptions item)
 
 ------------------------------------------------------------
 -- main
