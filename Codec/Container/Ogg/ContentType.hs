@@ -21,6 +21,8 @@ module Codec.Container.Ogg.ContentType (
   ContentTyped,
   contentTypeIs,
   contentTypeOf,
+  contentTypeEq,
+  demuxByContentType,
 
   -- Some guaranteed-known content-types
   skeleton
@@ -29,7 +31,7 @@ module Codec.Container.Ogg.ContentType (
 import Data.Bits
 import qualified Data.ByteString.Lazy as L
 import Data.Char
-import Data.List (sort)
+import Data.List (groupBy, sort)
 import Data.Map (fromList)
 import Data.Maybe
 import Data.Ratio
@@ -49,6 +51,15 @@ import Codec.Container.Ogg.TimeScheme
 class ContentTyped a where
   contentTypeIs :: ContentType -> a -> Bool
   contentTypeOf :: a -> Maybe ContentType
+
+contentTypeEq :: (ContentTyped a, ContentTyped b) => a -> b -> Bool
+contentTypeEq a b = case (contentTypeOf a, contentTypeOf b) of
+  (Just ca, Just cb) -> ca == cb
+  _ -> False
+
+-- | Group a list of ContentTyped items by their Content-Type
+demuxByContentType :: (ContentTyped a) => [a] -> [[a]]
+demuxByContentType = groupBy contentTypeEq
 
 ------------------------------------------------------------
 -- | Data: ContentType
