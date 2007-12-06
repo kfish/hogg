@@ -14,12 +14,22 @@ Description:
   HOgg also includes a library that may be used by other packages for handling
   the Ogg container format.
 Category:            Codec
--- For GHC 6.4 etc., we require external fps (Data.ByteString.Lazy)
+------------------------------------------------------------------------
+-- See the README file for information about configuring Build-Depends.
+--
+-- For GHC 6.4 we require external fps (Data.ByteString.Lazy)
 -- Build-Depends:       base, fps, mtl, HUnit
+--
 -- For GHC 6.6, fps is built in
 Build-Depends:       base, mtl, HUnit
--- For HTTP support, use the following instead (and similarly below):
+--
+-- For HTTP support, use the following instead (and similarly below in the
+-- configuration of the 'hogg' Executable):
 -- Build-Depends:       base, mtl, HUnit, HTTP1
+--
+-- For GHC 6.8, add extra library names by uncommenting the following line
+--                     , array, bytestring, containers, random
+------------------------------------------------------------------------
 Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Chop
                      Codec.Container.Ogg.ContentType
@@ -41,6 +51,9 @@ Other-modules:       Codec.Container.Ogg.ByteFields
 ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields
 -- ghc-options:         -prof -auto-all
 
+------------------------------------------------------------------------
+-- hogg commandline tool
+--
 Executable:          hogg
 Main-Is:             hogg.hs
 Hs-Source-Dirs:      ., tools
@@ -49,6 +62,9 @@ ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields
 -- For HTTP support, use the following instead:
 -- ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields -DUSE_HTTP
 
+------------------------------------------------------------------------
+-- ListMerge test program
+--
 Executable:          ListMergeTest
 Main-Is:             ListMergeTest.hs
 Hs-Source-Dirs:      ., tests
