@@ -33,6 +33,18 @@ import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
 ------------------------------------------------------------
+-- Version
+--
+
+hoggVersion :: String
+hoggVersion = "0.3.0"
+
+showVersion :: IO ()
+showVersion = do
+    putStrLn $ "hogg version " ++ hoggVersion
+    exitWith ExitSuccess
+
+------------------------------------------------------------
 --  HOggTool datatype
 --
 
@@ -107,6 +119,7 @@ instance Eq (OptDescr Option) where
 -- Options available for subcommands
 --
 data Option = Help
+            | Version
             | ContentTypeOpt String
             | OutputOpt String
             | StartOpt String
@@ -114,19 +127,21 @@ data Option = Help
             deriving Eq
 
 options :: [OptDescr Option]
-options = concat $ helpOptions : allOptions
+options = concat $ miscOptions : allOptions
 
 allOptions :: [[OptDescr Option]]
 allOptions = [cTypeOptions, rangeOptions, outputOptions]
 
-helpOptions, cTypeOptions, rangeOptions, outputOptions :: [OptDescr Option]
+miscOptions, cTypeOptions, rangeOptions, outputOptions :: [OptDescr Option]
 
-helpOptions = [
-  Option ['h', '?'] ["help"] (NoArg Help) "Display this help and exit"]
+miscOptions = [
+  Option ['h', '?'] ["help"] (NoArg Help) "Display this help and exit",
+  Option ['V'] ["version"] (NoArg Version)
+         "Output version information and exit" ]
 
 cTypeOptions = [
   Option ['c']      ["content-type"] (ReqArg ContentTypeOpt "Content-Type")
-         "Select the logical bitstreams for a specified content type"]
+         "Select the logical bitstreams for a specified content type" ]
 
 rangeOptions = [
   Option ['s']      ["start"] (ReqArg StartOpt "Timestamp")
@@ -171,7 +186,7 @@ processConfig = foldM processOneOption
     processOneOption config (EndOpt end) = do
       let e = catchRead "Invalid end time" end
       return $ config {endCfg = Just e}
-    processOneOption config Help = return config
+    processOneOption config _ = return config
 
 catchRead :: (Read a) => String -> String -> a
 catchRead msg x = case reads x of
@@ -625,7 +640,7 @@ contextHelp command (item:_) = synopsis ++ usage ++ examples ++
 -- | Provide usage information [for a specific command]
 optionsHelp :: SubCommand -> String
 optionsHelp item = usageInfo "Options:"
-                     (concat $ helpOptions : subOptions item)
+                     (concat $ miscOptions : subOptions item)
 
 ------------------------------------------------------------
 -- main
@@ -634,8 +649,14 @@ optionsHelp item = usageInfo "Options:"
 helpStrings :: [[Char]]
 helpStrings = ["--help", "-h", "-?"]
 
+versionStrings :: [[Char]]
+versionStrings = ["--version", "-V"]
+
 isHelp :: String -> Bool
 isHelp x = elem x helpStrings
+
+isVersion :: String -> Bool
+isVersion x = elem x versionStrings
 
 initTool :: [String] -> IO HOggTool
 initTool args = do
@@ -646,6 +667,7 @@ main :: IO ()
 main = do
     allArgs <- getArgs
     when (any isHelp allArgs) $ showHelp allArgs
+    when (any isVersion allArgs) $ showVersion
     handleSubCommand allArgs
 
 showHelp :: [String] -> IO ()
