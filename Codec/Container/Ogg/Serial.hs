@@ -18,7 +18,7 @@ type Serial = Word32
 
 -- Make a special instance of Random for Serial that does not include
 -- 0xffffffff, as this value is treated specailly by libogg
-instance Random Word32 where
+instance Random Serial where
   randomR = integralRandomR
   random = randomR (0,0xffffffff-1)
 

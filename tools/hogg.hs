@@ -21,7 +21,6 @@ import Text.Printf
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.List
-import Data.Maybe (fromJust)
 
 import Codec.Container.Ogg.Chain
 import Codec.Container.Ogg.Chop
@@ -30,7 +29,6 @@ import Codec.Container.Ogg.ListMerge
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Packet
 import Codec.Container.Ogg.RawPage
-import Codec.Container.Ogg.Skeleton
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
@@ -91,6 +89,7 @@ data Config =
     files :: [FilePath]
   }
 
+dftConfig :: Config
 dftConfig =
   Config {
     contentTypeCfg = Nothing,
@@ -146,10 +145,7 @@ processArgs args = do
                         processHelp opts
                         config <- processConfig dftConfig opts
                         return (config, args)
-    -- (opts, args, []  ) -> abort [unrecErr ++ unwords args]
-    -- (_   , _   , errs) -> abort errs
-  where
-    unrecErr = "Unrecognised arguments: "
+    (_, _, _ : _) -> return (dftConfig, args)
 
 processHelp :: [Option] -> IO ()
 processHelp opts = do
@@ -175,11 +171,12 @@ processConfig = foldM processOneOption
     processOneOption config (EndOpt end) = do
       let e = catchRead "Invalid end time" end
       return $ config {endCfg = Just e}
+    processOneOption config Help = return config
 
 catchRead :: (Read a) => String -> String -> a
 catchRead msg x = case reads x of
-    [] -> error (msg ++ ": " ++ x)
-    [(ms,mt)] -> ms
+    [(ms,_mt)] -> ms
+    _ -> error (msg ++ ": " ++ x) -- actually [] on error, but catch _ anyway
 
 ------------------------------------------------------------
 -- Hot: actions for getting Ogg data from the input files
@@ -234,8 +231,8 @@ chains = chainMatchM chainFilter
 chainMatchM :: (OggChain -> Hot a) -> Hot [[a]]
 chainMatchM f = do
     c <- allChains
-    let all = map (mapM f) c
-    sequence all
+    let a = map (mapM f) c
+    sequence a
 
 -- | Filter all elements of a chain by the given criteria
 chainFilter :: OggChain -> Hot OggChain
@@ -249,8 +246,8 @@ chainFilter (OggChain t gs ps) = do
 chainMatch :: (ContentTyped a) => (OggChain -> [a]) -> Hot [[[a]]]
 chainMatch f = do
     c <- allChains
-    let all = map (map f) c
-    sequence $ (map (mapM mType)) all
+    let a = map (map f) c
+    sequence $ (map (mapM mType)) a
 
 -- | Filter a ContentTyped list by the given content type
 mType :: (ContentTyped a) => [a] -> Hot [a]
@@ -439,7 +436,7 @@ chopPages = do
     outputPerFile $ map c2 chopChains
 
 chopRange :: Config -> OggChain -> Hot OggChain
-chopRange c@(Config _ _ start end _) xs = liftIO $ chopWithSkel start end xs
+chopRange (Config _ _ start end _) xs = liftIO $ chopWithSkel start end xs
 
 -- TODO: implement an option for the following ...
 -- To make with no skeleton bitstream:
@@ -557,8 +554,7 @@ dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
 dumpRawPages :: Hot ()
 dumpRawPages = do
     matchPages <- rawpages
-    let d = \x -> C.concat $ map (C.pack . show) matchPages
-    reportPerFile $ map d matchPages
+    reportPerFile $ map (C.pack . show) matchPages
 
 ------------------------------------------------------------
 -- known-types
@@ -607,6 +603,7 @@ categoryHelp c = c ++ ":\n" ++ concat (map itemHelp items) ++ "\n"
         itemHelp i = printf "  %-14s%s\n" (subName i) (subSynopsis i)
 
 -- | Provide detailed help for a specific command
+contextHelp :: [Char] -> [SubCommand] -> [String]
 contextHelp command [] = longHelp [] ++ contextError
   where contextError = ["\n*** \"" ++ command ++ "\": Unknown command.\n"]
 contextHelp command (item:_) = synopsis ++ usage ++ examples ++
@@ -626,6 +623,7 @@ contextHelp command (item:_) = synopsis ++ usage ++ examples ++
                              " " ++ opts ++ "\n")
 
 -- | Provide usage information [for a specific command]
+optionsHelp :: SubCommand -> String
 optionsHelp item = usageInfo "Options:"
                      (concat $ helpOptions : subOptions item)
 
@@ -633,6 +631,7 @@ optionsHelp item = usageInfo "Options:"
 -- main
 --
 
+helpStrings :: [[Char]]
 helpStrings = ["--help", "-h", "-?"]
 
 isHelp :: String -> Bool
@@ -656,19 +655,19 @@ showHelp allArgs = -- bracket init1 finish1 loop1
     init1 = initTool $ filter (not . isHelp) allArgs
     loop1 st = runReaderT run1 st
     run1 = help
-    finish1 = exitWith ExitSuccess
+    -- finish1 = exitWith ExitSuccess
 
 handleSubCommand :: [String] -> IO ()
 handleSubCommand [] = -- bracket (initTool []) finish loop0
   (initTool []) >>= loop0
   where
-    finish = exitWith ExitSuccess
+    -- finish = exitWith ExitSuccess
     loop0 st = runReaderT help st
     
 handleSubCommand (command:args) = -- bracket (initTool args) finish loop1
   (initTool args) >>= loop1
   where
-    finish = exitWith ExitSuccess
+    -- finish = exitWith ExitSuccess
     loop1 st = runReaderT run st
     run = act $ filter (\x -> subName x == command) subCommands
     act [] = help
