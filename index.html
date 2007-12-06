@@ -34,6 +34,9 @@ and can read and write
 <h2>Download</h2>
 
 <ul>
+<li><a
+href="http://www.kfish.org/software/download/hogg-0.3.0.tar.gz">hogg-0.3.0.tar.gz</a> Released Thu Dec 6 2007
+[<a href="release_notes/hogg-0.3.0.txt">Release notes</a>]</li>
 <li><a href="http://www.kfish.org/software/download/hogg-0.2.0.tar.gz">hogg-0.2.0.tar.gz</a> Released Wed Dec 6 2006
 [<a href="release_notes/hogg-0.2.0.txt">Release notes</a>]</li>
 </ul>
@@ -45,7 +48,7 @@ and can read and write
 Usage: hogg &lt;subcommand&gt; [options] filename ...
 
 Commands:
-  help          Display help for a specific subcommand
+  help          Display help for a specific subcommand (eg. "hogg help chop")
 
 Reporting:
   info          Display information about the file and its bitstreams
@@ -58,8 +61,12 @@ Extraction:
   reconstruct   Reconstruct an Ogg file by doing a full packet demux
 
 Editing:
+  chop          Extract a section (specify start and/or end time)
   merge         Merge, interleaving pages in order of presentation time
   addskel       Write a Skeleton logical bitstream
+
+Miscellaneous:
+  known-codecs  List codecs known by this version of hogg
 
 Please report bugs to [ogg-dev at xiph.org]
 </pre>
