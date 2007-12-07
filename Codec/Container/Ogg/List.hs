@@ -7,11 +7,17 @@
 -- Portability : portable
 
 module Codec.Container.Ogg.List (
-  listMerge
+  listMerge,
+  classify
 ) where
 
 import Data.List
 
+------------------------------------------------------------
+-- listMerge
+--
+
+-- | Merge the contents of a list of lists into one sorted list
 listMerge :: Ord a => [[a]] -> [a]
 listMerge ll = listMerge' $ listSort ll
 
@@ -28,4 +34,20 @@ listOrd :: Ord a => [a] -> [a] -> Ordering
 listOrd [] _ = LT
 listOrd _ [] = GT
 listOrd (x:_) (y:_) = compare x y
+
+------------------------------------------------------------
+-- classify
+--
+
+-- | Separate the items in a list into lists of similar items
+classify :: (a -> a -> Bool) -> [a] -> [[a]]
+classify f xs = classify' f xs []
+
+classify' :: (a -> a -> Bool) -> [a] -> [[a]] -> [[a]]
+classify' _ [] ss = ss
+classify' f (x:xs) [] = classify' f xs [[x]]
+
+classify' f (x:xs) (s:ss) = case f x (head s) of
+  True  -> classify' f xs ((s++[x]):ss)
+  False -> classify' f xs (s : classify' f [x] ss)
 
