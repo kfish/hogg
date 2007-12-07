@@ -58,6 +58,9 @@ instance ContentTyped OggTrack where
   contentTypeIs = trackIsType
   contentTypeOf = trackType
 
+instance Serialled OggTrack where
+  serialOf = trackSerialno
+
 ------------------------------------------------------------
 --
 --

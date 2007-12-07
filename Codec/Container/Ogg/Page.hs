@@ -76,6 +76,9 @@ instance ContentTyped OggPage where
   contentTypeIs t g = contentTypeIs t (pageTrack g)
   contentTypeOf g = trackType (pageTrack g)
 
+instance Serialled OggPage where
+  serialOf g = serialOf (pageTrack g)
+
 instance Timestampable OggPage where
   timestampOf g = gpToTimestamp gp track
     where

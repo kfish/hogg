@@ -20,6 +20,7 @@ import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Dump
 import Codec.Container.Ogg.Granulepos
 import Codec.Container.Ogg.Page
+import Codec.Container.Ogg.Serial
 import Codec.Container.Ogg.Track
 import Codec.Container.Ogg.Timestamp
 
@@ -57,6 +58,9 @@ data OggSegment =
 instance ContentTyped OggPacket where
   contentTypeIs t p = contentTypeIs t (packetTrack p)
   contentTypeOf p = trackType (packetTrack p)
+
+instance Serialled OggPacket where
+  serialOf p = serialOf (packetTrack p)
 
 instance Timestampable OggPacket where
   timestampOf p = gpToTimestamp gp track
