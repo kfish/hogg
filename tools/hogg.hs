@@ -29,6 +29,7 @@ import Codec.Container.Ogg.List
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Packet
 import Codec.Container.Ogg.RawPage
+import Codec.Container.Ogg.Serial
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
@@ -80,6 +81,7 @@ subCommands = [
                rewritePacketsSub,
                chopSub,
                mergePagesSub,
+               sortPagesSub,
                addSkelSub,
                countPacketsSub,
                countrwPagesSub,
@@ -553,6 +555,23 @@ mergePages = do
     -- of identical duration.
     let firstChainPages = map head matchPages
     outputL $ L.concat $ map pageWrite $ listMerge firstChainPages
+
+------------------------------------------------------------
+-- sortPages (sort)
+--
+
+sortPagesSub :: SubCommand
+sortPagesSub = SubCommand "sort" sortPages
+    "Editing" "Rewrite with correct page ordering"
+    [("Correct the page ordering in broken.ogg", "-o fixed.ogg broken.ogg")]
+    [outputOptions]
+
+sortPages :: Hot ()
+sortPages = do
+    matchPages <- pages
+    let r = \x -> L.concat $ map pageWrite $ (listMerge . demux) x
+    let r2 = \x -> outputPerChain $ map r x
+    outputPerFile $ map r2 matchPages
 
 ------------------------------------------------------------
 -- dumpRawPages (dumpraw)
