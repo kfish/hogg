@@ -21,7 +21,7 @@ import Data.Maybe
 import Codec.Container.Ogg.Chain
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
-import Codec.Container.Ogg.ListMerge
+import Codec.Container.Ogg.List
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Packet
 import Codec.Container.Ogg.Serial

@@ -1,12 +1,12 @@
 --
--- Module      : ListMerge
+-- Module      : Codec.Container.Ogg.List
 -- Copyright   : (c) Conrad Parker 2006
 -- License     : BSD-style
 -- Maintainer  : conradp@cse.unsw.edu.au
 -- Stability   : experimental
 -- Portability : portable
 
-module Codec.Container.Ogg.ListMerge (
+module Codec.Container.Ogg.List (
   listMerge
 ) where
 

@@ -1,7 +1,7 @@
 module Main where
 
 import Test.HUnit
-import Codec.Container.Ogg.ListMerge
+import Codec.Container.Ogg.List
 
 list0 :: [[Int]]
 list0 = []
