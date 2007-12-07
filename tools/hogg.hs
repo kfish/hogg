@@ -156,10 +156,10 @@ outputOptions = [
 processArgs :: [String] -> IO (Config, [String])
 processArgs args = do
   case getOpt RequireOrder options args of
-    (opts, args  , []  ) -> do
+    (opts, args'  , []  ) -> do
                         processHelp opts
                         config <- processConfig dftConfig opts
-                        return (config, args)
+                        return (config, args')
     (_, _, _ : _) -> return (dftConfig, args)
 
 processHelp :: [Option] -> IO ()
@@ -274,7 +274,7 @@ mType xs = do
 
 -- | Apply matchRange to all the inner inner lists
 matchRange :: (Timestampable a) => [[[a]]] -> Hot [[[a]]]
-matchRange all = sequence $ (map (mapM mRange)) all
+matchRange as = sequence $ (map (mapM mRange)) as
 
 -- | Filter a Timestampable list by the given time range
 mRange :: (Timestampable a) => [a] -> Hot [a]
