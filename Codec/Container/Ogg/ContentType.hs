@@ -31,7 +31,7 @@ module Codec.Container.Ogg.ContentType (
 import Data.Bits
 import qualified Data.ByteString.Lazy as L
 import Data.Char
-import Data.List (groupBy, sort)
+import Data.List (sort)
 import Data.Map (fromList)
 import Data.Maybe
 import Data.Ratio
@@ -40,6 +40,7 @@ import Text.Printf
 
 import Codec.Container.Ogg.ByteFields
 import Codec.Container.Ogg.Granulerate
+import Codec.Container.Ogg.List
 import Codec.Container.Ogg.MessageHeaders
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.TimeScheme
@@ -59,7 +60,7 @@ contentTypeEq a b = case (contentTypeOf a, contentTypeOf b) of
 
 -- | Group a list of ContentTyped items by their Content-Type
 demuxByContentType :: (ContentTyped a) => [a] -> [[a]]
-demuxByContentType = groupBy contentTypeEq
+demuxByContentType = classify contentTypeEq
 
 ------------------------------------------------------------
 -- | Data: ContentType
