@@ -87,6 +87,7 @@ subCommands = [
                countrwPagesSub,
                countPagesSub,
                knownCodecsSub,
+               selfCheckSub,
                helpSub
               ]
 
@@ -396,7 +397,7 @@ countPackets = do
 rewritePagesSub :: SubCommand
 rewritePagesSub = SubCommand "rip" rewritePages
     "Extraction" "Rip selected logical bistreams from an Ogg file (default: all)"
-    [("Extract all bitstreams from file.ogg", "file.ogg -o output.ogg"),
+    [("Extract all bitstreams from file.ogg", "-o output.ogg file.ogg"),
      ("Extract only the Theora bitstream from file.ogg",
       "-c theora -o output.ogg file.ogg")]
     allOptions
@@ -415,7 +416,7 @@ rewritePages = do
 rewritePacketsSub :: SubCommand
 rewritePacketsSub = SubCommand "reconstruct" rewritePackets
     "Extraction" "Reconstruct an Ogg file by doing a full packet demux"
-    [("Reconstruct all bitstreams from file.ogg", "file.ogg -o output.ogg"),
+    [("Reconstruct all bitstreams from file.ogg", "-o output.ogg file.ogg"),
      ("Reconstruct only the Theora bitstream from file.ogg",
       "-c theora -o output.ogg file.ogg")]
     allOptions
@@ -604,6 +605,35 @@ knownCodecs :: Hot ()
 knownCodecs = liftIO $ mapM_ putStrLn knownContentTypes
 
 ------------------------------------------------------------
+-- selfcheck
+--
+
+selfCheckSub :: SubCommand
+selfCheckSub = SubCommand "selfcheck" selfCheck
+  "Testing" "Check consistency of help example options"
+  [] -- Examples
+  [] -- Options
+
+selfCheck :: Hot ()
+selfCheck = liftIO $ mapM_ checkArgs allExamples
+  where allExamples = concatMap cmd subCommands
+        cmd s = map (\e -> unwords ["hogg", subName s, snd e]) (subExamples s)
+
+checkArgs :: String -> IO ()
+checkArgs line = do
+  let (_:sub:args) = words line
+  when (sub == "help") $ return ()
+  case getOpt RequireOrder options args of
+    (_, args'  , []  ) -> do
+        let a = filter (flip notElem (map subName subCommands)) $ filter (not . isSuffixOf ".ogg") args'
+        case a of
+          [] -> return ()
+          _  -> report (unwords ("non option":(map (\x -> '`':x++['\'']) a)))
+    (_, _, errs) -> mapM_ report (map (reverse.tail.reverse) errs)
+  where
+    report msg = hPutStrLn stderr $ "Warning: " ++ msg ++ " in help example:\n  " ++ line
+
+------------------------------------------------------------
 -- help
 --
 
@@ -617,6 +647,7 @@ help :: Hot ()
 help = do
     args <- asks hotFilenames
     outputC $ C.concat $ map C.pack $ longHelp args
+    selfCheck
 
 longHelp :: [String] -> [String]
 -- | "hogg help" with no arguments: Give a list of all subcommands
