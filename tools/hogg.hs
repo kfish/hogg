@@ -621,11 +621,13 @@ selfCheck = liftIO $ mapM_ checkArgs allExamples
 
 checkArgs :: String -> IO ()
 checkArgs line = do
-  let (_:sub:args) = words line
-  when (sub == "help") $ return ()
+  let (_:_:args) = words line
   case getOpt RequireOrder options args of
     (_, args'  , []  ) -> do
-        let a = filter (flip notElem (map subName subCommands)) $ filter (not . isSuffixOf ".ogg") args'
+        -- Allow non options which are either names of subcommands (as
+        -- examples for "hogg help"), or filenames (ending in .ogg)
+        let a = filter (flip notElem (map subName subCommands)) $
+                filter (not . isSuffixOf ".ogg") args'
         case a of
           [] -> return ()
           _  -> report (unwords ("non option":(map (\x -> '`':x++['\'']) a)))
