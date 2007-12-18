@@ -14,6 +14,7 @@ Description:
   HOgg also includes a library that may be used by other packages for handling
   the Ogg container format.
 Category:            Codec
+Extra-source-files:  README
 ------------------------------------------------------------------------
 -- See the README file for information about configuring Build-Depends.
 --
