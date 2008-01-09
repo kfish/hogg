@@ -10,6 +10,7 @@ module Codec.Container.Ogg.MessageHeaders (
   MessageHeaders(..),
   mhEmpty,
   mhSingleton,
+  mhInsert,
   mhAppend
 ) where
 
@@ -34,6 +35,13 @@ mhEmpty = MessageHeaders (Map.empty)
 
 mhSingleton :: String -> String -> MessageHeaders
 mhSingleton f v = MessageHeaders (Map.singleton f [v])
+
+------------------------------------------------------------
+-- Insert
+--
+
+mhInsert :: String -> String -> MessageHeaders -> MessageHeaders
+mhInsert k v (MessageHeaders h) = MessageHeaders (Map.insert k [v] h)
 
 ------------------------------------------------------------
 -- Append
