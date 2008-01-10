@@ -30,7 +30,7 @@ import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
 ------------------------------------------------------------
--- Types
+-- ChopState
 --
 
 type ChopState = [ChopTrackState]
@@ -56,7 +56,27 @@ data ChopTrackState =
     ended :: Bool
   }
 
+-- An initial ChopState (used for a chop without adding skeleton)
+emptyChopState :: ChopState
+emptyChopState = []
+
+-- Initial state for a new track
+newChopTrackState :: OggTrack -> ChopTrackState
+newChopTrackState t = ChopTrackState t [] [] 0 (Granulepos Nothing) 0 [] False
+
+------------------------------------------------------------
+-- Chop monad
+--
+
 type Chop a = (StateT ChopState Identity) a
+
+-- | Run the Chop monad
+runChop :: ChopState -> Chop a -> (a, ChopState)
+runChop st x = runIdentity (runStateT x st)
+
+------------------------------------------------------------
+-- Chop functions
+--
 
 -- | Chop a bitstream, do NOT add a Skeleton bitstream
 -- | chop start end chain
@@ -67,24 +87,17 @@ chop start end chain =
 -- | Chop a bitstream, adding a Skeleton bitstream
 -- | chopWithSkel start end chain
 chopWithSkel :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> IO OggChain
-chopWithSkel start end chain = do
+chopWithSkel start end chain = case hasSkel of
+  True  -> do
+    return $ fst $ runChop emptyChopState (chopTop start end chain)
+  False -> do
     -- Construct a new track for the Skeleton
     s <- genSerial
     let skelTrack = (newTrack s){trackType = Just skeleton}
         st = [newChopTrackState skelTrack]
     return $ fst $ runChop st (chopTop start end chain)
-
--- An initial ChopState for a chop without adding skeleton
-emptyChopState :: ChopState
-emptyChopState = []
-
--- Initial state for a new track
-newChopTrackState :: OggTrack -> ChopTrackState
-newChopTrackState t = ChopTrackState t [] [] 0 (Granulepos Nothing) 0 [] False
-
--- | Run the Chop monad
-runChop :: ChopState -> Chop a -> (a, ChopState)
-runChop st x = runIdentity (runStateT x st)
+  where
+    hasSkel = any (contentTypeIs skeleton) (chainTracks chain)
 
 -- | Top-level bitstream chopper -- handles headers
 chopTop :: Maybe Timestamp -> Maybe Timestamp -> OggChain -> Chop OggChain
@@ -244,7 +257,7 @@ popPages :: (ChopTrackState -> [OggPage]) -> Chop [OggPage]
 popPages f = do
     l <- get
     let gs = foldr (\a b -> (f a)++b) [] l
-    return gs
+    return $ filter (not . contentTypeIs skeleton) gs
 
 -- | Determine whether all tracks are ended
 allEnded :: Chop Bool
