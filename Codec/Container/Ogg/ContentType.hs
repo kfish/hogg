@@ -299,11 +299,14 @@ flacIdent = L.pack [0x7f, 0x46, 0x4c, 0x41, 0x43, 0x01]
 -- Extract sample rate from FLAC BOS header
 flacMetadata :: L.ByteString -> MessageHeaders
 flacMetadata d = MessageHeaders (fromList headerVals)
-  where headerVals = [samplerate, channels]
+  where headerVals = [samplerate, channels, version]
         samplerate = ("Audio-Samplerate", [(show srate) ++ " Hz"])
         channels = ("Audio-Channels", [show c])
+        version = ("FLAC-Ogg-Mapping-Version", [show vMaj ++ "." ++ show vMin])
         srate = flacGranulerate d
         c = 1 + (u8At 29 d `shiftR` 1) .&. 0x7 :: Int
+        vMaj = u8At 5 d :: Integer
+        vMin = u8At 6 d :: Integer
 
 flacGranulerate :: L.ByteString -> Granulerate
 flacGranulerate d = intRate $ h27 .|. h28 .|. h29
