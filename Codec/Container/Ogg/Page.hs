@@ -11,6 +11,7 @@ module Codec.Container.Ogg.Page (
   pageScan,
   pageWrite,
   pageLength,
+  pageCompletedPackets,
   pageKeyGranule
 ) where
 
@@ -53,12 +54,19 @@ data OggPage =
 -- OggPage functions
 --
 
--- | Determine the length of a page that would be written
+-- | Determine the length in bytes of a page that would be written
 pageLength :: OggPage -> Int
 pageLength g = 27 + numsegs + sum (map (fromIntegral . L.length) s)
     where (numsegs, _) = buildSegtab 0 [] incplt s
           incplt = pageIncomplete g
           s = pageSegments g
+
+-- | Determine the number of packets completed by this page
+pageCompletedPackets :: OggPage -> Int
+pageCompletedPackets g
+  | pageIncomplete g = n-1
+  | otherwise = n
+  where n = length (pageSegments g)
 
 -- | Determine the keygranule of a page
 pageKeyGranule :: OggPage -> Maybe Integer
