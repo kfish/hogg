@@ -20,16 +20,15 @@ import Text.Printf
 
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
-import Data.List
+import Data.List hiding (sort)
 
 import Codec.Container.Ogg.Chain
 import Codec.Container.Ogg.Chop
 import Codec.Container.Ogg.ContentType
-import Codec.Container.Ogg.List
 import Codec.Container.Ogg.Page
 import Codec.Container.Ogg.Packet
 import Codec.Container.Ogg.RawPage
-import Codec.Container.Ogg.Serial
+import Codec.Container.Ogg.Sort
 import Codec.Container.Ogg.Timestamp
 import Codec.Container.Ogg.Track
 
@@ -555,7 +554,7 @@ mergePages = do
     -- chains won't work anyway unless corresponding chains in each file are
     -- of identical duration.
     let firstChainPages = map head matchPages
-    outputL $ L.concat $ map pageWrite $ listMerge firstChainPages
+    outputL $ L.concat $ map pageWrite $ merge firstChainPages
 
 ------------------------------------------------------------
 -- sortPages (sort)
@@ -570,7 +569,7 @@ sortPagesSub = SubCommand "sort" sortPages
 sortPages :: Hot ()
 sortPages = do
     matchPages <- pages
-    let r = \x -> L.concat $ map pageWrite $ (listMerge . demux) x
+    let r = \x -> L.concat $ map pageWrite $ sort x
     let r2 = \x -> outputPerChain $ map r x
     outputPerFile $ map r2 matchPages
 

@@ -34,7 +34,6 @@ Build-Depends:       base, mtl, HUnit
 Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Chop
                      Codec.Container.Ogg.ContentType
-                     Codec.Container.Ogg.List
                      Codec.Container.Ogg.RawPage
                      Codec.Container.Ogg.Page
                      Codec.Container.Ogg.Packet
@@ -42,12 +41,14 @@ Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Granulerate
                      Codec.Container.Ogg.Serial
                      Codec.Container.Ogg.Skeleton
+                     Codec.Container.Ogg.Sort
                      Codec.Container.Ogg.Track
                      Codec.Container.Ogg.TimeScheme
                      Codec.Container.Ogg.Timestamp
 Other-modules:       Codec.Container.Ogg.ByteFields
                      Codec.Container.Ogg.CRC
                      Codec.Container.Ogg.Dump
+                     Codec.Container.Ogg.List
                      Codec.Container.Ogg.MessageHeaders
 ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields
 -- ghc-options:         -prof -auto-all
