@@ -25,7 +25,12 @@ module Codec.Container.Ogg.ContentType (
   demuxByContentType,
 
   -- Some guaranteed-known content-types
-  skeleton
+  skeleton,
+  cmml,
+  flac,
+  speex,
+  theora,
+  vorbis
 ) where
 
 import Data.Bits
