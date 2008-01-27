@@ -65,4 +65,21 @@ sortHeaders' sb tb ob oh se (g:gs)
 -- | When mergeing multiple files together, ensure that the resulting file
 --   contains only one Skeleton track
 mergeSkeleton :: [OggPage] -> [OggPage]
-mergeSkeleton = id
+mergeSkeleton [] = []
+mergeSkeleton (g:gs) 
+  | contentTypeIs skeleton g = g : mergeSkeleton' (pageTrack g) gs
+  | otherwise = g : mergeSkeleton gs 
+
+mergeSkeleton' :: OggTrack -> [OggPage] -> [OggPage]
+mergeSkeleton' _ [] = []
+mergeSkeleton' t' (g:gs)
+  | contentTypeIs skeleton g = case (t == t', pageBOS g, pageEOS g) of
+      (True, _, _)     -> g:gs'  -- Include known Skeleton pages
+      (False, True, _) -> gs'    -- Drop other Skeleton BOS pages
+      (False, _, True) -> gs'    -- Drop other Skeleton EOS pages
+      (False, _, _)    -> g':gs' -- Fix serialno of other Skeleton pages
+  | otherwise = g : gs'          -- Pass non-Skeleton pages through
+  where
+    t = pageTrack g
+    g' = g{pageTrack = t'}
+    gs' = mergeSkeleton' t' gs 
