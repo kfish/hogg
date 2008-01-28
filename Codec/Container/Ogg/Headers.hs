@@ -29,13 +29,13 @@ splitHeaders :: [OggPage] -> ([OggPage], [OggPage])
 splitHeaders gs = splitHeaders' Map.empty ([], [], gs)
 
 splitHeaders' ::
-              -- | Pages seen so far, demuxed and keyed by Track
+              -- Pages seen so far, demuxed and keyed by Track
               Map.Map OggTrack [OggPage]
 
-              -- | (headers, seenNotHeaders, notSeen)
+              -- (headers, seenNotHeaders, notSeen)
               -> ([OggPage], [OggPage], [OggPage])
 
-              -- | output
+              -- output
               -> ([OggPage], [OggPage])
 
 splitHeaders' _ (hs, nhs, []) = (hs, nhs)
