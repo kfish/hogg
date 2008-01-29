@@ -263,7 +263,7 @@ speex = ContentType
           "Speex"                   -- label
           ["audio/x-speex"]         -- mime
           (L.isPrefixOf speexIdent) -- identify
-          (const 3)                 -- headers
+          (\d -> (le32At 68 d) + 2) -- headers
           3                         -- preroll
           (Just (\d -> intRate (le32At 36 d))) -- granulerate
           Nothing                   -- granuleshift
@@ -291,7 +291,7 @@ flac = ContentType
             "FLAC"                     -- label
             ["audio/x-flac"]           -- mime
             (L.isPrefixOf flacIdent)   -- identify
-            (const 3)                  -- headers
+            (\d -> be16At 7 d)         -- headers
             0                          -- preroll
             (Just flacGranulerate)     -- granulerate
             Nothing                    -- granuleshift
