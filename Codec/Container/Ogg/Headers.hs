@@ -71,8 +71,6 @@ splitHeaders' seen (hs, nhs, (g:gs))
     isSkeleton = contentTypeIs skeleton t
 
     lastHeader = nPackets >= nHeaders
-    nHeaders = case (trackType t) of
-                 Just ctype -> (trackHeaders t)
-                 Nothing -> 1
+    nHeaders = trackHeaders t
     nPackets = sum $ map pageCompletedPackets tPages
     tPages = (Map.findWithDefault [] t seen) ++ [g]
