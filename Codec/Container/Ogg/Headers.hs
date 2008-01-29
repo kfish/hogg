@@ -72,7 +72,7 @@ splitHeaders' seen (hs, nhs, (g:gs))
 
     lastHeader = nPackets >= nHeaders
     nHeaders = case (trackType t) of
-                 Just ctype -> (headers ctype)
+                 Just ctype -> (trackHeaders t)
                  Nothing -> 1
     nPackets = sum $ map pageCompletedPackets tPages
     tPages = (Map.findWithDefault [] t seen) ++ [g]

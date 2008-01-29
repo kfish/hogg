@@ -38,6 +38,7 @@ data OggTrack =
   OggTrack {
     trackSerialno :: Serial,
     trackType :: Maybe ContentType,
+    trackHeaders :: Int,
     trackGranulerate :: Maybe Granulerate,
     trackGranuleshift :: Maybe Int,
     trackMetadata :: MessageHeaders
@@ -67,17 +68,18 @@ instance Serialled OggTrack where
 
 -- | The null track
 nullTrack :: OggTrack
-nullTrack = OggTrack 0 Nothing Nothing Nothing mhEmpty
+nullTrack = OggTrack 0 Nothing 0 Nothing Nothing mhEmpty
 
 -- | A new track, with a given serialno
 newTrack :: Serial -> OggTrack
-newTrack serialno = OggTrack serialno Nothing Nothing Nothing mhEmpty
+newTrack serialno = OggTrack serialno Nothing 0 Nothing Nothing mhEmpty
 
 -- Instantiate an OggTrack given a serialno and a bos page
 bosToTrack :: Serial -> L.ByteString -> OggTrack
-bosToTrack s d = OggTrack s ctype gr gs mh
+bosToTrack s d = OggTrack s ctype nh gr gs mh
   where
     ctype = identify d
+    nh = maybe 1 (\x -> headers x d) ctype
     gr = maybe Nothing (\x -> granulerate x d) ctype
     gs = maybe Nothing (\x -> granuleshift x d) ctype
     mh = maybe mhEmpty (\x -> metadata x d) ctype
@@ -141,7 +143,7 @@ instance Ord OggTrack where
 
 instance Show OggTrack where
   -- show (OggTrack serialno ctype gr gs mhdrs) =
-  show (OggTrack serialno ctype _ _ mhdrs) =
+  show (OggTrack serialno ctype _ _ _ mhdrs) =
     t ++ ": serialno " ++ s ++ "\n" ++ m
     where s = printf "%010u" ((fromIntegral serialno) :: Int)
           t = maybe "(Unknown)" show ctype

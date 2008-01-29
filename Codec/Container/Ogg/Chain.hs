@@ -78,8 +78,7 @@ chainAddSkeleton' serialno (OggChain tracks _ packets) = OggChain nt ng np
     (hdrs, d) = splitAt totHeaders rest
 
     -- ... for which we determine the total number of header pages
-    totHeaders = sum tracksNHeaders
-    tracksNHeaders = map headers $ mapMaybe trackType tracks
+    totHeaders = sum $ map trackHeaders tracks
 
     -- Increment the pageIx of the original data packets by the number of
     -- Skeleton pages

@@ -76,7 +76,7 @@ data ContentType =
     label :: String,
     mime :: [String],
     identifyP :: L.ByteString -> Bool, -- predictate, used by identify
-    headers :: Int,
+    headers :: L.ByteString -> Int,
     preroll :: Int,
     granulerateF :: Maybe (L.ByteString -> Granulerate), -- used by granulerate
     granuleshiftF :: Maybe (L.ByteString -> Int), -- used by granuleshift
@@ -139,7 +139,7 @@ skeleton = ContentType
              "Skeleton"                     -- label
              ["application/x-ogg-skeleton"] -- mime
              (L.isPrefixOf skeletonIdent)   -- identify
-             0                              -- headers
+             (const 0)                      -- headers
              0                              -- preroll
              Nothing                        -- granulerate
              Nothing                        -- granuleshift
@@ -174,7 +174,7 @@ cmml = ContentType
          "CMML"                   -- label
          ["text/x-cmml"]          -- mime
          (L.isPrefixOf cmmlIdent) -- identify
-         3                        -- headers
+         (const 3)                -- headers
          0                        -- preroll
          (Just (\d -> fracRate (le64At 12 d) (le64At 20 d))) -- granulerate
          (Just (\d -> u8At 28 d)) -- granuleshift
@@ -193,7 +193,7 @@ vorbis = ContentType
            "Vorbis"                   -- label
            ["audio/x-vorbis"]         -- mime
            (L.isPrefixOf vorbisIdent) -- identify
-           3                          -- headers
+           (const 3)                  -- headers
            2                          -- preroll
            (Just (\d -> intRate (le32At 12 d))) -- granulerate
            Nothing                    -- granuleshift
@@ -221,7 +221,7 @@ theora = ContentType
            "Theora"                   -- label
            ["video/x-theora"]         -- mime
            (L.isPrefixOf theoraIdent) -- identify
-           3                          -- headers
+           (const 3)                  -- headers
            0                          -- preroll
            (Just (\d -> fracRate (be32At 22 d) (be32At 26 d))) -- granulerate
            (Just theoraGranuleshift)  -- granuleshift
@@ -263,7 +263,7 @@ speex = ContentType
           "Speex"                   -- label
           ["audio/x-speex"]         -- mime
           (L.isPrefixOf speexIdent) -- identify
-          3                         -- headers
+          (const 3)                 -- headers
           3                         -- preroll
           (Just (\d -> intRate (le32At 36 d))) -- granulerate
           Nothing                   -- granuleshift
@@ -291,7 +291,7 @@ flac = ContentType
             "FLAC"                     -- label
             ["audio/x-flac"]           -- mime
             (L.isPrefixOf flacIdent)   -- identify
-            3                          -- headers
+            (const 3)                  -- headers
             0                          -- preroll
             (Just flacGranulerate)     -- granulerate
             Nothing                    -- granuleshift
@@ -329,7 +329,7 @@ oggpcm2 = ContentType
             "PCM"                       -- label
             ["audio/x-ogg-pcm"]         -- mime
             (L.isPrefixOf oggpcm2Ident) -- identify
-            3                           -- headers
+            (const 3)                   -- headers
             0                           -- preroll
             (Just (\d -> intRate (be32At 16 d))) -- granulerate
             Nothing                     -- granuleshift

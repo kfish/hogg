@@ -169,10 +169,9 @@ tracksToFisbones ts = Data.Maybe.mapMaybe trackToFisbone ts
 
 -- | Create an OggFisbone from a given OggTrack
 trackToFisbone :: OggTrack -> Maybe OggFisbone
-trackToFisbone (OggTrack serialno (Just ctype) (Just gr) gs mdata) =
+trackToFisbone (OggTrack serialno (Just ctype) nheaders (Just gr) gs mdata) =
   Just (OggFisbone serialno nheaders gr startgranule pr gsi mhdrs)
   where
-    nheaders = headers ctype
     pr = fromIntegral $ preroll ctype
     startgranule = 0
     gsi = maybe 0 id gs -- A Granuleshift of None is represented by 0

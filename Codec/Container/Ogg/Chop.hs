@@ -338,7 +338,7 @@ getAccum = do
 addHeaders :: OggPage -> Chop ()
 addHeaders g = do
   let t = pageTrack g
-      h = headers $ fromJust (trackType t)
+      h = trackHeaders t
   modifyHeaders g h
 
 -- | Subtract the number of completed header packets provided by this page
