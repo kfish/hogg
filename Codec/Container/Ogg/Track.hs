@@ -45,7 +45,7 @@ data OggTrack =
   }
 
 ------------------------------------------------------------
--- ContentTyped
+-- ContentTyped, ContentTypeImplied, Serialled
 --
 
 -- | Predicate
@@ -58,6 +58,9 @@ trackIsType t0 track
 instance ContentTyped OggTrack where
   contentTypeIs = trackIsType
   contentTypeOf = trackType
+
+instance ContentTypeImplied OggTrack where
+  contentTypeImplies = trackIsType
 
 instance Serialled OggTrack where
   serialOf = trackSerialno

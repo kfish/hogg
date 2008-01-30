@@ -84,6 +84,9 @@ instance ContentTyped OggPage where
   contentTypeIs t g = contentTypeIs t (pageTrack g)
   contentTypeOf g = trackType (pageTrack g)
 
+instance ContentTypeImplied OggPage where
+  contentTypeImplies = contentTypeIs
+
 instance Serialled OggPage where
   serialOf g = serialOf (pageTrack g)
 

@@ -24,6 +24,10 @@ module Codec.Container.Ogg.ContentType (
   contentTypeEq,
   demuxByContentType,
 
+  -- ContentTypeImplied typeclass
+  ContentTypeImplied,
+  contentTypeImplies,
+
   -- Some guaranteed-known content-types
   skeleton,
   cmml,
@@ -66,6 +70,14 @@ contentTypeEq a b = case (contentTypeOf a, contentTypeOf b) of
 -- | Group a list of ContentTyped items by their Content-Type
 demuxByContentType :: (ContentTyped a) => [a] -> [[a]]
 demuxByContentType = classify contentTypeEq
+
+------------------------------------------------------------
+-- | Typeclass: ContentTypeImplied
+--
+
+class (ContentTyped a) => ContentTypeImplied a where
+  contentTypeImplies :: ContentType -> a -> Bool
+  contentTypeImplies = contentTypeIs
 
 ------------------------------------------------------------
 -- | Data: ContentType
