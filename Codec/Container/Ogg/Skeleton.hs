@@ -10,6 +10,10 @@ module Codec.Container.Ogg.Skeleton (
   OggFishead (..),
   OggFisbone (..),
   emptyFishead,
+  pageToFishead,
+  packetToFishead,
+  pageToFisbone,
+  packetToFisbone,
   fisheadToPage,
   fisheadToPacket,
   fisboneToPage,
@@ -91,6 +95,63 @@ z = 0
 
 emptyFishead :: OggFishead
 emptyFishead = OggFishead zeroTimestamp zeroTimestamp
+
+------------------------------------------------------------
+-- pageToFishead, pageToFisbone
+--
+
+pageToFishead :: OggPage -> Maybe OggFishead
+pageToFishead g = packetToFishead (head $ pagesToPackets [g])
+
+pageToFisbone :: OggPage -> Maybe OggFisbone
+pageToFisbone g = packetToFisbone (head $ pagesToPackets [g])
+
+------------------------------------------------------------
+-- packetToFishead, bsToFishead
+--
+
+packetToFishead :: OggPacket -> Maybe OggFishead
+packetToFishead (OggPacket d t _ bos _ _) = case bos of
+  False -> Nothing
+  True -> case (contentTypeIs skeleton t) of
+    True  -> Just (bsToFishead d)
+    False -> Nothing
+
+bsToFishead :: L.ByteString -> OggFishead
+bsToFishead d = OggFishead pt bt
+  where
+    pt = t 12 20
+    bt = t 28 36
+
+    -- | Read a timestamp encoded as a (le64,le64) rational, where a
+    -- denominator of 0 is interepreted as the result being 0.
+    t o1 o2 = case od of
+      0 -> Timestamp (0 % 1)
+      _ -> Timestamp (on % od)
+      where
+        on = le64At o1 d
+        od = le64At o2 d
+
+------------------------------------------------------------
+-- packetToFisbone, bsToFisbone
+--
+
+packetToFisbone :: OggPacket -> Maybe OggFisbone
+packetToFisbone (OggPacket d t _ _ _ _) =
+  case (contentTypeIs skeleton t) of
+    True  -> Just (bsToFisbone d)
+    False -> Nothing
+
+bsToFisbone :: L.ByteString -> OggFisbone
+bsToFisbone d = OggFisbone serial nh gr startg pr gshift mh
+  where
+    serial = le32At 12 d
+    nh = le32At 16 d
+    gr = fracRate (le64At 20 d) (le64At 28 d)
+    startg = le64At 36 d
+    pr = le32At 44 d
+    gshift = u8At 48 d
+    mh = read $ C.unpack (L.drop 52 d)
 
 ------------------------------------------------------------
 -- fisheadToPage
