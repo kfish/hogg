@@ -342,7 +342,7 @@ infoSub :: SubCommand
 infoSub = SubCommand "info" info
     "Reporting" "Display information about the file and its bitstreams"
     [("Describe all bitstreams in file.ogg", "file.ogg"),
-     ("Describe only the Theora bitstream in file.ogg", "-c theora file.ogg")]
+     ("Describe only the Theora bitstream in file.ogv", "-c theora file.ogv")]
     [cTypeOptions]
 
 info :: Hot ()
@@ -360,7 +360,7 @@ dumpPacketsSub :: SubCommand
 dumpPacketsSub = SubCommand "dump" dumpPackets
     "Reporting" "Hexdump packets of an Ogg file"
     [("Dump all bitstreams in file.ogg", "file.ogg"),
-     ("Dump only the Theora bitstream in file.ogg", "-c theora file.ogg")]
+     ("Dump only the Theora bitstream in file.ogv", "-c theora file.ogv")]
     allOptions
 
 dumpPackets :: Hot ()
@@ -377,8 +377,8 @@ countPacketsSub :: SubCommand
 countPacketsSub = SubCommand "packetcount" countPackets
     "Testing" "Count packets of an Ogg file" 
     [("Count packets of all bitstreams in file.ogg", "file.ogg"),
-     ("Count packets from only the Theora bitstream in file.ogg",
-      "-c theora file.ogg")]
+     ("Count packets from only the Theora bitstream in file.ogv",
+      "-c theora file.ogv")]
     [cTypeOptions, rangeOptions]
 
 countPackets :: Hot ()
@@ -396,8 +396,8 @@ rewritePagesSub :: SubCommand
 rewritePagesSub = SubCommand "rip" rewritePages
     "Extraction" "Rip selected logical bistreams from an Ogg file (default: all)"
     [("Extract all bitstreams from file.ogg", "-o output.ogg file.ogg"),
-     ("Extract only the Theora bitstream from file.ogg",
-      "-c theora -o output.ogg file.ogg")]
+     ("Extract only the Theora bitstream from file.ogv",
+      "-c theora -o output.ogv file.ogv")]
     allOptions
 
 rewritePages :: Hot ()
@@ -415,8 +415,8 @@ rewritePacketsSub :: SubCommand
 rewritePacketsSub = SubCommand "reconstruct" rewritePackets
     "Extraction" "Reconstruct an Ogg file by doing a full packet demux"
     [("Reconstruct all bitstreams from file.ogg", "-o output.ogg file.ogg"),
-     ("Reconstruct only the Theora bitstream from file.ogg",
-      "-c theora -o output.ogg file.ogg")]
+     ("Reconstruct only the Theora bitstream from file.ogv",
+      "-c theora -o output.ogv file.ogv")]
     allOptions
 
 rewritePackets :: Hot ()
@@ -433,13 +433,13 @@ rewritePackets = do
 chopSub :: SubCommand
 chopSub = SubCommand "chop" chopPages
     "Editing" "Extract a section (specify start and/or end time)"
-    [("Extract the first minute of file.ogg", "-e 1:00 file.ogg"),
-     ("Extract from the second to the fifth minute of file.ogg",
-      "-s 2:00 -e 5:00 -o output.ogg file.ogg"),
-     ("Extract only the Theora video stream, from 02:00 to 05:00, of file.ogg",
-      "-c theora -s 2:00 -e 5:00 -o output.ogg file.ogg"),
+    [("Extract the first minute of file.ogx", "-e 1:00 file.ogx"),
+     ("Extract from the second to the fifth minute of file.ogx",
+      "-s 2:00 -e 5:00 -o output.ogx file.ogx"),
+     ("Extract only the Theora video stream, from 02:00 to 05:00, of file.ogv",
+      "-c theora -s 2:00 -e 5:00 -o output.ogv file.ogv"),
      ("Extract, specifying SMPTE-25 frame offsets",
-      "-c theora -s smpte-25:00:02:03::12 -e smpte-25:00:05:02::04 -o output.ogg file.ogg")]
+      "-c theora -s smpte-25:00:02:03::12 -e smpte-25:00:05:02::04 -o output.ogv file.ogv")]
     allOptions
 
 chopPages :: Hot ()
@@ -465,7 +465,7 @@ chopRange (Config _ _ start end _) xs = liftIO $ chopWithSkel start end xs
 addSkelSub :: SubCommand
 addSkelSub = SubCommand "addskel" addSkel
   "Editing" "Write a Skeleton logical bitstream"
-  [("Add a Skeleton to file.ogg", "-o output.ogg file.ogg")]
+  [("Add a Skeleton to file.ogg", "-o output.oga file.ogg")]
   [outputOptions]
 
 addSkel :: Hot ()
@@ -486,8 +486,8 @@ countrwPagesSub :: SubCommand
 countrwPagesSub = SubCommand "countrw" countrwPages
     "Testing" "Rewrite via packets and display a count of pages produced"
     [("Rewrite and count packets of all bitstreams in file.ogg", "file.ogg"),
-     ("Rewrite and count packets from only the Theora bitstream in file.ogg",
-      "-c theora file.ogg")]
+     ("Rewrite and count packets from only the Theora bitstream in file.ogv",
+      "-c theora file.ogv")]
     [cTypeOptions, rangeOptions]
 
 countrwPages :: Hot ()
@@ -505,8 +505,8 @@ countPagesSub :: SubCommand
 countPagesSub = SubCommand "pagecount" countPages
     "Testing" "Count pages of an Ogg file" 
     [("Count pages of all bitstreams in file.ogg", "file.ogg"),
-     ("Count pages from only the Theora bitstream in file.ogg",
-      "-c theora file.ogg")]
+     ("Count pages from only the Theora bitstream in file.ogv",
+      "-c theora file.ogv")]
     [cTypeOptions, rangeOptions]
 
 countPages :: Hot ()
@@ -524,8 +524,8 @@ dumpPagesSub :: SubCommand
 dumpPagesSub = SubCommand "pagedump" dumpPages
     "Reporting" "Display page structure of an Ogg file"
     [("Dump pages of all bitstreams in file.ogg", "file.ogg"),
-     ("Dump pages of only the Theora bitstream in file.ogg",
-      "-c theora file.ogg")]
+     ("Dump pages of only the Theora bitstream in file.ogv",
+      "-c theora file.ogv")]
     allOptions
 
 dumpPages :: Hot ()
@@ -542,8 +542,8 @@ dumpPages = do
 mergePagesSub :: SubCommand
 mergePagesSub = SubCommand "merge" mergePages
     "Editing" "Merge, interleaving pages in order of presentation time"
-    [("Merge pages of audio.ogg and video.ogg",
-      "-o output.ogg audio.ogg video.ogg")]
+    [("Merge pages of audio.oga and video.ogv",
+      "-o output.ogv audio.oga video.ogv")]
     [outputOptions]
 
 mergePages :: Hot ()
@@ -562,7 +562,7 @@ mergePages = do
 sortPagesSub :: SubCommand
 sortPagesSub = SubCommand "sort" sortPages
     "Editing" "Rewrite with correct page ordering"
-    [("Correct the page ordering in broken.ogg", "-o fixed.ogg broken.ogg")]
+    [("Correct the page ordering in broken.ogv", "-o fixed.ogv broken.ogv")]
     [outputOptions]
 
 sortPages :: Hot ()
@@ -580,8 +580,8 @@ dumpRawPagesSub :: SubCommand
 dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
     "Reporting" "Dump raw (unparsed) page data"
     [("Dump raw pages of all bitstreams in file.ogg", "file.ogg"),
-     ("Dump raw pages of only the Theora bitstream in file.ogg",
-      "-c theora file.ogg")]
+     ("Dump raw pages of only the Theora bitstream in file.ogv",
+      "-c theora file.ogv")]
     allOptions
 
 dumpRawPages :: Hot ()
@@ -625,13 +625,15 @@ checkArgs line = do
         -- Allow non options which are either names of subcommands (as
         -- examples for "hogg help"), or filenames (ending in .ogg)
         let a = filter (flip notElem (map subName subCommands)) $
-                filter (not . isSuffixOf ".ogg") args'
+                filter (not . validSuffix) args'
         case a of
           [] -> return ()
           _  -> report (unwords ("non option":(map (\x -> '`':x++['\'']) a)))
     (_, _, errs) -> mapM_ report (map (reverse.tail.reverse) errs)
   where
     report msg = hPutStrLn stderr $ "Warning: " ++ msg ++ " in help example:\n  " ++ line
+    validSuffix s = or $ map (flip isSuffixOf s) validExtensions
+    validExtensions = [".ogg", ".oga", ".ogv", ".ogx", ".spx"]
 
 ------------------------------------------------------------
 -- help
