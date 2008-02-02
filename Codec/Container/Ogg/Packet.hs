@@ -92,7 +92,7 @@ uncutPacket d t gp = OggPacket d t gp False False segs
 type SeqnoMap = Map.Map OggTrack Word32
 
 data CarryPage = CarryPage {
-  carryPageIx :: Int,
+  _carryPageIx :: Int,
   carryPagePage :: OggPage
 }
 
