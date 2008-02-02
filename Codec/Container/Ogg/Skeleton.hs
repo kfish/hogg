@@ -101,10 +101,14 @@ emptyFishead = OggFishead zeroTimestamp zeroTimestamp
 --
 
 pageToFishead :: OggPage -> Maybe OggFishead
-pageToFishead g = packetToFishead (head $ pagesToPackets [g])
+pageToFishead g = case (pagesToPackets [g]) of
+  [] -> Nothing
+  p:_ -> packetToFishead p
 
 pageToFisbone :: OggPage -> Maybe OggFisbone
-pageToFisbone g = packetToFisbone (head $ pagesToPackets [g])
+pageToFisbone g = case (pagesToPackets [g]) of
+  [] -> Nothing
+  p:_ -> packetToFisbone p
 
 ------------------------------------------------------------
 -- packetToFishead, bsToFishead
@@ -242,3 +246,37 @@ trackToFisbone (OggTrack serialno (Just ctype) nheaders (Just gr) gs mdata) =
 -- If the pattern match failed, ie. any of the Maybe values were Nothing,
 -- then we can't produce a valid Fisbone for this
 trackToFisbone _ = Nothing
+
+------------------------------------------------------------
+-- Custom Instances
+--
+
+instance ContentTypeImplied OggPage where
+  contentTypeImplies = pageImplies
+
+pageImplies :: [OggTrack] -> ContentType -> OggPage -> Bool
+pageImplies tracks t g = case (pagesToPackets [g]) of
+  []  -> False
+  p:_ -> contentTypeImplies tracks t p
+
+instance ContentTypeImplied OggPacket where
+  contentTypeImplies = packetImplies
+
+packetImplies :: [OggTrack] -> ContentType -> OggPacket -> Bool
+packetImplies tracks t p = case (contentTypeIs skeleton p) of
+    False -> contentTypeIs t p
+    True  -> case (packetBOS p, packetEOS p) of
+      (True, _) -> True
+      (_, True) -> True
+      _         -> case (packetToFisbone p) of
+                     Nothing -> False
+                     Just fb -> fbPacketImplies tracks t fb
+
+fbPacketImplies :: [OggTrack] -> ContentType -> OggFisbone -> Bool
+fbPacketImplies tracks t fb = case matchTracks of
+    []       -> False
+    sTrack:_ -> contentTypeIs t sTrack
+  where
+    matchTracks = filter (\x -> trackSerialno x == skelSerial) tracks
+    skelSerial = fisboneSerialno fb
+

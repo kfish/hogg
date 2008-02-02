@@ -14,7 +14,11 @@ module Codec.Container.Ogg.Track (
   gpToTimestamp,
   gpToGranules,
   gpSplit,
-  gpExplain
+  gpExplain,
+
+  -- ContentTypeImplied typeclass
+  ContentTypeImplied,
+  contentTypeImplies
 ) where
 
 import qualified Data.ByteString.Lazy as L
@@ -45,7 +49,14 @@ data OggTrack =
   }
 
 ------------------------------------------------------------
--- ContentTyped, ContentTypeImplied, Serialled
+-- | Typeclass: ContentTypeImplied
+--
+
+class (ContentTyped a) => ContentTypeImplied a where
+  contentTypeImplies :: [OggTrack] -> ContentType -> a -> Bool
+
+------------------------------------------------------------
+-- Instances: ContentTyped, ContentTypeImplied, Serialled
 --
 
 -- | Predicate
@@ -60,7 +71,7 @@ instance ContentTyped OggTrack where
   contentTypeOf = trackType
 
 instance ContentTypeImplied OggTrack where
-  contentTypeImplies = trackIsType
+  contentTypeImplies _ = trackIsType
 
 instance Serialled OggTrack where
   serialOf = trackSerialno

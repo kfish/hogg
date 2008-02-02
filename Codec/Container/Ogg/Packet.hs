@@ -59,9 +59,6 @@ instance ContentTyped OggPacket where
   contentTypeIs t p = contentTypeIs t (packetTrack p)
   contentTypeOf p = trackType (packetTrack p)
 
-instance ContentTypeImplied OggPacket where
-  contentTypeImplies = contentTypeIs
-
 instance Serialled OggPacket where
   serialOf p = serialOf (packetTrack p)
 
