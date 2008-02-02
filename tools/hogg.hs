@@ -253,26 +253,25 @@ chainMatchM f = do
 
 -- | Filter all elements of a chain by the given criteria
 chainFilter :: OggChain -> Hot OggChain
-chainFilter (OggChain t gs ps) = do
-    t' <- mType t
-    gs' <- mType gs
-    ps' <- mType ps
-    return $ OggChain t' gs' ps'
+chainFilter (OggChain ts gs ps) = do
+    ts' <- mType ts ts
+    gs' <- mType ts gs
+    ps' <- mType ts ps
+    return $ OggChain ts' gs' ps'
 
 -- | A generic function to pull a list of things from a chain
-chainMatch :: (ContentTypeImplied a) => (OggChain -> [a]) -> Hot [[[a]]]
+chainMatch :: (OggChain -> a) -> Hot [[a]]
 chainMatch f = do
-    c <- allChains
-    let a = map (map f) c
-    sequence $ (map (mapM mType)) a
+    c <- chains
+    return $ sequence $ map (map f) c
 
 -- | Filter a ContentTyped list by the given content type
-mType :: (ContentTypeImplied a) => [a] -> Hot [a]
-mType xs = do
+mType :: (ContentTypeImplied a) => [OggTrack] -> [a] -> Hot [a]
+mType tks xs = do
     config <- asks hotConfig
     return $ case (contentTypeCfg config) of
       Nothing -> xs
-      Just t -> filter (contentTypeImplies t) xs
+      Just t -> filter (contentTypeImplies tks t) xs
 
 -- | Apply matchRange to all the inner inner lists
 matchRange :: (Timestampable a) => [[[a]]] -> Hot [[[a]]]
