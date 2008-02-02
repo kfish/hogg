@@ -97,6 +97,7 @@ subCommands = [
 data Config =
   Config {
     contentTypeCfg :: Maybe ContentType,
+    noSkelCfg :: Bool,
     outputCfg :: Maybe String,
     startCfg :: Maybe Timestamp,
     endCfg :: Maybe Timestamp,
@@ -107,6 +108,7 @@ dftConfig :: Config
 dftConfig =
   Config {
     contentTypeCfg = Nothing,
+    noSkelCfg = False,
     outputCfg = Nothing,
     startCfg = Nothing,
     endCfg = Nothing,
@@ -123,18 +125,19 @@ instance Eq (OptDescr Option) where
 data Option = Help
             | Version
             | ContentTypeOpt String
-            | OutputOpt String
+            | SkelOpt
             | StartOpt String
             | EndOpt String
+            | OutputOpt String
             deriving Eq
 
 options :: [OptDescr Option]
 options = concat $ miscOptions : allOptions
 
 allOptions :: [[OptDescr Option]]
-allOptions = [cTypeOptions, rangeOptions, outputOptions]
+allOptions = [cTypeOptions, skelOptions, rangeOptions, outputOptions]
 
-miscOptions, cTypeOptions, rangeOptions, outputOptions :: [OptDescr Option]
+miscOptions, cTypeOptions, skelOptions, rangeOptions, outputOptions :: [OptDescr Option]
 
 miscOptions = [
   Option ['h', '?'] ["help"] (NoArg Help) "Display this help and exit",
@@ -144,6 +147,10 @@ miscOptions = [
 cTypeOptions = [
   Option ['c']      ["content-type"] (ReqArg ContentTypeOpt "Content-Type")
          "Select the logical bitstreams for a specified content type" ]
+
+skelOptions = [
+  Option ['k']      ["no-skeleton"] (NoArg SkelOpt)
+         "Do NOT include a Skeleton bitstream in the output" ]
 
 rangeOptions = [
   Option ['s']      ["start"] (ReqArg StartOpt "Timestamp")
@@ -180,6 +187,8 @@ processConfig = foldM processOneOption
       -- let c = catchRead "Invalid content type" ctype
       let c = parseType ctype
       return $ config {contentTypeCfg = c}
+    processOneOption config (SkelOpt) = do
+      return $ config {noSkelCfg = True}
     processOneOption config (OutputOpt output) = do
       return $ config {outputCfg = Just output}
     processOneOption config (StartOpt start) = do
@@ -271,7 +280,9 @@ mType tks xs = do
     config <- asks hotConfig
     return $ case (contentTypeCfg config) of
       Nothing -> xs
-      Just t -> filter (contentTypeImplies tks t) xs
+      Just t -> case (noSkelCfg config) of
+                  False -> filter (contentTypeImplies tks t) xs
+                  True  -> filter (contentTypeIs t) xs
 
 -- | Apply matchRange to all the inner inner lists
 matchRange :: (Timestampable a) => [[[a]]] -> Hot [[[a]]]
@@ -452,11 +463,9 @@ chopPages = do
     outputPerFile $ map c2 chopChains
 
 chopRange :: Config -> OggChain -> Hot OggChain
-chopRange (Config _ _ start end _) xs = liftIO $ chopWithSkel start end xs
-
--- TODO: implement an option for the following ...
--- To make with no skeleton bitstream:
--- chopRange c@(Config _ _ start end _) xs = liftIO $ chop start end xs
+chopRange (Config _ noSkel _ start end _) xs = case noSkel of
+  False -> liftIO $ chopWithSkel start end xs
+  True  -> liftIO $ chop start end xs
 
 ------------------------------------------------------------
 -- addSkel (addskel)
