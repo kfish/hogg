@@ -20,6 +20,7 @@ import Text.Printf
 
 import qualified Data.ByteString.Lazy as L
 import qualified Data.ByteString.Lazy.Char8 as C
+import Data.Char
 import Data.List hiding (sort)
 
 import Codec.Container.Ogg.Chain
@@ -44,6 +45,39 @@ showVersion = do
     putStrLn $ "hogg version " ++ hoggVersion
     exitWith ExitSuccess
 
+
+------------------------------------------------------------
+-- Content types for which granulepos is interpreted
+--
+
+interpretedCodecs :: String
+interpretedCodecs = englishList $ filter (/= "Skeleton") knownContentTypes
+
+englishList :: [String] -> String
+englishList [] = []
+englishList [a,b] = a ++ " and " ++ b
+englishList (a:as) = a ++ ", " ++ englishList as
+
+------------------------------------------------------------
+-- Paragraph rendering
+--
+
+para :: [String] -> String
+para ss = concat $ intersperse "\n" (map (\s -> breakLines 2 76 s) ss)
+
+-- breakLines leftIndent columnWidth text
+breakLines :: Int -> Int -> String -> String
+breakLines i n s
+  | length s < n = indent ++ s ++ "\n"
+  | otherwise    = indent ++ line' ++ "\n" ++ breakLines i n rest'
+  where
+    indent = take i $ repeat ' '
+    (line, rest) = splitAt n s
+    (rSpill, rLine) = break isSpace (reverse line)
+    line' = reverse rLine
+    rest' = reverse rSpill ++ rest
+    
+
 ------------------------------------------------------------
 --  HOggTool datatype
 --
@@ -66,6 +100,7 @@ data SubCommand =
     subMethod :: Hot (),
     subCategory :: String,
     subSynopsis :: String,
+    subDescription :: String,
     subExamples :: [(String,String)], -- [(example description, flags)]
     subOptions :: [[OptDescr Option]] -- eg. [rangeOptions, cTypeOptions]
   }
@@ -352,6 +387,7 @@ outputPerChain = L.concat
 infoSub :: SubCommand
 infoSub = SubCommand "info" info
     "Reporting" "Display information about the file and its bitstreams"
+    ""
     [("Describe all bitstreams in file.ogg", "file.ogg"),
      ("Describe only the Theora bitstream in file.ogv", "-c theora file.ogv")]
     [cTypeOptions]
@@ -370,6 +406,7 @@ info = do
 dumpPacketsSub :: SubCommand
 dumpPacketsSub = SubCommand "dump" dumpPackets
     "Reporting" "Hexdump packets of an Ogg file"
+    ""
     [("Dump all bitstreams in file.ogg", "file.ogg"),
      ("Dump only the Theora bitstream in file.ogv", "-c theora file.ogv")]
     allOptions
@@ -387,6 +424,7 @@ dumpPackets = do
 countPacketsSub :: SubCommand
 countPacketsSub = SubCommand "packetcount" countPackets
     "Testing" "Count packets of an Ogg file" 
+    ""
     [("Count packets of all bitstreams in file.ogg", "file.ogg"),
      ("Count packets from only the Theora bitstream in file.ogv",
       "-c theora file.ogv")]
@@ -406,10 +444,16 @@ countPackets = do
 rewritePagesSub :: SubCommand
 rewritePagesSub = SubCommand "rip" rewritePages
     "Extraction" "Rip selected logical bistreams from an Ogg file (default: all)"
+    rewriteDesc
     [("Extract all bitstreams from file.ogg", "-o output.ogg file.ogg"),
      ("Extract only the Theora bitstream from file.ogv",
       "-c theora -o output.ogv file.ogv")]
     allOptions
+
+rewriteDesc :: String
+rewriteDesc = para [
+  "Skeleton handling: If the input file has a skeleton track, then its " ++
+  "metadata describing the bitstream being ripped will be replicated."]
 
 rewritePages :: Hot ()
 rewritePages = do
@@ -425,6 +469,7 @@ rewritePages = do
 rewritePacketsSub :: SubCommand
 rewritePacketsSub = SubCommand "reconstruct" rewritePackets
     "Extraction" "Reconstruct an Ogg file by doing a full packet demux"
+    ""
     [("Reconstruct all bitstreams from file.ogg", "-o output.ogg file.ogg"),
      ("Reconstruct only the Theora bitstream from file.ogv",
       "-c theora -o output.ogv file.ogv")]
@@ -444,6 +489,7 @@ rewritePackets = do
 chopSub :: SubCommand
 chopSub = SubCommand "chop" chopPages
     "Editing" "Extract a section (specify start and/or end time)"
+    chopDesc
     [("Extract the first minute of file.ogx", "-e 1:00 file.ogx"),
      ("Extract from the second to the fifth minute of file.ogx",
       "-s 2:00 -e 5:00 -o output.ogx file.ogx"),
@@ -452,6 +498,12 @@ chopSub = SubCommand "chop" chopPages
      ("Extract, specifying SMPTE-25 frame offsets",
       "-c theora -s smpte-25:00:02:03::12 -e smpte-25:00:05:02::04 -o output.ogv file.ogv")]
     allOptions
+
+chopDesc :: String
+chopDesc = para [
+    "This chops a section of an Ogg file. By default, the output will " ++
+    "contain a Skeleton track specifying the start of the chop as " ++
+    "presentation time."]
 
 chopPages :: Hot ()
 chopPages = do
@@ -473,9 +525,10 @@ chopRange (Config _ noSkel _ start end _) xs = case noSkel of
 
 addSkelSub :: SubCommand
 addSkelSub = SubCommand "addskel" addSkel
-  "Editing" "Write a Skeleton logical bitstream"
-  [("Add a Skeleton to file.ogg", "-o output.oga file.ogg")]
-  [outputOptions]
+    "Editing" "Write a Skeleton logical bitstream"
+    ""
+    [("Add a Skeleton to file.ogg", "-o output.oga file.ogg")]
+    [outputOptions]
 
 addSkel :: Hot ()
 addSkel = do
@@ -494,6 +547,7 @@ addSkel = do
 countrwPagesSub :: SubCommand
 countrwPagesSub = SubCommand "countrw" countrwPages
     "Testing" "Rewrite via packets and display a count of pages produced"
+    ""
     [("Rewrite and count packets of all bitstreams in file.ogg", "file.ogg"),
      ("Rewrite and count packets from only the Theora bitstream in file.ogv",
       "-c theora file.ogv")]
@@ -513,6 +567,7 @@ countrwPages = do
 countPagesSub :: SubCommand
 countPagesSub = SubCommand "pagecount" countPages
     "Testing" "Count pages of an Ogg file" 
+    ""
     [("Count pages of all bitstreams in file.ogg", "file.ogg"),
      ("Count pages from only the Theora bitstream in file.ogv",
       "-c theora file.ogv")]
@@ -532,6 +587,7 @@ countPages = do
 dumpPagesSub :: SubCommand
 dumpPagesSub = SubCommand "pagedump" dumpPages
     "Reporting" "Display page structure of an Ogg file"
+    ""
     [("Dump pages of all bitstreams in file.ogg", "file.ogg"),
      ("Dump pages of only the Theora bitstream in file.ogv",
       "-c theora file.ogv")]
@@ -551,9 +607,38 @@ dumpPages = do
 mergePagesSub :: SubCommand
 mergePagesSub = SubCommand "merge" mergePages
     "Editing" "Merge, interleaving pages in order of presentation time"
+    mergeDesc
     [("Merge pages of audio.oga and video.ogv",
       "-o output.ogv audio.oga video.ogv")]
     [outputOptions]
+
+mergeDesc :: String
+mergeDesc = para [
+    "This merges Ogg files together, interleaving pages in order of " ++
+    "presentation time. It correctly interprets the granulepos timestamps " ++
+    "of " ++ interpretedCodecs ++ "bitstreams. ",
+
+    "For example, if you have an Ogg Theora video file, and its " ++
+    "soundtrack stored separately as an Ogg Speex audio file, and you can " ++
+    "use 'hogg merge' to create a single Ogg file containing the video and " ++
+    "audio, interleaved together in parallel. ",
+
+    "Similarly, using 'hogg merge' on a collection of Ogg Vorbis audio " ++
+    "files will create a big Ogg file with all the songs in parallel, ie. " ++
+    "interleaved for simultaneous playback. Such a file is proper Ogg, but " ++
+    "not \"Ogg Vorbis I\" -- the Ogg Vorbis I specification defines an " ++
+    "Ogg Vorbis file as an Ogg file containing only one Vorbis track at a " ++
+    "time (ie. no parallel multiplexing). Many music players (which use " ++
+    "libvorbisfile) aren't designed to play multitrack Ogg files. In " ++
+    "general however, video players, and anything built on a multimedia " ++
+    "framework (like GStreamer, DirectShow etc.) will probably be able to " ++
+    "handle such files. ",
+
+    "If you want to create a file containing some Ogg files sequenced one " ++
+    "after another, then you should simply concatenate them together using " ++
+    "cat. In Ogg this is called \"chaining\". If you cat Ogg Vorbis I audio " ++
+    "files together, then the result will also be a compliant Ogg Vorbis " ++
+    "file. "]
 
 mergePages :: Hot ()
 mergePages = do
@@ -571,8 +656,22 @@ mergePages = do
 sortPagesSub :: SubCommand
 sortPagesSub = SubCommand "sort" sortPages
     "Editing" "Rewrite with correct page ordering"
+    sortDesc
     [("Correct the page ordering in broken.ogv", "-o fixed.ogv broken.ogv")]
     [outputOptions]
+
+sortDesc :: String
+sortDesc = para [
+    "This sorts an Ogg file, interleaving pages in order of presentation " ++
+    "time. It correctly interprets the granulepos timestamps of " ++
+    interpretedCodecs ++ " bitstreams. ",
+    "Some encoders produce files with incorrect page ordering; for example, " ++
+    "some audio and video pages may occur out of order. Although these " ++
+    "files are usually playable, it can be difficult to accurately seek or " ++
+    "scrub on them, increasing the likelihood of glitches during playback. " ++
+    "Players may also need to use more memory in order to buffer the audio " ++
+    "and video data for synchronized playback, which can be a problem when " ++
+    "the files are viewed on low-memory devices."]
 
 sortPages :: Hot ()
 sortPages = do
@@ -588,6 +687,7 @@ sortPages = do
 dumpRawPagesSub :: SubCommand
 dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
     "Reporting" "Dump raw (unparsed) page data"
+    ""
     [("Dump raw pages of all bitstreams in file.ogg", "file.ogg"),
      ("Dump raw pages of only the Theora bitstream in file.ogv",
       "-c theora file.ogv")]
@@ -604,9 +704,17 @@ dumpRawPages = do
 
 knownCodecsSub :: SubCommand
 knownCodecsSub = SubCommand "known-codecs" knownCodecs
-  "Miscellaneous" "List codecs known by this version of hogg"
-  [] -- Examples
-  [] -- Options
+    "Miscellaneous" "List codecs known by this version of hogg"
+    knownCodecsDesc
+    [] -- Examples
+    [] -- Options
+
+knownCodecsDesc :: String
+knownCodecsDesc = para [
+    "All hogg subcommands can interpret the timestamps of " ++
+    interpretedCodecs ++ " bitstreams.",
+    "Running 'hogg known-codecs' will simply list these codec names, " ++
+    "one per line. This format is designed to be easily machine readable."]
 
 knownCodecs :: Hot ()
 knownCodecs = liftIO $ mapM_ putStrLn knownContentTypes
@@ -617,9 +725,10 @@ knownCodecs = liftIO $ mapM_ putStrLn knownContentTypes
 
 selfCheckSub :: SubCommand
 selfCheckSub = SubCommand "selfcheck" selfCheck
-  "Testing" "Check consistency of help example options"
-  [] -- Examples
-  [] -- Options
+    "Testing" "Check consistency of help example options"
+    ""
+    [] -- Examples
+    [] -- Options
 
 selfCheck :: Hot ()
 selfCheck = liftIO $ mapM_ checkArgs allExamples
@@ -650,9 +759,10 @@ checkArgs line = do
 
 helpSub :: SubCommand
 helpSub = SubCommand "help" help
-  "Commands" "Display help for a specific subcommand (eg. \"hogg help chop\")"
-  [("Display help for the \"hogg chop\" subcommand", "chop")]
-  [] -- Options
+    "Commands" "Display help for a specific subcommand (eg. \"hogg help chop\")"
+    ""
+    [("Display help for the \"hogg chop\" subcommand", "chop")]
+    [] -- Options
 
 help :: Hot ()
 help = do
@@ -682,7 +792,7 @@ categoryHelp c = c ++ ":\n" ++ concat (map itemHelp items) ++ "\n"
 contextHelp :: [Char] -> [SubCommand] -> [String]
 contextHelp command [] = longHelp [] ++ contextError
   where contextError = ["\n*** \"" ++ command ++ "\": Unknown command.\n"]
-contextHelp command (item:_) = synopsis ++ usage ++ examples ++
+contextHelp command (item:_) = synopsis ++ usage ++ description ++ examples ++
     ["\n" ++ optionsHelp item]
   where usage = ["Usage: hogg " ++ command ++ hasOpts command ++ outOpts]
         hasOpts "help" = " <subcommand>"
@@ -691,6 +801,9 @@ contextHelp command (item:_) = synopsis ++ usage ++ examples ++
                     True -> " filename ...\n"
                     False -> "\n"
         synopsis = [command ++ ": " ++ subSynopsis item ++ "\n"]
+        description = case (subDescription item) of
+                    "" -> []
+                    _  -> ["\n" ++ (subDescription item)]
         examples = case (subExamples item) of
                      [] -> []
                      _  -> ["\nExamples:"] ++
