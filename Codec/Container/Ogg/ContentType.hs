@@ -29,6 +29,7 @@ module Codec.Container.Ogg.ContentType (
   cmml,
   flac,
   speex,
+  celt,
   theora,
   vorbis
 ) where
@@ -88,7 +89,7 @@ knownContentTypes :: [String]
 knownContentTypes = sort $ map label known
 
 known :: [ContentType]
-known = [skeleton, cmml, vorbis, theora, speex, flac, oggpcm2]
+known = [skeleton, cmml, vorbis, theora, speex, celt, flac, oggpcm2]
 
 identify :: L.ByteString -> Maybe ContentType
 identify d = listToMaybe $ filter (\x -> identifyP x d) known
@@ -282,6 +283,34 @@ speexMetadata d = MessageHeaders (fromList headerVals)
         channels = ("Audio-Channels", [show c])
         srate = (le32At 36 d) :: Int
         c = (le32At 48 d) :: Int
+
+------------------------------------------------------------
+-- CELT
+--
+
+celt :: ContentType
+celt = ContentType
+          "CELT"                    -- label
+          ["audio/x-celt"]          -- mime
+          (L.isPrefixOf celtIdent) -- identify
+          (\d -> (le32At 52 d) + 2) -- headers
+          3                         -- preroll
+          (Just (\d -> intRate (le32At 40 d))) -- granulerate
+          Nothing                   -- granuleshift
+          celtMetadata
+          
+-- celtIdent = 'CELT    '
+celtIdent :: L.ByteString
+celtIdent = L.pack [0x43, 0x45, 0x4c, 0x54, 0x20, 0x20, 0x20, 0x20]
+
+-- Extract sample rate from Speex BOS header
+celtMetadata :: L.ByteString -> MessageHeaders
+celtMetadata d = MessageHeaders (fromList headerVals)
+  where headerVals = [samplerate, channels]
+        samplerate = ("Audio-Samplerate", [printf "%d Hz" srate])
+        channels = ("Audio-Channels", [show c])
+        srate = (le32At 40 d) :: Int
+        c = (le32At 44 d) :: Int
 
 ------------------------------------------------------------
 -- FLAC
