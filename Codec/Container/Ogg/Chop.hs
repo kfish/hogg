@@ -263,7 +263,7 @@ popPages f = do
 allEnded :: Chop Bool
 allEnded = do
     l <- get
-    return $ foldr (\x b -> ended x && b) True l
+    return $ all ended l
 
 -- | Get prevK for a given track
 getK :: OggPage -> Chop Integer
