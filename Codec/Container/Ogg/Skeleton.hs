@@ -130,8 +130,8 @@ bsToFishead d = OggFishead pt bt
     -- | Read a timestamp encoded as a (le64,le64) rational, where a
     -- denominator of 0 is interepreted as the result being 0.
     t o1 o2 = case od of
-      0 -> Timestamp (0 % 1)
-      _ -> Timestamp (on % od)
+      0 -> Timestamp (0, 1)
+      _ -> Timestamp (on, od)
       where
         on = le64At o1 d
         od = le64At o2 d
@@ -185,9 +185,7 @@ fisheadWrite (OggFishead p b) = newFisheadData
     uData = L.concat $ List.map le32Fill $ take 5 $ repeat z
 
 timestampFill :: Timestamp -> L.ByteString
-timestampFill (Timestamp r) = L.concat $ List.map le64Fill [n, d]
-  where n = numerator r
-        d = denominator r
+timestampFill (Timestamp (n,d)) = L.concat $ List.map le64Fill [n, d]
 
 ------------------------------------------------------------
 -- fisboneToPage

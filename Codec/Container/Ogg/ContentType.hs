@@ -161,8 +161,8 @@ skeletonMetadata d = MessageHeaders (fromList headerVals)
         -- | Read a timestamp encoded as a (le64,le64) rational, where a
         -- denominator of 0 is interepreted as the result being 0.
         t o1 o2 = case od of
-          0 -> Timestamp (0 % 1)
-          _ -> Timestamp (on % od)
+          0 -> Timestamp (0, 1)
+          _ -> Timestamp (on, od)
           where
             on = le64At o1 d
             od = le64At o2 d

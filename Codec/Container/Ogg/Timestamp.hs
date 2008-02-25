@@ -22,9 +22,12 @@ import Text.Printf
 
 import Codec.Container.Ogg.TimeScheme
 
+-- Timestamp (n, d) is similar to Rational, but we ensure to keep the
+-- original denominator around without simplifying, as it is derived from
+-- the framerate / samplerate
 data Timestamp =
   Timestamp {
-    stamp :: Rational
+    stamp :: (Integer, Integer)
   }
   -- deriving Ord, Eq
 
@@ -33,30 +36,28 @@ data Timestamp =
 --
 
 instance Ord Timestamp where
-  compare (Timestamp r1) (Timestamp r2) = compare r1 r2
+  compare (Timestamp (n1,d1)) (Timestamp (n2,d2)) = compare (n1%d1) (n2%d2)
 
 instance Eq Timestamp where
-  (Timestamp r1) == (Timestamp r2) = r1 == r2
+  (Timestamp (n1,d1)) == (Timestamp (n2,d2)) = (n1%d1) == (n2%d2)
 
 ------------------------------------------------------------
 -- Constants
 --
 
 zeroTimestamp :: Timestamp
-zeroTimestamp = Timestamp (0%1)
+zeroTimestamp = Timestamp (0,1)
 
 ------------------------------------------------------------
 -- Show
 --
 
 instance Show Timestamp where
-  show (Timestamp r)
+  show (Timestamp (n,d))
     | d == 0    = "00:00:00.000"
     | d < 100   = printf "%02d:%02d:%02d::%02d" hrs minN secN framesN
     | otherwise = printf "%02d:%02d:%02d.%03d" hrs minN secN msN
     where
-          n = numerator r
-          d = denominator r
           msN = quot (1000 * framesN) d
           (secT, framesN) = quotRem n d
           (minT, secN) = quotRem secT 60
@@ -89,10 +90,10 @@ makeStamp scheme ts = map rToTs (timeSum rate ts)
     rate = timeSchemeRate scheme
     rToTs x = Timestamp x
 
-timeSum :: Rational -> ParsedTimeStamp -> [Rational]
+timeSum :: Rational -> ParsedTimeStamp -> [(Integer, Integer)]
 timeSum rate (ParsedTimeStamp hh mm ss subs) = case subs of
-    Left ms -> [((t 1000 1 ms) % 1000)]
-    Right ff -> [((t n d ff) % n)]
+    Left ms -> [((t 1000 1 ms) , 1000)]
+    Right ff -> [((t n d ff) , n)]
   where
       n = numerator rate
       d = denominator rate

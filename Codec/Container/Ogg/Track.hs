@@ -106,7 +106,7 @@ gpToTimestamp mgp track
   | otherwise    = Just (Timestamp timestamp)
   where g = gpToGranules mgp track
         r = trackGranulerate track
-        timestamp = (granules*d) % n
+        timestamp = (granules*d, n)
         n = numerator gr
         d = denominator gr
         Just granules = g
