@@ -115,7 +115,6 @@ gpToTimestamp mgp track
 gpExplain :: Granulepos -> OggTrack -> String
 gpExplain mgp track
   | s == Nothing = show mgp
-  | delta == 0   = show mgp
   | otherwise    = show keyframe ++ "|" ++ show delta
   where s = gpSplit mgp track
         Just (keyframe, delta) = s
