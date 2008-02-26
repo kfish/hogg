@@ -501,7 +501,22 @@ chopSub = SubCommand "chop" chopPages
 
 chopDesc :: String
 chopDesc = para [
-    "This chops a section of an Ogg file. By default, the output will " ++
+    "This chops a section of an Ogg file. " ++
+    "It correctly interprets the granulepos timestamps of " ++
+    interpretedCodecs ++ " bitstreams.",
+
+    "The output file contains copies of the headers of the input file, and " ++
+    "all the codec data required to correctly decode the content between " ++
+    "the start and end times specified on the commandline. For codecs with " ++
+    "data dependencies like video keyframes, the keyframe prior to the " ++
+    "starting time will be included in the output.",
+
+    "Note that 'hogg chop' operates by copying pages of Ogg data; it does " ++
+    "not strip partial packets from the first or last data page included in " ++
+    "the output. It does however ensure to set the end of stream flag on " ++
+    "the last page of each logical bitstream.",
+
+    "Skeleton handling: By default, the output will " ++
     "contain a Skeleton track specifying the start of the chop as " ++
     "presentation time."]
 
