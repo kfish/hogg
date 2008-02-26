@@ -36,10 +36,10 @@ data Timestamp =
 --
 
 instance Ord Timestamp where
-  compare (Timestamp (n1,d1)) (Timestamp (n2,d2)) = compare (n1%d1) (n2%d2)
+  compare (Timestamp (n1,d1)) (Timestamp (n2,d2)) = compare (n1 % d1) (n2 % d2)
 
 instance Eq Timestamp where
-  (Timestamp (n1,d1)) == (Timestamp (n2,d2)) = (n1%d1) == (n2%d2)
+  (Timestamp (n1,d1)) == (Timestamp (n2,d2)) = (n1 % d1) == (n2 % d2)
 
 ------------------------------------------------------------
 -- Constants
