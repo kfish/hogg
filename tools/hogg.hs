@@ -653,7 +653,15 @@ mergeDesc = para [
     "after another, then you should simply concatenate them together using " ++
     "cat. In Ogg this is called \"chaining\". If you cat Ogg Vorbis I audio " ++
     "files together, then the result will also be a compliant Ogg Vorbis " ++
-    "file. "]
+    "file.",
+
+    "Theora handling: Theora BOS pages will be written before the BOS pages " ++    "of other codecs.",
+
+    "Skeleton handling: If any of the input files contain a Skeleton track " ++
+    "then the output file will contain exactly one Skeleton track. Its " ++
+    "Skeleton BOS (fishead) page will be copied from the first input file " ++
+    "with Skeleton. All fisbone packets present in input files will be " ++
+    "copied into the output file."]
 
 mergePages :: Hot ()
 mergePages = do
@@ -686,7 +694,14 @@ sortDesc = para [
     "scrub on them, increasing the likelihood of glitches during playback. " ++
     "Players may also need to use more memory in order to buffer the audio " ++
     "and video data for synchronized playback, which can be a problem when " ++
-    "the files are viewed on low-memory devices."]
+    "the files are viewed on low-memory devices.",
+
+    "Theora handling: Theora BOS pages will be written before BOS pages of " ++
+    "other codecs.",
+
+    "Skeleton handling: If a Skeleton track is present in the input file, " ++
+    "the first page of the output file will be the Skeleton BOS page, and " ++
+    "the order of other Skeleton packets is preserved."]
 
 sortPages :: Hot ()
 sortPages = do
