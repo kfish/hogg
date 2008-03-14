@@ -69,10 +69,10 @@ instance Show Timestamp where
 
 data ParsedTimeStamp =
   ParsedTimeStamp {
-    hours :: Integer
-    , minutes :: Integer
-    , seconds :: Integer
-    , subseconds :: Either Integer Integer -- Left ms or Right frames
+    _hours :: Integer,
+    _minutes :: Integer,
+    _seconds :: Integer,
+    _subseconds :: Either Integer Integer -- Left ms or Right frames
   }
 
 instance Read Timestamp where
