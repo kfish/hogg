@@ -387,10 +387,14 @@ outputPerChain = L.concat
 infoSub :: SubCommand
 infoSub = SubCommand "info" info
     "Reporting" "Display information about the file and its bitstreams"
-    ""
+    infoDesc
     [("Describe all bitstreams in file.ogg", "file.ogg"),
      ("Describe only the Theora bitstream in file.ogv", "-c theora file.ogv")]
     [cTypeOptions]
+
+infoDesc :: String
+infoDesc = para [
+  "Chain handling: Information for each chain is reported separately."]
 
 info :: Hot ()
 info = do
@@ -406,10 +410,14 @@ info = do
 dumpPacketsSub :: SubCommand
 dumpPacketsSub = SubCommand "dump" dumpPackets
     "Reporting" "Hexdump packets of an Ogg file"
-    ""
+    dumpDesc
     [("Dump all bitstreams in file.ogg", "file.ogg"),
      ("Dump only the Theora bitstream in file.ogv", "-c theora file.ogv")]
     allOptions
+
+dumpDesc :: String
+dumpDesc = para [
+  "Chain handling: Each chain is dumped separately."]
 
 dumpPackets :: Hot ()
 dumpPackets = do
@@ -426,7 +434,7 @@ countPacketsSub = SubCommand "packetcount" countPackets
     "Testing" "Count packets of an Ogg file" 
     ""
     [("Count packets of all bitstreams in file.ogg", "file.ogg"),
-     ("Count packets from only the Theora bitstream in file.ogv",
+     ("Count packets from only the Theora bitstreams in file.ogv",
       "-c theora file.ogv")]
     [cTypeOptions, rangeOptions]
 
@@ -453,7 +461,9 @@ rewritePagesSub = SubCommand "rip" rewritePages
 rewriteDesc :: String
 rewriteDesc = para [
   "Skeleton handling: If the input file has a skeleton track, then its " ++
-  "metadata describing the bitstream being ripped will be replicated."]
+  "metadata describing the bitstream being ripped will be replicated.",
+  "Chain handling: All matching bitstreams from all chains are ripped, and " ++
+  "chain ordering is preserved."]
 
 rewritePages :: Hot ()
 rewritePages = do
@@ -469,7 +479,7 @@ rewritePages = do
 rewritePacketsSub :: SubCommand
 rewritePacketsSub = SubCommand "reconstruct" rewritePackets
     "Extraction" "Reconstruct an Ogg file by doing a full packet demux"
-    ""
+    rewriteDesc -- reuse info from rip
     [("Reconstruct all bitstreams from file.ogg", "-o output.ogg file.ogg"),
      ("Reconstruct only the Theora bitstream from file.ogv",
       "-c theora -o output.ogv file.ogv")]
@@ -518,7 +528,10 @@ chopDesc = para [
 
     "Skeleton handling: By default, the output will " ++
     "contain a Skeleton track specifying the start of the chop as " ++
-    "presentation time."]
+    "presentation time.",
+
+    "Chain handling: The chop range is applied to each chain, and chain " ++
+    "ordering is preserved."]
 
 chopPages :: Hot ()
 chopPages = do
@@ -541,9 +554,13 @@ chopRange (Config _ noSkel _ start end _) xs = case noSkel of
 addSkelSub :: SubCommand
 addSkelSub = SubCommand "addskel" addSkel
     "Editing" "Write a Skeleton logical bitstream"
-    ""
+    addSkelDesc
     [("Add a Skeleton to file.ogg", "-o output.oga file.ogg")]
     [outputOptions]
+
+addSkelDesc :: String
+addSkelDesc = para [
+  "Chain handling: A Skeleton track is added to each chain."]
 
 addSkel :: Hot ()
 addSkel = do
@@ -602,7 +619,7 @@ countPages = do
 dumpPagesSub :: SubCommand
 dumpPagesSub = SubCommand "pagedump" dumpPages
     "Reporting" "Display page structure of an Ogg file"
-    ""
+    dumpDesc -- reuse info from dumpPackets
     [("Dump pages of all bitstreams in file.ogg", "file.ogg"),
      ("Dump pages of only the Theora bitstream in file.ogv",
       "-c theora file.ogv")]
@@ -661,7 +678,9 @@ mergeDesc = para [
     "then the output file will contain exactly one Skeleton track. Its " ++
     "Skeleton BOS (fishead) page will be copied from the first input file " ++
     "with Skeleton. All fisbone packets present in input files will be " ++
-    "copied into the output file."]
+    "copied into the output file.",
+
+    "Chain handling: Only the first chain of each input file is merged."]
 
 mergePages :: Hot ()
 mergePages = do
@@ -701,7 +720,10 @@ sortDesc = para [
 
     "Skeleton handling: If a Skeleton track is present in the input file, " ++
     "the first page of the output file will be the Skeleton BOS page, and " ++
-    "the order of other Skeleton packets is preserved."]
+    "the order of other Skeleton packets is preserved.",
+
+    "Chain handling: Each chain is sorted separately, and chain ordering is " ++
+    "preserved."]
 
 sortPages :: Hot ()
 sortPages = do
@@ -717,11 +739,16 @@ sortPages = do
 dumpRawPagesSub :: SubCommand
 dumpRawPagesSub = SubCommand "dumpraw" dumpRawPages
     "Reporting" "Dump raw (unparsed) page data"
-    ""
+    dumpRawDesc
     [("Dump raw pages of all bitstreams in file.ogg", "file.ogg"),
      ("Dump raw pages of only the Theora bitstream in file.ogv",
       "-c theora file.ogv")]
     allOptions
+
+dumpRawDesc :: String
+dumpRawDesc = para [
+  "This operates below the level of Content-Type, Skeleton and chain " ++
+  "handling, and simply dumps raw page data for debugging purposes."]
 
 dumpRawPages :: Hot ()
 dumpRawPages = do
