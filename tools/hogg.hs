@@ -38,7 +38,7 @@ import Codec.Container.Ogg.Track
 --
 
 hoggVersion :: String
-hoggVersion = "0.3.0"
+hoggVersion = "0.4.0"
 
 showVersion :: IO ()
 showVersion = do
