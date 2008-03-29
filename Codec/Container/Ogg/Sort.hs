@@ -62,7 +62,7 @@ sortHeaders' sb tb ob oh se (g:gs)
 -- mergeSkeleton
 --
 
--- | When mergeing multiple files together, ensure that the resulting file
+-- | When merging multiple files together, ensure that the resulting file
 --   contains only one Skeleton track
 mergeSkeleton :: [OggPage] -> [OggPage]
 mergeSkeleton [] = []
