@@ -1,19 +1,23 @@
-Name:                hogg
-Version:             0.4.0
-License:             BSD3
-License-file:        LICENSE
-Copyright:           Conrad Parker, 2007-2008
-Author:              Conrad Parker
-Maintainer:          conradp@cse.unsw.edu.au
-Stability:           experimental
-Homepage:            http://www.kfish.org/software/hogg/
-Synopsis:            Library and tools to manipulate the Ogg container format
-Description:
-  The HOgg package provides a commandline tool for manipulating Ogg files.
-  It supports chained and multiplexed Ogg bitstreams and Ogg Skeleton.
-  HOgg also includes a library that may be used by other packages for handling
-  the Ogg container format.
-Category:            Codec
+Name:          hogg
+Version:       0.4.0
+License:       BSD3
+License-file:  LICENSE
+Copyright:     Conrad Parker, 2007-2008
+Author:        Conrad Parker
+Maintainer:    Conrad Parker <conradp@cse.unsw.edu.au>
+Stability:     experimental
+Category:      Codec
+Synopsis:      Library and tools to manipulate the Ogg container format
+Description:   The HOgg package provides a commandline tool for manipulating Ogg files.
+               It supports chained and multiplexed Ogg bitstreams and Ogg Skeleton.
+               HOgg also includes a library that may be used by other packages for handling
+               the Ogg container format.
+Homepage:      http://www.kfish.org/software/hogg/
+
+Build-Type:    Simple
+Cabal-Version: >= 1.2
+Tested-With:   GHC==6.8.2
+
 Extra-source-files:  README
 ------------------------------------------------------------------------
 -- See the README file for information about configuring Build-Depends.
