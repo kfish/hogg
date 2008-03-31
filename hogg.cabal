@@ -74,11 +74,12 @@ library
 Executable hogg
     Main-Is:         hogg.hs
     Hs-Source-Dirs:  ., tools
-    Extensions:      CPP
+
+    ghc-options:    -Wall -fglasgow-exts -O2 -funbox-strict-fields
+    Extensions:     CPP
+
     if flag(http)
-       ghc-options: -Wall -fglasgow-exts -O2 -funbox-strict-fields -DUSE_HTTP
-    else
-       ghc-options: -Wall -fglasgow-exts -O2 -funbox-strict-fields
+       cpp-options: -DUSE_HTTP
 
 ------------------------------------------------------------------------
 -- ListMerge test program
