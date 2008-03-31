@@ -182,7 +182,7 @@ appendToCarry (Just (CarryPage ix (OggPage o track cont _ bos _ gp seqno segs)))
               (OggPacket d _ _ _ eos (Just (s:_)))
   = CarryPage ix (OggPage o track cont True bos eos gp seqno (segs++[seg]))
   where seg = L.take (fromIntegral $ segmentLength s) d
-        
+
 -- For completeness
 appendToCarry _ _ _ _ _ = error "appendToCarry{Ogg.Packet}: nothing to append"
 

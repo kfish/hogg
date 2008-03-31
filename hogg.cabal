@@ -22,14 +22,14 @@ Extra-source-files:  README
 -- Build-Depends:       base, fps, mtl, HUnit
 --
 -- For GHC 6.6, fps is built in
-Build-Depends:       base, mtl, HUnit
+-- Build-Depends:       base, mtl, HUnit
 --
 -- For HTTP support, use the following instead (and similarly below in the
 -- configuration of the 'hogg' Executable):
 -- Build-Depends:       base, mtl, HUnit, HTTP1
 --
 -- For GHC 6.8, add extra library names by uncommenting the following line
---                     , array, bytestring, containers, random
+Build-Depends:       base>3, mtl, HUnit, array, bytestring, containers, random
 ------------------------------------------------------------------------
 Exposed-modules:     Codec.Container.Ogg.Chain
                      Codec.Container.Ogg.Chop
