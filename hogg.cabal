@@ -26,59 +26,63 @@ Extra-source-files:  README
 -- For GHC 6.4, we require external fps (Data.ByteString.Lazy)
 -- Build-Depends:       base, fps, mtl, HUnit
 
-Flag splitBase
-  description: Choose the new smaller, split-up base package.
+flag splitBase
+  description: Choose the new smaller, split-up base package introduced with GHC 6.8.
 
-Library
-    If flag(splitBase)
--- GHC 6.8 build-depends
-      Build-Depends: base>=3, mtl, HUnit, array, bytestring, containers, random
-    Else
+flag http
+  default: False
+  description: HTTP1 with lazy bytestring support, from:
+               <http://www.dtek.chalmers.se/~tox/site/http.php4>.
+               This is optional and off by default.
+library
+    if flag(splitBase)
+      build-depends: base>=3, mtl, HUnit, array, bytestring, containers, random
+    else
 -- For GHC 6.6, fps is built in
-      Build-Depends: base, mtl, HUnit
+      build-depends: base, mtl, HUnit
 
--- For HTTP support, use the following instead (and similarly below in the
--- configuration of the 'hogg' Executable):
--- Build-Depends:       base, mtl, HUnit, HTTP1
+    if flag(http)
+      build-depends: HTTP1
 
 ------------------------------------------------------------------------
-    Exposed-modules:     Codec.Container.Ogg.Chain
-                         Codec.Container.Ogg.Chop
-                         Codec.Container.Ogg.ContentType
-                         Codec.Container.Ogg.Granulepos
-                         Codec.Container.Ogg.Granulerate
-                         Codec.Container.Ogg.Headers
-                         Codec.Container.Ogg.RawPage
-                         Codec.Container.Ogg.Page
-                         Codec.Container.Ogg.Packet
-                         Codec.Container.Ogg.Serial
-                         Codec.Container.Ogg.Skeleton
-                         Codec.Container.Ogg.Sort
-                         Codec.Container.Ogg.Track
-                         Codec.Container.Ogg.TimeScheme
-                         Codec.Container.Ogg.Timestamp
-    Other-modules:       Codec.Container.Ogg.ByteFields
-                         Codec.Container.Ogg.CRC
-                         Codec.Container.Ogg.Dump
-                         Codec.Container.Ogg.List
-                         Codec.Container.Ogg.MessageHeaders
-    ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields
+    Exposed-modules: Codec.Container.Ogg.Chain
+                     Codec.Container.Ogg.Chop
+                     Codec.Container.Ogg.ContentType
+                     Codec.Container.Ogg.Granulepos
+                     Codec.Container.Ogg.Granulerate
+                     Codec.Container.Ogg.Headers
+                     Codec.Container.Ogg.RawPage
+                     Codec.Container.Ogg.Page
+                     Codec.Container.Ogg.Packet
+                     Codec.Container.Ogg.Serial
+                     Codec.Container.Ogg.Skeleton
+                     Codec.Container.Ogg.Sort
+                     Codec.Container.Ogg.Track
+                     Codec.Container.Ogg.TimeScheme
+                     Codec.Container.Ogg.Timestamp
+    Other-modules:   Codec.Container.Ogg.ByteFields
+                     Codec.Container.Ogg.CRC
+                     Codec.Container.Ogg.Dump
+                     Codec.Container.Ogg.List
+                     Codec.Container.Ogg.MessageHeaders
+    ghc-options:     -Wall -fglasgow-exts -O2 -funbox-strict-fields
 -- ghc-options:         -prof -auto-all
 
 ------------------------------------------------------------------------
 -- hogg commandline tool
 --
-Executable          hogg
-    Main-Is:             hogg.hs
-    Hs-Source-Dirs:      ., tools
-    Extensions:          CPP
-    ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields
-    -- For HTTP support, use the following instead:
-    -- ghc-options:         -Wall -fglasgow-exts -O2 -funbox-strict-fields -DUSE_HTTP
+Executable hogg
+    Main-Is:         hogg.hs
+    Hs-Source-Dirs:  ., tools
+    Extensions:      CPP
+    if flag(http)
+       ghc-options: -Wall -fglasgow-exts -O2 -funbox-strict-fields -DUSE_HTTP
+    else
+       ghc-options: -Wall -fglasgow-exts -O2 -funbox-strict-fields
 
 ------------------------------------------------------------------------
 -- ListMerge test program
 --
-Executable          ListMergeTest
-    Main-Is:             ListMergeTest.hs
-    Hs-Source-Dirs:      ., tests
+Executable ListMergeTest
+    Main-Is:        ListMergeTest.hs
+    Hs-Source-Dirs: ., tests
