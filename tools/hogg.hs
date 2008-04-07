@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -cpp #-}
+{-# LANGUAGE CPP, FlexibleInstances #-}
 module Main where
 
 import System.Exit
@@ -18,7 +18,7 @@ import System.Console.GetOpt
 
 import Text.Printf
 
-import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy as L (ByteString, concat, hGetContents, hPut)
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char
 import Data.List hiding (sort)
@@ -93,7 +93,7 @@ breakLines n s
     (rSpill, rLine) = break isSpace (reverse line)
     line' = reverse rLine
     rest' = reverse rSpill ++ rest
-    
+
 
 ------------------------------------------------------------
 --  HOggTool datatype
@@ -449,7 +449,7 @@ dumpPackets = do
 
 countPacketsSub :: SubCommand
 countPacketsSub = SubCommand "packetcount" countPackets
-    "Testing" "Count packets of an Ogg file" 
+    "Testing" "Count packets of an Ogg file"
     ""
     [("Count packets of all bitstreams in file.ogg", "file.ogg"),
      ("Count packets from only the Theora bitstreams in file.ogv",
@@ -589,7 +589,7 @@ addSkel = do
     outputPerFile $ map s2 skels
   where
     ioAddSkeleton x = liftIO $ chainAddSkeleton x
-  
+
 ------------------------------------------------------------
 -- countrwPages (countrw)
 --
@@ -616,7 +616,7 @@ countrwPages = do
 
 countPagesSub :: SubCommand
 countPagesSub = SubCommand "pagecount" countPages
-    "Testing" "Count pages of an Ogg file" 
+    "Testing" "Count pages of an Ogg file"
     ""
     [("Count pages of all bitstreams in file.ogg", "file.ogg"),
      ("Count pages from only the Theora bitstream in file.ogv",
@@ -1035,7 +1035,7 @@ handleSubCommand [] = -- bracket (initTool []) finish loop0
   where
     -- finish = exitWith ExitSuccess
     loop0 st = runReaderT help st
-    
+
 handleSubCommand (command:args) = -- bracket (initTool args) finish loop1
   (initTool args) >>= loop1
   where

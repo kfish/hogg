@@ -27,7 +27,7 @@ import Codec.Container.Ogg.Timestamp
 import Data.List as List
 import Data.Map as Map
 import Data.Word (Word32)
-import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy as L (take, length, append, drop, ByteString)
 import qualified Data.ByteString.Lazy.Char8 as C
 
 ------------------------------------------------------------

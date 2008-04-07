@@ -1,4 +1,4 @@
---
+{-# LANGUAGE TypeSynonymInstances #-}
 -- Module      : Serial
 -- Copyright   : (c) Conrad Parker 2007
 -- License     : BSD-style
