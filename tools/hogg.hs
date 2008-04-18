@@ -45,6 +45,12 @@ showVersion = do
     putStrLn $ "hogg version " ++ hoggVersion
     exitWith ExitSuccess
 
+hoggDesc :: String
+hoggDesc = para [
+    "hogg is a commandline tool for manipulating Ogg files. It supports " ++
+    "chained and multiplexed files conformant with RFC3533. Hogg can parse " ++
+    "headers for " ++ interpretedCodecs ++ ", and can " ++
+    "read and write Ogg Skeleton logical bitstreams."]
 
 ------------------------------------------------------------
 -- Content types for which granulepos is interpreted
@@ -831,6 +837,7 @@ longHelp :: [String] -> [String]
 -- | "hogg help" with no arguments: Give a list of all subcommands
 longHelp [] =
     ["Usage: hogg <subcommand> [options] filename ...\n\n"] ++
+    [hoggDesc, "\n"] ++
     map categoryHelp ["Commands", "Reporting", "Extraction", "Editing", "Miscellaneous"] ++
     -- map categoryHelp ["Testing"] ++
     ["Please report bugs to <ogg-dev@xiph.org>\n"]
