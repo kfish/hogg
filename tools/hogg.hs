@@ -23,6 +23,10 @@ import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char
 import Data.List hiding (sort)
 
+import System.Locale (defaultTimeLocale)
+import Data.Time.Format (formatTime)
+import Data.Time.Clock (getCurrentTime)
+
 import Codec.Container.Ogg.Chain
 import Codec.Container.Ogg.Chop
 import Codec.Container.Ogg.ContentType
@@ -46,11 +50,14 @@ showVersion = do
     exitWith ExitSuccess
 
 hoggDesc :: String
-hoggDesc = para [
+hoggDesc =
     "hogg is a commandline tool for manipulating Ogg files. It supports " ++
     "chained and multiplexed files conformant with RFC3533. Hogg can parse " ++
     "headers for " ++ interpretedCodecs ++ ", and can " ++
-    "read and write Ogg Skeleton logical bitstreams."]
+    "read and write Ogg Skeleton logical bitstreams."
+
+hoggAuthors :: String
+hoggAuthors = "Conrad Parker"
 
 ------------------------------------------------------------
 -- Content types for which granulepos is interpreted
@@ -128,7 +135,8 @@ subCommands = [
                countPagesSub,
                knownCodecsSub,
                selfCheckSub,
-               helpSub
+               helpSub,
+               manSub
               ]
 
 ------------------------------------------------------------
@@ -837,7 +845,7 @@ longHelp :: [String] -> [String]
 -- | "hogg help" with no arguments: Give a list of all subcommands
 longHelp [] =
     ["Usage: hogg <subcommand> [options] filename ...\n\n"] ++
-    [hoggDesc, "\n"] ++
+    [para [hoggDesc], "\n"] ++
     map categoryHelp ["Commands", "Reporting", "Extraction", "Editing", "Miscellaneous"] ++
     -- map categoryHelp ["Testing"] ++
     ["Please report bugs to <ogg-dev@xiph.org>\n"]
@@ -879,6 +887,56 @@ contextHelp command (item:_) = synopsis ++ usage ++ description ++ examples ++
 optionsHelp :: SubCommand -> String
 optionsHelp item = usageInfo "Options:"
                      (concat $ miscOptions : subOptions item)
+
+------------------------------------------------------------
+-- man
+--
+
+manSub :: SubCommand
+manSub = SubCommand "man" man
+    "Commands" "Generate Unix man page for a specific subcommand (eg. \"hogg man chop\")"
+    ""
+    [("Generate a man page for the \"hogg chop\" subcommand", "chop")]
+    [] -- Options
+
+man :: Hot ()
+man = do
+    args <- asks hotFilenames
+    -- let dateStamp = "1 June 2007"
+    currentTime <- liftIO getCurrentTime
+    let dateStamp = formatTime defaultTimeLocale "%B %Y" currentTime
+    outputC $ C.concat $ map C.pack $ (longMan dateStamp) args
+    selfCheck
+
+longMan :: String -> [String] -> [String]
+-- | "hogg man" with no arguments: Give a list of all subcommands
+-- longMan [] =
+longMan dateStamp _ =
+    [".TH HOGG 1 \"", dateStamp, "\" \"hogg\" \"Annodex\"\n"] ++
+    [".SH NAME\n"] ++
+    ["hogg \\- inspect or manipulate Ogg multimedia files\n\n"] ++
+    [".SH SYNOPSIS\n\n.B hogg\n.RI SUBCOMMAND\n[\n.I OPTIONS\n]\n.I filename ...\n\n"] ++
+    [".SH DESCRIPTION\n.B hogg\n"] ++
+    [hoggDesc, "\n"] ++
+    map categoryMan ["Commands", "Reporting", "Extraction", "Editing", "Miscellaneous"] ++
+    -- map categoryMan ["Testing"] ++
+    [".SH AUTHORS\n\n", hoggAuthors, "\n\n"] ++
+    ["Please report bugs to <ogg-dev@xiph.org>\n"] ++
+    [".SH \"SEE ALSO\"\n\n"] ++
+    [".PP\n"] ++ map (\x -> "\\fB"++x++"\\fR(1)\n") seeAlso
+  where
+    seeAlso = ["ogginfo", "oggzinfo", "oggzrip", "oggzmerge", "oggzdump", "oggzdiff"]
+    
+
+-- | "hogg help command": Give command-specific help
+-- longMan (command:_) = contextMan command m
+--   where m = filter (\x -> subName x == command) subCommands
+
+-- | Provide synopses for a specific category of commands
+categoryMan :: String -> String
+categoryMan c = ".SH " ++ (map toUpper c) ++ "\n" ++ concat (map itemMan items) ++ "\n"
+  where items = filter (\x -> subCategory x == c) subCommands
+        itemMan i = printf ".IP %s\n%s\n" (subName i) (subSynopsis i)
 
 ------------------------------------------------------------
 -- main

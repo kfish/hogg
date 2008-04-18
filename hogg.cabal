@@ -36,10 +36,10 @@ flag http
                This is optional and off by default.
 library
     if flag(splitBase)
-      build-depends: base>=3, mtl, HUnit, array, bytestring, containers, random
+      build-depends: base>=3, mtl, HUnit, array, bytestring, containers, random, time
     else
 -- For GHC 6.6, fps is built in
-      build-depends: base, mtl, HUnit
+      build-depends: base, mtl, HUnit, time
 
     if flag(http)
       build-depends: HTTP1
