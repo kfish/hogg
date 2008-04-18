@@ -50,11 +50,11 @@ showVersion = do
     exitWith ExitSuccess
 
 hoggDesc :: String
-hoggDesc =
+hoggDesc = para [
     "hogg is a commandline tool for manipulating Ogg files. It supports " ++
     "chained and multiplexed files conformant with RFC3533. Hogg can parse " ++
     "headers for " ++ interpretedCodecs ++ ", and can " ++
-    "read and write Ogg Skeleton logical bitstreams."
+    "read and write Ogg Skeleton logical bitstreams."]
 
 hoggAuthors :: String
 hoggAuthors = "Conrad Parker"
@@ -76,15 +76,19 @@ englishList (a:as) = a ++ ", " ++ englishList as
 --
 
 para :: [String] -> String
-para ss = concat $ intersperse "\n" (map (\s -> breakLines 2 76 s) ss)
+para ss = concat $ intersperse "\n" (map (\s -> breakLines 76 s) ss)
+
+indent :: Int -> String -> String
+indent i s = unlines $ map (\x -> indentation ++ x) (lines s)
+  where
+    indentation = take i $ repeat ' '
 
 -- breakLines leftIndent columnWidth text
-breakLines :: Int -> Int -> String -> String
-breakLines i n s
-  | length s < n = indent ++ s ++ "\n"
-  | otherwise    = indent ++ line' ++ "\n" ++ breakLines i n rest'
+breakLines :: Int -> String -> String
+breakLines n s
+  | length s < n = s ++ "\n"
+  | otherwise    = line' ++ "\n" ++ breakLines n rest'
   where
-    indent = take i $ repeat ' '
     (line, rest) = splitAt n s
     (rSpill, rLine) = break isSpace (reverse line)
     line' = reverse rLine
@@ -845,7 +849,7 @@ longHelp :: [String] -> [String]
 -- | "hogg help" with no arguments: Give a list of all subcommands
 longHelp [] =
     ["Usage: hogg <subcommand> [options] filename ...\n\n"] ++
-    [para [hoggDesc], "\n"] ++
+    [indent 2 hoggDesc, "\n"] ++
     map categoryHelp ["Commands", "Reporting", "Extraction", "Editing", "Miscellaneous"] ++
     -- map categoryHelp ["Testing"] ++
     ["Please report bugs to <ogg-dev@xiph.org>\n"]
@@ -875,7 +879,7 @@ contextHelp command (item:_) = synopsis ++ usage ++ description ++ examples ++
         synopsis = [command ++ ": " ++ subSynopsis item ++ "\n"]
         description = case (subDescription item) of
                     "" -> []
-                    _  -> ["\n" ++ (subDescription item)]
+                    _  -> ["\n" ++ indent 2 (subDescription item)]
         examples = case (subExamples item) of
                      [] -> []
                      _  -> ["\nExamples:"] ++
@@ -908,20 +912,39 @@ man = do
     outputC $ C.concat $ map C.pack $ (longMan dateStamp) args
     selfCheck
 
+headerMan :: String -> [String]
+headerMan dateStamp = [".TH HOGG 1 \"", dateStamp, "\" \"hogg\" \"Annodex\"\n"]
+
+synopsisMan :: String -> [SubCommand] -> [String]
+synopsisMan _ [] =
+    [".SH SYNOPSIS\n\n.B hogg\n.RI SUBCOMMAND\n[\n.I OPTIONS\n]\n.I filename...\n\n"]
+synopsisMan command (item:_) =
+    [".SH SYNOPSIS\n\n.B hogg\n.RI ", command, "\n", hasOpts command, outOpts, "\n"]
+  where hasOpts "help" = ".I <subcommand>\n"
+        hasOpts _ = "[\n.I OPTIONS\n]\n"
+        outOpts = case elem outputOptions (subOptions item) of
+                    True -> ".I filename ...\n"
+                    False -> "\n"
+
+authorsMan :: [String]
+authorsMan =
+    [".SH AUTHORS\n\n", hoggAuthors, "\n\n"] ++
+    ["Please report bugs to <ogg-dev@xiph.org>\n"]
+
+descMan :: String -> [String]
+descMan desc = [".SH DESCRIPTION\n", desc, "\n"]
+
 longMan :: String -> [String] -> [String]
 -- | "hogg man" with no arguments: Give a list of all subcommands
--- longMan [] =
-longMan dateStamp _ =
-    [".TH HOGG 1 \"", dateStamp, "\" \"hogg\" \"Annodex\"\n"] ++
+longMan dateStamp [] =
+    headerMan dateStamp ++
     [".SH NAME\n"] ++
     ["hogg \\- inspect or manipulate Ogg multimedia files\n\n"] ++
-    [".SH SYNOPSIS\n\n.B hogg\n.RI SUBCOMMAND\n[\n.I OPTIONS\n]\n.I filename ...\n\n"] ++
-    [".SH DESCRIPTION\n.B hogg\n"] ++
-    [hoggDesc, "\n"] ++
+    synopsisMan "SUBCOMMAND" [] ++
+    descMan (".B hogg\n" ++ hoggDesc) ++
     map categoryMan ["Commands", "Reporting", "Extraction", "Editing", "Miscellaneous"] ++
     -- map categoryMan ["Testing"] ++
-    [".SH AUTHORS\n\n", hoggAuthors, "\n\n"] ++
-    ["Please report bugs to <ogg-dev@xiph.org>\n"] ++
+    authorsMan ++
     [".SH \"SEE ALSO\"\n\n"] ++
     [".PP\n"] ++ map (\x -> "\\fB"++x++"\\fR(1)\n") seeAlso
   where
@@ -929,14 +952,41 @@ longMan dateStamp _ =
     
 
 -- | "hogg help command": Give command-specific help
--- longMan (command:_) = contextMan command m
---   where m = filter (\x -> subName x == command) subCommands
+longMan dateStamp (command:_) = contextMan dateStamp command m
+  where m = filter (\x -> subName x == command) subCommands
 
 -- | Provide synopses for a specific category of commands
 categoryMan :: String -> String
 categoryMan c = ".SH " ++ (map toUpper c) ++ "\n" ++ concat (map itemMan items) ++ "\n"
   where items = filter (\x -> subCategory x == c) subCommands
         itemMan i = printf ".IP %s\n%s\n" (subName i) (subSynopsis i)
+
+-- | Provide detailed help for a specific command
+contextMan :: String -> [Char] -> [SubCommand] -> [String]
+contextMan dateStamp _ [] = longMan dateStamp []
+contextMan dateStamp command i@(item:_) =
+    headerMan dateStamp ++
+    synopsisMan command i ++
+    synDesc ++ description ++
+    ["\n" ++ optionsMan item] ++
+    examples ++
+    authorsMan
+  where synDesc = descMan (subSynopsis item)
+        -- desc = [command ++ ": " ++ subSynopsis item ++ "\n"]
+        description = case (subDescription item) of
+                    "" -> []
+                    _  -> ["\n" ++ (subDescription item)]
+        examples = case (subExamples item) of
+                     [] -> []
+                     _  -> ["\n.SH EXAMPLES\n"] ++
+                           flip map (subExamples item) (\(desc,opts) ->
+                             ".PP\n" ++ desc ++ ":\n.PP\n.RS\n\\f(CWhogg " ++ command ++
+                             " " ++ opts ++ "\\fP\n.RE\n")
+
+-- | Provide usage information [for a specific command]
+optionsMan :: SubCommand -> String
+optionsMan item = usageInfo ".SH OPTIONS"
+                     (concat $ miscOptions : subOptions item)
 
 ------------------------------------------------------------
 -- main
