@@ -1,6 +1,6 @@
 #!/usr/bin/env runhaskell
 
-import Distribution.Simple (defaultMainWithHooks, defaultUserHooks,
+import Distribution.Simple (defaultMainWithHooks, simpleUserHooks,
                              UserHooks(..), Args)
 
 {-
@@ -16,7 +16,7 @@ import System.Exit(ExitCode(..))
 -}
 
 main :: IO ()
-main = defaultMainWithHooks (defaultUserHooks)
+main = defaultMainWithHooks (simpleUserHooks)
 -- main = defaultMainWithHooks (defaultUserHooks{runTests = tests})
 
 {-
