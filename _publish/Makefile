@@ -33,7 +33,8 @@ graph: darcs
 	mv "/tmp/$(IMGNAME)" "$(PROJECT)/images/$(IMGNAME)"	&& \
 	chmod 644 "$(PROJECT)/images/$(IMGNAME)"
 
-publish: haddock graph
+#publish: haddock graph
+publish: graph
 	rsync -ave ssh $(PROJECT) $(SERVER):$(REMOTE)
 
 clean:

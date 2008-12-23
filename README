@@ -3,7 +3,7 @@ HOgg -- Ogg encapsulation stuffz
 ------------------------------------------------------------
 
 Requirements:
-        - Cabal (tested with various version from 1.1.3 to 1.1.8 and darcs)
+        - Cabal (tested with various version from 1.1.3 to 1.6.0)
 
         - Data.ByteString, included with GHC >= 6.6, and available separately
           for GHC 6.4 at:
