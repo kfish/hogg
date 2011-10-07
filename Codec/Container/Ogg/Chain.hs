@@ -13,7 +13,6 @@ module Codec.Container.Ogg.Chain (
 ) where
 
 import qualified Data.ByteString.Lazy as L
-import Data.Maybe
 
 import Codec.Container.Ogg.ContentType
 import Codec.Container.Ogg.Granulepos
