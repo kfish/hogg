@@ -65,7 +65,7 @@ library
                      Codec.Container.Ogg.Dump
                      Codec.Container.Ogg.List
                      Codec.Container.Ogg.MessageHeaders
-    ghc-options:     -Wall -fglasgow-exts -O2 -funbox-strict-fields
+    ghc-options:     -Wall -O2 -funbox-strict-fields
 -- ghc-options:         -prof -auto-all
 
 ------------------------------------------------------------------------
@@ -75,7 +75,7 @@ Executable hogg
     Main-Is:         hogg.hs
     Hs-Source-Dirs:  ., tools
 
-    ghc-options:    -Wall -fglasgow-exts -O2 -funbox-strict-fields
+    ghc-options:    -Wall -O2 -funbox-strict-fields
     Extensions:     CPP
 
     if flag(http)

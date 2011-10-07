@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 --
 -- Module      : Skeleton
 -- Copyright   : (c) Conrad Parker 2006

@@ -5,7 +5,6 @@ import System.Exit
 import System.IO
 
 import Control.Monad.Reader
-import Control.Monad
 import Control.Exception
 
 #ifdef USE_HTTP

@@ -30,7 +30,7 @@ hexDump' o d
   | L.null d = C.empty
   | otherwise = lineDump `C.append` hexDump' (o+16) rest
     where (line, rest) = {-# SCC "LsplitAt" #-} L.splitAt 16 d
-          lineDump = {-# "Cpack" #-} C.pack $ {-# SCC "lineDump" #-} spaces 4 ++ offset ++ ": " ++ hexLine ++ spaces hexPad ++ ascLine ++ "\n"
+          lineDump = {-# SCC "Cpack" #-} C.pack $ {-# SCC "lineDump" #-} spaces 4 ++ offset ++ ": " ++ hexLine ++ spaces hexPad ++ ascLine ++ "\n"
           spaces n = {-# SCC "spaces" #-} take n $ repeat ' '
           offset = {-# SCC "offset" #-} hexOffset o
 

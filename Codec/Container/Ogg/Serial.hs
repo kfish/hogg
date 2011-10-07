@@ -1,4 +1,6 @@
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- Module      : Serial
 -- Copyright   : (c) Conrad Parker 2007
 -- License     : BSD-style
