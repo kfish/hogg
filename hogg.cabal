@@ -14,7 +14,7 @@ Description:   The HOgg package provides a commandline tool for manipulating Ogg
                the Ogg container format.
 Homepage:      http://www.kfish.org/software/hogg/
 Build-Type:    Simple
-Cabal-Version: >= 1.2
+Cabal-Version: >= 1.6
 Tested-With:   GHC==6.8.2
 
 Extra-source-files:  README hogg.1
@@ -35,7 +35,7 @@ flag http
                This is optional and off by default.
 library
     if flag(splitBase)
-      build-depends: base>=3, mtl, HUnit, array, bytestring, containers, random, time, old-locale
+      build-depends: base >=3 && < 5, mtl, HUnit, array, bytestring, containers, random, time, old-locale
     else
 -- For GHC 6.6, fps is built in
       build-depends: base, mtl, HUnit, time
@@ -64,7 +64,7 @@ library
                      Codec.Container.Ogg.Dump
                      Codec.Container.Ogg.List
                      Codec.Container.Ogg.MessageHeaders
-    ghc-options:     -Wall -O2 -funbox-strict-fields
+    ghc-options:     -Wall -funbox-strict-fields
 -- ghc-options:         -prof -auto-all
 
 ------------------------------------------------------------------------
@@ -74,7 +74,7 @@ Executable hogg
     Main-Is:         hogg.hs
     Hs-Source-Dirs:  ., tools
 
-    ghc-options:    -Wall -O2 -funbox-strict-fields
+    ghc-options:    -Wall -funbox-strict-fields
     Extensions:     CPP
 
     if flag(http)
