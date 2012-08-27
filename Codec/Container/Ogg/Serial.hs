@@ -43,18 +43,9 @@ demux = classify serialEq
 -- | Generate a serial number
 --
 
--- Make a special instance of Random for Serial that does not include
--- 0xffffffff, as this value is treated specailly by libogg
-instance Random Serial where
-  randomR = integralRandomR
-  random = randomR (0,0xffffffff-1)
-
-integralRandomR :: (Integral a, RandomGen g) => (a,a) -> g -> (a,g)
-integralRandomR  (a,b) g = case randomR (fromIntegral a :: Integer,
-                                         fromIntegral b :: Integer) g of
-                            (x,g') -> (fromIntegral x, g')
-
 genSerial :: IO Serial
 genSerial = do
-  serialno <- getStdRandom random
+  -- Randomly generate a Serial that does not equal
+  -- 0xffffffff, as this value is treated specailly by libogg
+  serialno <- getStdRandom (randomR (0,0xffffffff-1))
   return serialno
