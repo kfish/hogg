@@ -1,5 +1,5 @@
 Name:          hogg
-Version:       0.4.1.1
+Version:       0.4.1.2
 License:       BSD3
 License-file:  LICENSE
 Copyright:     Conrad Parker, 2007-2011
@@ -15,7 +15,7 @@ Description:   The HOgg package provides a commandline tool for manipulating Ogg
 Homepage:      http://www.kfish.org/software/hogg/
 Build-Type:    Simple
 Cabal-Version: >= 1.6
-Tested-With:   GHC==6.8.2
+Tested-With:   GHC==7.0.3, GHC==7.2.1, GHC==7.4.2, GHC==7.6.0
 
 Extra-source-files:  README hogg.1
 
