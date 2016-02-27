@@ -1,6 +1,8 @@
 HOgg - Ogg encapsulation stuffz
 ===============================
 
+**THIS PACKAGE IS ORPHNED, I MADE SOME FIXES TO COMPILE IT BUT IT WONT BE DEVELOPED FURTHER**
+
 Requirements
 ------------
 
