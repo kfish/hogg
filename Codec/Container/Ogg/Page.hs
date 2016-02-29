@@ -99,7 +99,7 @@ instance Timestampable OggPage where
 
 -- | Construct a binary representation of an Ogg page
 pageWrite :: OggPage -> L.ByteString
-pageWrite (OggPage _ track cont incplt bos eos gp seqno s) = newPageData
+pageWrite (OggPage _ track cont incplt bos eos gp _ s) = newPageData
   where
     newPageData = L.concat [hData, crc, sData, body]
     crcPageData = L.concat [hData, zeroCRC, sData, body]
@@ -203,7 +203,7 @@ pageBuild allowBOS o t d = buildResult allowBOS bos where
   segtab = rawPageSegtab r
   body = rawPageBody r
   segments = splitSegments 0 segtab body
-  rest = L.drop pageLen d 
+  rest = L.drop pageLen d
 
 findOrAddTrack :: Serial -> L.ByteString -> [OggTrack] -> (Maybe OggTrack, OggTrack)
 findOrAddTrack s d t = foat fTrack

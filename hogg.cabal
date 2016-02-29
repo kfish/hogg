@@ -15,9 +15,9 @@ Description:   The HOgg package provides a commandline tool for manipulating Ogg
 Homepage:      http://www.kfish.org/software/hogg/
 Build-Type:    Simple
 Cabal-Version: >= 1.6
-Tested-With:   GHC==7.0.3, GHC==7.2.1, GHC==7.4.2, GHC==7.6.0
+Tested-With:   GHC==7.8.4, GHC==7.10.3
 
-Extra-source-files:  README hogg.1
+Extra-source-files:  README.md hogg.1
 
 ------------------------------------------------------------------------
 -- See the README file for information about configuring Build-Depends.
@@ -35,7 +35,7 @@ flag http
                This is optional and off by default.
 library
     if flag(splitBase)
-      build-depends: base >=3 && < 5, mtl, HUnit, array, bytestring, containers, random, time
+      build-depends: base >=3 && < 5, mtl, HUnit, array, bytestring, containers, random, time, old-locale
     else
 -- For GHC 6.6, fps is built in
       build-depends: base, mtl, HUnit, time

@@ -3,7 +3,7 @@
 -- Module      :  ByteFields
 -- Copyright   :  (c) Conrad Parker 2006
 -- License     :  BSD-style
--- 
+--
 -- Maintainer  :  conradp@cse.unsw.edu.au
 -- Stability   :  experimental
 -- Portability :  portable
@@ -61,9 +61,9 @@ u8At = leNAt 1
 -- Generate a ByteString containing the given number
 leNFill :: Integral a => Int -> a -> L.ByteString
 leNFill n x
-  | l < n	= L.pack $ (i ++ (take (n-l) $ repeat 0x00))
-  | l > n	= error "leNFill too short"
-  | otherwise	= L.pack $ i
+  | l < n = L.pack $ (i ++ (take (n-l) $ repeat 0x00))
+  | l > n = error "leNFill too short"
+  | otherwise = L.pack $ i
                   where l = length i
                         i = toTwosComp x
 
@@ -90,4 +90,3 @@ toTwosComp x = g $ f x
 -- | Convert from twos complement, unsigned, little endian
 fromTwosComp :: Integral a => [Word8] -> a
 fromTwosComp x = foldr (\a b -> fromIntegral a + b*256) 0 x
-
