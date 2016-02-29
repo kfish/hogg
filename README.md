@@ -1,5 +1,6 @@
 HOgg - Ogg encapsulation stuffz
 ===============================
+[![Build Status](https://travis-ci.org/tmcgilchrist/hogg.svg)](https://travis-ci.org/tmcgilchrist/hogg)
 
 **THIS PACKAGE IS ORPHNED, I MADE SOME FIXES TO COMPILE IT BUT IT WONT BE DEVELOPED FURTHER**
 
