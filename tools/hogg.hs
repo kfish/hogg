@@ -22,7 +22,12 @@ import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char
 import Data.List hiding (sort)
 
+#if MIN_VERSION_time(1,5,0)
+import Data.Time.Format(defaultTimeLocale)
+#else
 import System.Locale (defaultTimeLocale)
+#endif
+
 import Data.Time.Format (formatTime)
 import Data.Time.Clock (getCurrentTime)
 
@@ -952,7 +957,7 @@ longMan dateStamp [] =
     [".PP\n"] ++ map (\x -> "\\fB"++x++"\\fR(1)\n") seeAlso
   where
     seeAlso = ["ogginfo", "oggzinfo", "oggzrip", "oggzmerge", "oggzdump", "oggzdiff"]
-    
+
 
 -- | "hogg help command": Give command-specific help
 longMan dateStamp (command:_) = contextMan dateStamp command m
